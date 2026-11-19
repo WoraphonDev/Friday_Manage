@@ -1473,6 +1473,153 @@ kbd {
   flex: 1;
   min-width: 0;
 }
+/* ── Sidebar ย่อเหลือไอคอน (ผู้ใช้เลือกแบบ A + C จาก mockup 2026-11-19) · มีผลเฉพาะ desktop เพราะมือถือซ่อน .sidebar อยู่แล้ว
+   ตอนกาง ลูกของ Sidebar กว้างคงที่ แล้วให้ Sidebar ขยายเผยออกมา ข้อความจึงไม่ตัดบรรทัดไปมาระหว่าง animation */
+.sidebar {
+  overflow-x: hidden;
+}
+.sidebar > * {
+  min-width: calc(var(--sidebar-width) - 20px);
+}
+.sidebar-animate .sidebar {
+  transition: width var(--motion-dur) var(--motion-ease);
+}
+.project-chip,
+.nav-rail-icon {
+  display: none;
+}
+/* ปุ่มย่อ/กางติดล่างของ Sidebar เสมอ แม้รายชื่อโปรเจกต์ยาวจนต้องเลื่อน */
+.sidebar-foot {
+  position: sticky;
+  bottom: -12px;
+  margin: 8px -10px -12px;
+  padding: 8px 10px 12px;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+}
+.sidebar-toggle {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-label);
+  text-align: left;
+  cursor: pointer;
+}
+.sidebar-toggle kbd {
+  margin-left: auto;
+  color: var(--faint);
+}
+.sidebar-rail .sidebar {
+  width: var(--sidebar-rail-width);
+}
+.sidebar-rail .sidebar > * {
+  min-width: 0;
+}
+.sidebar-rail .sidebar > :not(.sidebar-workspace):not(nav):not(.sidebar-foot),
+.sidebar-rail .sidebar-workspace .menu-label,
+.sidebar-rail .sidebar nav > .menu-label,
+.sidebar-rail .sidebar-workspace .workspace-switch > :not(.workspace-logo) {
+  display: none;
+}
+.sidebar-rail .sidebar-workspace .workspace-switch {
+  width: 38px;
+  padding: 0;
+  justify-content: center;
+  border-color: transparent;
+}
+.sidebar-rail .sidebar .nav-link {
+  position: relative;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+}
+/* ซ่อนข้อความเมนูแบบที่ screen reader ยังอ่านชื่อได้ (ลิงก์เหลือแค่ไอคอน) */
+.sidebar-rail .sidebar .nav-link > :not(svg):not(.project-chip):not(.badge) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.sidebar-rail .sidebar .nav-rail-icon {
+  display: block;
+}
+.sidebar-rail .sidebar .project-chip {
+  display: flex;
+}
+.project-chip {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  color: var(--on-primary);
+  font-size: 11px;
+  font-weight: 700;
+}
+/* หัว "Projects" กลายเป็นเส้นคั่น (ข้อความยังอยู่ให้ screen reader) */
+.sidebar-rail .sidebar .nav-section {
+  height: 1px;
+  margin: 10px 6px;
+  padding: 0;
+  overflow: hidden;
+  font-size: 0;
+  background: var(--border);
+}
+.sidebar-rail .sidebar .nav-link .badge {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  line-height: 16px;
+}
+/* ชื่อเมนูข้างไอคอนตอนย่อ (rail-tip.tsx) */
+.rail-tip {
+  position: fixed;
+  z-index: 60;
+  translate: 0 -50%;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: var(--contrast-bg);
+  color: var(--contrast-ink);
+  box-shadow: var(--shadow-menu);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: pre;
+  pointer-events: none;
+  animation: rail-tip-in var(--motion-dur-s) var(--motion-ease);
+}
+.rail-tip::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  background: inherit;
+  translate: 0 -50%;
+  rotate: 45deg;
+}
+@keyframes rail-tip-in {
+  from {
+    opacity: 0;
+    translate: -4px -50%;
+  }
+}
+@media (max-width: 760px) {
+  .rail-tip {
+    display: none;
+  }
+}
 .admin-pill {
   background: var(--inverse-bg-2);
   color: var(--inverse-ink);

@@ -45,6 +45,8 @@
     "inbox": "Inbox",
     "projects": "Projects",
     "newProject": "+ New project",
+    "collapseSidebar": "ย่อเมนู",
+    "expandSidebar": "กางเมนู",
     "admin": "Admin Console",
     "members": "สมาชิก",
     "profile": "โปรไฟล์",

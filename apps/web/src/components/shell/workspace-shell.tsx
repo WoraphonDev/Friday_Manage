@@ -18,6 +18,8 @@ import {
   Bell as BellIcon,
   Check,
   ChevronDown,
+  ChevronsLeft,
+  ChevronsRight,
   CircleCheck,
   Clock,
   FolderKanban,
@@ -69,6 +71,8 @@ import { OnboardingAccountItem, OnboardingNavButton } from "@/features/onboardin
 import { HelpButton, HelpMenuLink } from "@/features/help-panel";
 import { isBlocked, SuspendedScreen, SuspensionBanner, useSuspension } from "@/features/suspension";
 import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
+import { useSidebarRail } from "./sidebar-rail";
+import { useRailTip } from "./rail-tip";
 import { DeletedWorkspaceScreen, DeletedWorkspacesSection, useDeletedWorkspace } from "@/features/trash";
 // ช่องต่อเติม (SHELL_SLOTS ด้านล่าง): import ของ W24–W26 วางแทนบรรทัดที่จองไว้ของตัวเองเท่านั้น
 // (W24 / W25 merge ก่อนมีช่องนี้ จึงวาง WhatsNewButton / EngagementPrompts และ OnboardingNavButton / OnboardingAccountItem ตรงใน JSX
@@ -141,29 +145,32 @@ function Navigation({
       <Link
         className="nav-link"
         href={base}
+        data-tip={t("home")}
         aria-current={pathname === base ? "page" : undefined}
         onClick={close}
       >
         <Home size={18} />
-        {t("home")}
+        <span className="nav-text">{t("home")}</span>
       </Link>
       <Link
         className="nav-link"
         href={`${base}/my-tasks`}
+        data-tip={t("myTasks")}
         aria-current={pathname === `${base}/my-tasks` ? "page" : undefined}
         onClick={close}
       >
         <CircleCheck size={18} />
-        {t("myTasks")}
+        <span className="nav-text">{t("myTasks")}</span>
       </Link>
       <Link
         className="nav-link"
         href={`${base}/inbox`}
+        data-tip={t("inbox")}
         aria-current={pathname === `${base}/inbox` ? "page" : undefined}
         onClick={close}
       >
         <Inbox size={18} />
-        {t("inbox")}
+        <span className="nav-text">{t("inbox")}</span>
         {unread > 0 && <Badge tone="red">{unread}</Badge>}
       </Link>
       {!locked && <div className="nav-section">{t("projects")}</div>}
@@ -173,6 +180,7 @@ function Navigation({
             className="nav-link"
             key={project.id}
             href={`${base}/p/${encodeURIComponent(project.key)}`}
+            data-tip={project.name}
             aria-current={
               pathname.startsWith(`${base}/p/${project.key}/`) ||
               pathname === `${base}/p/${project.key}`
@@ -185,6 +193,14 @@ function Navigation({
               className="project-dot"
               style={{ background: project.color ?? FALLBACK_PROJECT_COLOR }}
             />
+            {/* ตอน Sidebar ย่อ: ตัวย่อบนสีโปรเจกต์ แบบเดียวกับไอคอนหัวโปรเจกต์ */}
+            <span
+              className="project-chip"
+              style={{ background: project.color ?? FALLBACK_PROJECT_COLOR }}
+              aria-hidden="true"
+            >
+              {project.key.slice(0, 2)}
+            </span>
             <span className="project-name">{project.name}</span>
             {project.pausedAt && <span className="paused-pill">{tp("pill")}</span>}
           </Link>
@@ -196,10 +212,12 @@ function Navigation({
         <Link
           className="nav-link"
           href={`${base}/new-project`}
+          data-tip={t("newProject").replace(/^\+\s*/, "")}
           aria-current={pathname === `${base}/new-project` ? "page" : undefined}
           onClick={close}
         >
-          {t("newProject")}
+          <Plus size={18} className="nav-rail-icon" aria-hidden="true" />
+          <span className="nav-text">{t("newProject")}</span>
         </Link>
       )}
       {/* W25 · V2: ปุ่มเริ่มต้นใช้งานท้าย Sidebar เหนือ Admin Console (สมาชิกไม่มีส่วนท้าย จึงครอบตัวเอง) */}
@@ -208,13 +226,13 @@ function Navigation({
         // Canvas วาง Admin Console ไว้ล่างสุดของ Sidebar คั่นด้วยเส้น
         <div className="nav-footer">
           {!locked && <OnboardingNavButton ws={workspace.slug} role={workspace.role} onNavigate={close} />}
-          <Link className="nav-link" href={`${base}/admin`} onClick={close}>
+          <Link className="nav-link" href={`${base}/admin`} data-tip={t("admin")} onClick={close}>
             <Settings size={18} />
-            {t("admin")}
+            <span className="nav-text">{t("admin")}</span>
           </Link>
-          <Link className="nav-link" href={`${base}/billing`} onClick={close}>
+          <Link className="nav-link" href={`${base}/billing`} data-tip={t("billing")} onClick={close}>
             <CreditCard size={18} />
-            {t("billing")}
+            <span className="nav-text">{t("billing")}</span>
           </Link>
         </div>
       )}
@@ -304,6 +322,10 @@ export function WorkspaceShell({
   const [wsQuery, setWsQuery] = useState("");
   const [accountOpen, setAccountOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+  const sidebar = useSidebarRail(pathname);
+  const railTip = useRailTip(sidebar.rail);
+  // เปิด animation ย่อ/กางหลังวาดครั้งแรก: เข้าหน้า Timeline ตรง ๆ ต้องเห็น Sidebar ย่ออยู่แล้ว ไม่ใช่เห็นมันหดต่อหน้า
+  const [sidebarAnimate, setSidebarAnimate] = useState(false);
   const me = useQuery({
     queryKey: queryKeys.me,
     queryFn: () => api.get<Me>("/me"),
@@ -674,8 +696,14 @@ export function WorkspaceShell({
             {accountMenu}
           </header>
         )}
-        <div className={`workspace-body chrome-${chrome}`}>
-          <aside className="sidebar">
+        <div className={`workspace-body chrome-${chrome}${sidebar.rail ? " sidebar-rail" : ""}${sidebarAnimate ? " sidebar-animate" : ""}`}>
+          <aside
+            className="sidebar"
+            ref={(node) => {
+              if (node && !sidebarAnimate) requestAnimationFrame(() => setSidebarAnimate(true));
+            }}
+            {...railTip.handlers}
+          >
             <div className="sidebar-workspace">
               <div className="menu-label">Workspace</div>
               {switcher}
@@ -693,7 +721,22 @@ export function WorkspaceShell({
                 retry={() => void projects.refetch()}
               />
             )}
+            <div className="sidebar-foot">
+            <button
+              type="button"
+              className="nav-link sidebar-toggle"
+              aria-expanded={!sidebar.rail}
+              aria-keyshortcuts="["
+              data-tip={`${sidebar.rail ? t("nav.expandSidebar") : t("nav.collapseSidebar")}  [`}
+              onClick={sidebar.toggle}
+            >
+              {sidebar.rail ? <ChevronsRight size={18} aria-hidden="true" /> : <ChevronsLeft size={18} aria-hidden="true" />}
+              <span className="nav-text">{sidebar.rail ? t("nav.expandSidebar") : t("nav.collapseSidebar")}</span>
+              <kbd aria-hidden="true">[</kbd>
+            </button>
+            </div>
           </aside>
+          {railTip.tip}
           <main className="workspace-main" id="main-content">
             <SuspensionBanner ws={ws} suspension={suspension} role={workspace.role} />
             {blocked && suspension ? (

@@ -45,6 +45,8 @@
     "inbox": "Inbox",
     "projects": "Projects",
     "newProject": "+ New project",
+    "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar",
     "admin": "Admin Console",
     "members": "Members",
     "profile": "Profile",

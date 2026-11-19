@@ -102,6 +102,10 @@ function Panel({ workspace, projects, onClose }: { workspace: ContactWorkspace; 
                     <kbd>Ctrl 1–9</kbd>
                   </dt>
                   <dd>{t("keyList.switch")}</dd>
+                  <dt>
+                    <kbd>[</kbd>
+                  </dt>
+                  <dd>{t("keyList.sidebar")}</dd>
                 </dl>
               )}
               <div className={styles.panelStatic}>

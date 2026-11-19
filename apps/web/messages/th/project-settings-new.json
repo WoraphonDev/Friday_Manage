@@ -421,7 +421,7 @@
     "createNow": "สร้างเลย (ตั้งค่าที่เหลือทีหลัง)",
     "create": "สร้างโปรเจกต์",
     "creating": "กำลังสร้าง…",
-    "created": "สร้าง {key} แล้ว · {modules} Module, {statuses} สถานะ, {sprints} Sprint",
+    "created": "สร้าง {key} แล้ว · {modules} Module, {statuses} สถานะ",
     "errors": {
       "required": "ต้องกรอก",
       "key": "ขึ้นต้นด้วยตัวอักษร ใช้ A–Z และ 0–9 ยาว 2–10 ตัว",
@@ -512,7 +512,7 @@
     "removeHoliday": "ลบวันหยุด {name}",
     "sprintLength": "ความยาว Sprint",
     "weeks": "{n} สัปดาห์",
-    "sprintHint": "เริ่ม Sprint 1 วันที่ {date} (จันทร์แรก) · รวม {count} Sprint",
+    "sprintHint": "ใช้เป็นค่าตั้งต้นตอนสร้าง Sprint · สร้าง Sprint เองได้ในแท็บ Backlog หรือ Table",
     "milestones": "Milestones",
     "milestoneName": "ชื่อ Milestone ที่ {n}",
     "milestoneDate": "วันที่ Milestone ที่ {n}",
@@ -632,7 +632,6 @@
       "modules": "{count} Module ในหน้า Table",
       "statuses": "{count} สถานะ ({first} → {last})",
       "milestones": "{count} Milestone บน Timeline",
-      "sprints": "Sprint 1–{count} ({weeks} สัปดาห์)",
       "holidays": "วันหยุดบริษัท {count} วัน",
       "members": "เพิ่มสมาชิก {count} คน"
     },

@@ -444,7 +444,8 @@ describe('สร้างโปรเจกต์จาก Template และข
       ['Incident', true],
     ]);
     expect(d.issueTypes.find((x: { name: string }) => x.name === 'Incident').workflowId).toBe(d.issueTypes.find((x: { name: string }) => x.name === 'Bug').workflowId);
-    expect(d.sprints[0]).toMatchObject({ startDate: '2026-11-02', endDate: '2026-11-13' });
+    // ไม่สร้าง Sprint ให้อัตโนมัติ (2026-11-19) · ความยาว Sprint เป็นค่าตั้งต้นตอนสร้างเอง
+    expect(d.sprints).toEqual([]);
     const usage = await t.owner.query(`SELECT usage_count FROM project_templates WHERE id = $1`, [templateId]);
     expect(usage.rows[0].usage_count).toBe(1);
     const fields = await t.owner.query(`SELECT name, field_type FROM custom_fields WHERE project_id = $1`, [r.body.id]);

@@ -74,21 +74,5 @@ export function spanDays(start: string, end: string) {
   return { calendar, working };
 }
 
-/** จำนวน Sprint แบบเดียวกับ sprintPlan ของ API: เริ่มวันจันทร์แรก ทุก n สัปดาห์จนถึง Go-live */
-export function sprintCount(start: string, end: string, weeks: number | null) {
-  if (!weeks || !validDate(start) || !validDate(end)) return 0;
-  let d = start;
-  while (day(d).getUTCDay() !== 1) d = addDays(d, 1);
-  let n = 0;
-  for (; d <= end && n < 200; n++) d = addDays(d, weeks * 7);
-  return n;
-}
-export function firstMonday(start: string) {
-  if (!validDate(start)) return null;
-  let d = start;
-  while (day(d).getUTCDay() !== 1) d = addDays(d, 1);
-  return d;
-}
-
 /** ข้อความหลายบรรทัด → รายการ (ตัดบรรทัดว่าง) */
 export const lines = (text: string) => text.split("\n").map((l) => l.trim()).filter(Boolean);

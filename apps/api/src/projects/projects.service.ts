@@ -414,10 +414,7 @@ export class ProjectsService {
       (items ?? []).map((text, i) => ({ ...base, kind: SCOPE_KINDS[k as keyof typeof SCOPE_KINDS], text, sort: i })),
     );
     if (scope.length) await tx.insert(s.projectScopeItems).values(scope);
-    const sprints = sprintPlan(input.startDate, input.goliveDate, sprintLengthWeeks);
-    if (sprints.length) {
-      await tx.insert(s.sprints).values(sprints.map((sp) => ({ ...base, ...sp })));
-    }
+    // ไม่สร้าง Sprint ให้อัตโนมัติแล้ว (ผู้ใช้ตัดสิน 2026-11-19): ทีมสร้างเองโดยกำหนดวันเริ่ม / ความยาว · sprintLengthWeeks เป็นค่าตั้งต้นของหน้าต่างสร้าง Sprint
     if (template) {
       await tx.update(s.projectTemplates).set({ usageCount: sql`${s.projectTemplates.usageCount} + 1` }).where(eq(s.projectTemplates.id, template.id));
     }
@@ -428,7 +425,6 @@ export class ProjectsService {
         modules: modules.length,
         statuses: statuses.length,
         milestones: input.milestones.length,
-        sprints: sprints.length,
         members: members.length + 1,
         holidays: holidays.length,
         scopeItems: scope.length,
@@ -1025,15 +1021,3 @@ function choiceIds(options: unknown) {
   return { choices: choices.filter((c) => c && typeof c === 'object' && typeof (c as { label?: unknown }).label === 'string').map((c) => ({ ...(c as object), id: typeof (c as { id?: unknown }).id === 'string' ? (c as { id: string }).id : randomUUID() })) };
 }
 
-/** Sprint ระดับโปรเจกต์: เริ่มจันทร์แรกตั้งแต่วันเริ่มโปรเจกต์ จบวันศุกร์ของสัปดาห์สุดท้าย จนถึง Go-live */
-export function sprintPlan(start: string, golive: string, weeks: number | null) {
-  if (!weeks) return [];
-  let d = start;
-  while (new Date(`${d}T00:00:00Z`).getUTCDay() !== 1) d = addDays(d, 1);
-  const out: { number: number; name: string; startDate: string; endDate: string }[] = [];
-  for (let n = 1; d <= golive && n <= 200; n++) {
-    out.push({ number: n, name: `Sprint ${n}`, startDate: d, endDate: addDays(d, weeks * 7 - 3) });
-    d = addDays(d, weeks * 7);
-  }
-  return out;
-}

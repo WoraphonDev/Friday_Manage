@@ -99,13 +99,12 @@ export async function buildPlanXlsx(
   const shown = (h: Header) => {
     // QA Due มีเฉพาะโปรเจกต์แยก Dev / QA · โปรเจกต์อื่นได้ไฟล์แบบเดิม
     if (h === 'QA Due') return !!project.progressSplit;
-    // โปรเจกต์ที่ยังไม่มี Sprint ไม่ต้องมีคอลัมน์ว่าง
-    if (h === 'Sprint') return hasSprints;
     const f = HEADER_FIELD[h];
     const rule = f ? options.profile?.fields[f] : undefined;
     return !rule || rule.task !== 'hidden' || rule.subtask !== 'hidden';
   };
-  let hasSprints = false;
+  // Sprint อยู่ในไฟล์ของโปรเจกต์เสมอ (ว่าง = ยังไม่เข้า Sprint) ให้กรอกใน Excel แล้วนำเข้าได้ · Template เปล่าไม่มี (render)
+  const standard = EXPORT_HEADERS.filter(shown);
   // Custom field ที่ซ่อนทั้งสองระดับไม่ส่งออก · ชื่อชนกับคอลัมน์มาตรฐานต่อท้าย (Custom)
   const customs = (options.customFields ?? []).filter((f) => f.taskMode !== 'hidden' || f.subtaskMode !== 'hidden');
   const taken = new Set(EXPORT_HEADERS.map((h) => h.toLowerCase()));
@@ -138,8 +137,7 @@ export async function buildPlanXlsx(
   const moduleName = new Map(mods.map((x) => [x.id, x.name]));
   const groupName = new Map(phs.map((x) => [x.id, x.name]));
   const sprintName = new Map(sps.map((x) => [x.id, x.name]));
-  hasSprints = sps.length > 0;
-  const standard = EXPORT_HEADERS.filter(shown);
+
   const userName = new Map(users.map((x) => [x.id, x.name]));
   const statusName = new Map(sts.map((x) => [x.id, x.name]));
   const group = <T extends { issueId: string }>(list: T[], pick: (r: T) => string) => {

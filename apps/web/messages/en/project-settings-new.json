@@ -421,7 +421,7 @@
     "createNow": "Create now (set the rest later)",
     "create": "Create project",
     "creating": "Creating…",
-    "created": "Created {key} · {modules} Module, {statuses} statuses, {sprints} Sprint",
+    "created": "Created {key} · {modules} Module, {statuses} statuses",
     "errors": {
       "required": "Required",
       "key": "Start with a letter, use A–Z and 0–9, 2–10 characters long",
@@ -512,7 +512,7 @@
     "removeHoliday": "Remove holiday {name}",
     "sprintLength": "Sprint length",
     "weeks": "{n, plural, one {{n} week} other {{n} weeks}}",
-    "sprintHint": "Sprint 1 starts {date} (first Monday) · {count} Sprints in total",
+    "sprintHint": "Used as the default when you create sprints. Create sprints yourself in Backlog or Table.",
     "milestones": "Milestones",
     "milestoneName": "Milestone {n} name",
     "milestoneDate": "Milestone {n} date",
@@ -632,7 +632,6 @@
       "modules": "{count} Module on the Table page",
       "statuses": "{count} statuses ({first} → {last})",
       "milestones": "{count} Milestone on the Timeline",
-      "sprints": "Sprint 1–{count} ({weeks} weeks)",
       "holidays": "{count, plural, one {{count} company holiday} other {{count} company holidays}}",
       "members": "Add {count, plural, one {{count} member} other {{count} members}}"
     },

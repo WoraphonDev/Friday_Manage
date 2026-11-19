@@ -13,7 +13,7 @@ import { useSlidingIndicator } from "@/lib/motion";
 import { positionOptions, jobTitleCodes } from "@/lib/positions";
 import { queryKeys } from "@/lib/query";
 import {
-  BUILTIN_TEMPLATES, firstMonday, insertAt, KEY_PATTERN, workflowBody, lines, spanDays, sprintCount, suggestKey, TEMPLATE_PRESETS, validDate,
+  BUILTIN_TEMPLATES, insertAt, KEY_PATTERN, workflowBody, lines, spanDays, suggestKey, TEMPLATE_PRESETS, validDate,
   type BuiltinTemplate, type WorkflowStep,
 } from "./plan";
 import styles from "./wizard.module.css";
@@ -192,7 +192,6 @@ export function NewProjectWizard({ ws }: { ws: string }) {
   const span = spanDays(d.startDate, d.goliveDate);
   const preset = d.template.startsWith("ws:") ? null : TEMPLATE_PRESETS[d.template as BuiltinTemplate];
   const isScrum = !!preset?.sprint;
-  const sprints = isScrum ? sprintCount(d.startDate, d.goliveDate, d.sprintLengthWeeks) : 0;
   const templateName = preset ? t(`templates.${d.template}.name`) : (orgTemplates.find((x) => `ws:${x.id}` === d.template)?.name ?? t("templates.workspace"));
   // หมวดที่มี Template (ตอนนี้ในตัวมีเฉพาะ Software development) · เรียงตามรายการหมวดของ API
   const categories = (templates.data?.categories ?? ["software"]).filter((c) => c === "software" || orgTemplates.some((x) => x.category === c));
@@ -259,13 +258,13 @@ export function NewProjectWizard({ ws }: { ws: string }) {
     if (!validate(step === 5 ? 5 : 2)) return;
     setCreating(true);
     try {
-      const project = await api.post<{ key: string; created: { modules: number; statuses: number; milestones: number; sprints: number; members: number } }>(`${wsPath}/projects`, buildBody(d));
+      const project = await api.post<{ key: string; created: { modules: number; statuses: number; milestones: number; members: number } }>(`${wsPath}/projects`, buildBody(d));
       try {
         window.localStorage.removeItem(draftKey(ws));
       } catch {
         /* ไม่มี storage ก็ไม่เป็นไร */
       }
-      toast({ message: t("created", { key: project.key, modules: project.created.modules, statuses: project.created.statuses, sprints: project.created.sprints }) });
+      toast({ message: t("created", { key: project.key, modules: project.created.modules, statuses: project.created.statuses }) });
       await cache.invalidateQueries({ queryKey: queryKeys.projects(ws) });
       router.push(`/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(project.key)}`);
     } catch (e) {
@@ -407,7 +406,8 @@ export function NewProjectWizard({ ws }: { ws: string }) {
               {([1, 2, 3] as const).map((w) => (
                 <button key={w} type="button" className={styles.tg} aria-pressed={d.sprintLengthWeeks === w} onClick={() => set("sprintLengthWeeks", w)}>{t("weeks", { n: w })}</button>
               ))}
-              {firstMonday(d.startDate) && sprints > 0 && <span className={styles.hint}>{t("sprintHint", { date: formatDate(firstMonday(d.startDate), me.yearFormat), count: sprints })}</span>}
+              {/* ไม่สร้าง Sprint ให้อัตโนมัติ (2026-11-19) · ค่านี้เป็นค่าตั้งต้นตอนสร้าง Sprint */}
+              {isScrum && d.sprintLengthWeeks && <span className={styles.hint}>{t("sprintHint")}</span>}
             </div>
           </div>
         )}
@@ -605,7 +605,6 @@ export function NewProjectWizard({ ws }: { ws: string }) {
               {d.modules.length > 0 && <li>{t("auto.modules", { count: d.modules.length })}</li>}
               <li>{t("auto.statuses", { count: d.workflow.length, first: d.workflow[0]?.name ?? "", last: d.workflow.at(-1)?.name ?? "" })}</li>
               {d.milestones.length > 0 && <li>{t("auto.milestones", { count: d.milestones.length })}</li>}
-              {sprints > 0 && <li>{t("auto.sprints", { count: sprints, weeks: d.sprintLengthWeeks })}</li>}
               {d.holidays.length > 0 && <li>{t("auto.holidays", { count: d.holidays.length })}</li>}
               {d.members.length > 0 && <li>{t("auto.members", { count: d.members.length })}</li>}
             </ul>

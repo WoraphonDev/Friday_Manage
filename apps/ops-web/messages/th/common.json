@@ -129,7 +129,8 @@
     "jit": "คำขอสิทธิ์ชั่วคราวรออนุมัติ {count}",
     "playbook": "งาน Playbook ครบกำหนด {count}",
     "leads": "Lead ที่ต้องติดต่อ {count}",
-    "quotes": "ใบเสนอราคาที่ต้องตาม {count}"
+    "quotes": "ใบเสนอราคาที่ต้องตาม {count}",
+    "scripts": "สคริปต์รออนุมัติ / กำลังรัน {count}"
   },
   "account": {
     "name": "ชื่อ",
@@ -260,7 +261,11 @@
     "workspace_coupon": "ให้คูปอง",
     "privacy_purge_now": "ลบ Workspace ถาวรทันที",
     "privacy_release_hold": "ยกเลิก Legal hold",
-    "privacy_retention_shorten": "ลดระยะเก็บข้อมูล"
+    "privacy_retention_shorten": "ลดระยะเก็บข้อมูล",
+    "staff_elevate": "ขอสิทธิ์ชั่วคราว",
+    "quote_discount": "ส่วนลดในใบเสนอราคา",
+    "script_run": "รันสคริปต์ดูแลข้อมูล",
+    "script_undo": "ย้อนกลับสคริปต์ดูแลข้อมูล"
   },
   "export": {
     "title": "ส่งออกข้อมูล",

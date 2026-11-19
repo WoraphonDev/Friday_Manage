@@ -138,6 +138,7 @@ const NOTIFY: { task: TaskKey; key: string; tag: "tagApprove" | "tagMoney" | "ta
   { task: "abuseOpen", key: "abuse", tag: "tagAbuse", roles: ["owner", "engineer"], href: "/abuse" },
   { task: "rateLimitStreak", key: "rateLimit", tag: "tagIncident", roles: ["owner", "engineer"], href: "/ratelimit" },
   { task: "jitPending", key: "jit", tag: "tagApprove", roles: ["owner"], href: "/jit" },
+  { task: "playbookDue", key: "playbook", tag: "tagSla", roles: ["owner", "support"], href: "/success" },
 ];
 
 export function useNotifications(staff: Staff) {

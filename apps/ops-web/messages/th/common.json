@@ -126,7 +126,8 @@
     "abuse": "เคสใช้ผิดรอตรวจ {count}",
     "tagAbuse": "ใช้ผิด",
     "rateLimit": "ลูกค้าชนเพดาน API ต่อเนื่อง {count} ราย",
-    "jit": "คำขอสิทธิ์ชั่วคราวรออนุมัติ {count}"
+    "jit": "คำขอสิทธิ์ชั่วคราวรออนุมัติ {count}",
+    "playbook": "งาน Playbook ครบกำหนด {count}"
   },
   "account": {
     "name": "ชื่อ",

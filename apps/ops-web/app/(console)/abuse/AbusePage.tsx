@@ -123,7 +123,7 @@ export function AbusePage() {
             </div>
           )}
           {items.length > 1 && (
-            <label className="row small muted">
+            <label className={`row small muted ${styles.selectAll}`}>
               <input type="checkbox" className="check" checked={allPicked} onChange={() => setSelected(allPicked ? new Set() : new Set(items.map((c) => c.id)))} />
               {t("selectAll")}
             </label>

@@ -27,7 +27,9 @@ const opsTables = ['staff_users', 'support_sessions', 'feature_flags', 'feature_
   // สุขภาพและ Playbook (เฟส 3 · 0058)
   'health_daily', 'playbooks', 'playbook_runs', 'playbook_run_steps',
   // Lead และดีล (เฟส 3 · 0059)
-  'leads', 'lead_notes'];
+  'leads', 'lead_notes',
+  // ใบเสนอราคา (เฟส 3 · 0060)
+  'quotes'];
 
 beforeAll(() => owner.connect());
 afterAll(() => owner.end());

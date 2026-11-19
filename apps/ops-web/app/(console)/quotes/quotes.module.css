@@ -1,0 +1,51 @@
+/* ใบเสนอราคาและสัญญา (O55) · สีจาก token เท่านั้น */
+.editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.paper {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: sticky;
+  top: 0;
+}
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.steps li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.ok {
+  color: var(--success-text);
+}
+.bad {
+  color: var(--danger-text);
+}
+.wait {
+  color: var(--warning-text);
+}
+.link {
+  word-break: break-all;
+}
+@media (max-width: 760px) {
+  .editor {
+    grid-template-columns: 1fr;
+  }
+  .paper {
+    position: static;
+  }
+}

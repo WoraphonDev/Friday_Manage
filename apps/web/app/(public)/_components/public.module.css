@@ -250,5 +250,15 @@
 .consent { display:flex; gap:8px; align-items:flex-start; font-size:13px; }
 .honeypot { position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
 @media (max-width: 760px) {
-  .contactGrid, .contactPair, .contactNeeds { grid-template-columns:1fr; }
+  .contactGrid, .contactPair, .contactNeeds { grid-template-columns:minmax(0,1fr); }
+}
+/* ใบเสนอราคาสำหรับลูกค้า (O55) */
+.quoteTable { width:100%; border-collapse:collapse; font-size:14px; }
+.quoteTable td, .quoteTable th { white-space:normal; padding:10px 0; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; }
+/* th ของตารางทั่วไปเป็นหัวคอลัมน์ตัวเล็ก · แถวยอดรวมต้องเป็นตัวหนาขนาดปกติ */
+.quoteTable th { font-size:inherit; font-weight:700; color:var(--foreground); background:none; text-transform:none; letter-spacing:normal; }
+.num { text-align:right !important; white-space:nowrap !important; font-variant-numeric:tabular-nums; }
+@media print {
+  .noPrint { display:none !important; }
+  .contactGrid { grid-template-columns:1fr; }
 }

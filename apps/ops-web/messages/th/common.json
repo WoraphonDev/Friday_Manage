@@ -128,7 +128,8 @@
     "rateLimit": "ลูกค้าชนเพดาน API ต่อเนื่อง {count} ราย",
     "jit": "คำขอสิทธิ์ชั่วคราวรออนุมัติ {count}",
     "playbook": "งาน Playbook ครบกำหนด {count}",
-    "leads": "Lead ที่ต้องติดต่อ {count}"
+    "leads": "Lead ที่ต้องติดต่อ {count}",
+    "quotes": "ใบเสนอราคาที่ต้องตาม {count}"
   },
   "account": {
     "name": "ชื่อ",

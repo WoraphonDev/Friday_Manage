@@ -17,7 +17,7 @@ const LIMIT = 100;
 const SORTS = ["relevance", "updated", "due"] as const;
 type Sort = (typeof SORTS)[number];
 // ลำดับตัวกรองประเภทตาม Canvas
-const TYPE_ORDER: SearchType[] = ["task", "sub", "bug", "file", "comment", "project", "person"];
+const TYPE_ORDER: SearchType[] = ["task", "sub", "bug", "file", "comment", "diagram", "project", "person"];
 
 /** ตัวกรองของหน้า · เก็บใน URL (แชร์ลิงก์ได้) และใน filters ของการค้นหาที่บันทึก */
 interface Filters { q: string; types: SearchType[]; project: string; sort: Sort; archived: boolean; mine: boolean; open: boolean }
@@ -128,7 +128,8 @@ export function SearchPage({ ws }: { ws: string }) {
     patch({ q: draft.trim() });
   }
 
-  const typeRows = TYPE_ORDER.filter((type) => !(guest && type === "person"));
+  // แพ็กเกจที่ไม่มี Diagram ไม่แสดงตัวกรองนี้ (API บอกใน features)
+  const typeRows = TYPE_ORDER.filter((type) => !(guest && type === "person") && !(type === "diagram" && all.data?.features?.diagrams === false));
   const activeFilters = (filters.types.length < typeRows.length ? 1 : 0) + (filters.project ? 1 : 0) + (filters.mine ? 1 : 0) + (filters.open ? 1 : 0) + (filters.archived ? 1 : 0);
   return (
     <div className={styles.page}>
@@ -247,11 +248,11 @@ export function SearchPage({ ws }: { ws: string }) {
   );
 }
 
-const hitId = (h: SearchHit) => (h.type === "comment" ? h.commentId : h.type === "file" || h.type === "person" ? h.id : h.key);
+const hitId = (h: SearchHit) => (h.type === "comment" ? h.commentId : h.type === "file" || h.type === "person" || h.type === "diagram" ? h.id : h.key);
 
 function Result({ ws, h, q, year }: { ws: string; h: SearchHit; q: string; year: "BE" | "CE" }) {
   const t = useTranslations("search-palette");
-  const href = hitHref(ws, h);
+  const href = hitHref(ws, h, q);
   let title: string;
   const meta: string[] = [t(`types.${h.type}`)];
   let snippet: string | null = null;
@@ -274,6 +275,13 @@ function Result({ ws, h, q, year }: { ws: string; h: SearchHit; q: string; year:
       title = h.displayName;
       meta.push(...[h.jobTitle, h.email].filter((x): x is string => !!x));
       break;
+    case "diagram":
+      title = h.name;
+      meta.push(h.project.name);
+      if (h.issueCount) meta.push(t("meta.linked", { n: h.issueCount }));
+      if (h.updatedBy) meta.push(t("meta.editedBy", { name: h.updatedBy, date: formatDate(h.updatedAt, year) }));
+      snippet = h.matchedIn === "box" && h.boxText ? t("meta.inBoxSnippet", { text: h.boxText }) : null;
+      break;
     default:
       title = `${h.key} ${h.title}`;
       meta.push(h.project.name);
@@ -290,6 +298,7 @@ function Result({ ws, h, q, year }: { ws: string; h: SearchHit; q: string; year:
       </div>
       {isIssue(h) && <span className={styles.pill}><HitStatus status={h.status} /></span>}
       {h.type === "project" && h.archived && <span className={styles.pill}><Badge>{t("meta.archived")}</Badge></span>}
+      {h.type === "diagram" && <span className={styles.pill}><Badge>{t(`templates.${h.template}`)}</Badge></span>}
     </Link>
   );
 }

@@ -5,7 +5,7 @@ import { StatusPill } from "@/components/ui";
 import { statusTone } from "@/lib/status";
 
 // รูปแบบผลค้นหาของ GET w/:ws/search (A22)
-export const SEARCH_TYPES = ["task", "sub", "bug", "project", "comment", "file", "person"] as const;
+export const SEARCH_TYPES = ["task", "sub", "bug", "project", "comment", "file", "person", "diagram"] as const;
 export type SearchType = (typeof SEARCH_TYPES)[number];
 type ProjectRef = { key: string; name: string };
 export type IssueHit = { type: "task" | "sub" | "bug"; key: string; title: string; project: ProjectRef; status: { name: string; category: string }; priority: string; planEnd: string | null; matchedIn: "title" | "description"; snippet: string | null };
@@ -13,8 +13,11 @@ export type ProjectHit = { type: "project"; key: string; name: string; color: st
 export type CommentHit = { type: "comment"; issueKey: string; issueTitle: string; project: ProjectRef; commentId: string; snippet: string | null; createdAt: string };
 export type FileHit = { type: "file"; id: string; name: string; kind: string; mime: string | null; project: ProjectRef };
 export type PersonHit = { type: "person"; id: string; displayName: string; initials: string; avatarUrl: string | null; email: string; jobTitle: string | null };
-export type SearchHit = IssueHit | ProjectHit | CommentHit | FileHit | PersonHit;
-export interface SearchResult { q: string; total: number; counts: Record<SearchType, number>; items: SearchHit[] }
+/** แท็บ Diagram · matchedIn = box เมื่อคำค้นตรงข้อความในกล่อง / Lane / ป้ายบนเส้น (boxText = ข้อความนั้น) */
+export type DiagramHit = { type: "diagram"; id: string; name: string; template: string; issueCount: number; project: ProjectRef; updatedAt: string; updatedBy: string | null; matchedIn: "name" | "description" | "box"; boxText: string | null };
+export type SearchHit = IssueHit | ProjectHit | CommentHit | FileHit | PersonHit | DiagramHit;
+/** features.diagrams = false เมื่อแพ็กเกจไม่มี Diagram (ซ่อนตัวกรอง) · API รุ่นเก่าไม่ส่ง */
+export interface SearchResult { q: string; total: number; counts: Record<SearchType, number>; features?: { diagrams: boolean }; items: SearchHit[] }
 export interface SavedSearch { id: string; name: string; query: string; filters: Record<string, unknown>; createdAt: string; updatedAt: string }
 
 /** สีและตัวย่อของไอคอนต่อชนิด ตาม Canvas P1 */
@@ -26,12 +29,14 @@ export const TYPE_ICON: Record<SearchType | "command", { color: string; ab: stri
   file: { color: "#B45309", ab: "F" },
   comment: { color: "#7C3AED", ab: "C" },
   person: { color: "#BE185D", ab: "@" },
+  diagram: { color: "#0E7490", ab: "D" },
   command: { color: "#334155", ab: ">" },
 };
 
 /** กลุ่มผลลัพธ์ตาม Canvas: งาน · โปรเจกต์ · ไฟล์และคอมเมนต์ · คน */
 export const GROUPS = [
   { id: "issues", types: ["task", "sub", "bug"] },
+  { id: "diagrams", types: ["diagram"] },
   { id: "projects", types: ["project"] },
   { id: "content", types: ["file", "comment"] },
   { id: "people", types: ["person"] },
@@ -44,8 +49,14 @@ export const isIssue = (h: SearchHit): h is IssueHit => h.type === "task" || h.t
 const base = (ws: string) => `/work/${encodeURIComponent(ws)}`;
 // project layout เปิด Drawer งานจาก ?issue=KEY
 export const issueHref = (ws: string, projectKey: string, key: string) => `${base(ws)}/p/${encodeURIComponent(projectKey)}?issue=${encodeURIComponent(key)}`;
-export function hitHref(ws: string, h: SearchHit) {
+/** q = คำค้น: ผลที่เจอในกล่องของ Diagram เปิดแล้วพาไปที่กล่องนั้น (?find=) */
+export function hitHref(ws: string, h: SearchHit, q?: string) {
   switch (h.type) {
+    case "diagram": {
+      const href = `${base(ws)}/p/${encodeURIComponent(h.project.key)}/diagrams/${encodeURIComponent(h.id)}`;
+      const find = h.matchedIn === "box" && q ? bareQuery(q) : "";
+      return find ? `${href}?${new URLSearchParams({ find })}` : href;
+    }
     case "project": return `${base(ws)}/p/${encodeURIComponent(h.key)}`;
     case "comment": return issueHref(ws, h.project.key, h.issueKey);
     case "file": return `${base(ws)}/p/${encodeURIComponent(h.project.key)}/files`;

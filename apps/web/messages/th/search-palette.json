@@ -7,10 +7,12 @@
     "comment": "คอมเมนต์",
     "file": "ไฟล์",
     "person": "คน",
-    "command": "คำสั่ง"
+    "command": "คำสั่ง",
+    "diagram": "Diagram"
   },
   "groups": {
     "issues": "งาน",
+    "diagrams": "Diagram",
     "projects": "โปรเจกต์",
     "content": "ไฟล์ และคอมเมนต์",
     "people": "คน",
@@ -27,7 +29,11 @@
     "archived": "Archive แล้ว",
     "commentIn": "คอมเมนต์ใน {key} {title}",
     "files": "{project} · Files",
-    "command": "คำสั่ง"
+    "command": "คำสั่ง",
+    "inBox": "พบในกล่อง \"{text}\" · {project}",
+    "inBoxSnippet": "พบในกล่อง: {text}",
+    "linked": "ผูก {n} งาน",
+    "editedBy": "{name} แก้ไข {date}"
   },
   "palette": {
     "label": "ค้นหาและคำสั่ง",
@@ -66,7 +72,9 @@
     "newProject": "สร้างโปรเจกต์ใหม่",
     "import": "Import Excel",
     "profile": "ตั้งค่าโปรไฟล์และการแจ้งเตือน",
-    "search": "ไปที่หน้าค้นหา"
+    "search": "ไปที่หน้าค้นหา",
+    "diagrams": "ไปที่ Diagram ของโปรเจกต์นี้",
+    "newDiagram": "Diagram ใหม่"
   },
   "page": {
     "title": "ผลการค้นหา \"{q}\"",
@@ -74,7 +82,7 @@
     "inputLabel": "คำค้น",
     "placeholder": "ค้นหางาน โปรเจกต์ ไฟล์ คน · #DP-39 · @ชื่อ",
     "submit": "ค้นหา",
-    "summary": "{count} รายการ · ค้นทั้งชื่อ รายละเอียด คอมเมนต์ และชื่อไฟล์",
+    "summary": "{count} รายการ · ค้นทั้งชื่อ รายละเอียด คอมเมนต์ ชื่อไฟล์ และ Diagram",
     "capped": "แสดง {count} รายการแรก ลองเพิ่มตัวกรองเพื่อให้แคบลง",
     "sortLabel": "เรียงลำดับ",
     "sort": {
@@ -91,7 +99,8 @@
       "file": "ไฟล์",
       "comment": "คอมเมนต์",
       "project": "โปรเจกต์",
-      "person": "คน"
+      "person": "คน",
+      "diagram": "Diagram"
     },
     "projectHeading": "โปรเจกต์",
     "allProjects": "ทุกโปรเจกต์",
@@ -118,5 +127,12 @@
     "noResultsHint": "ลองเอาตัวกรองออก หรือค้นในโปรเจกต์ที่ Archive",
     "startTitle": "พิมพ์คำค้นเพื่อเริ่มค้นหา",
     "startHint": "ค้นได้ทั้งงาน โปรเจกต์ คอมเมนต์ ไฟล์ และคน · พิมพ์ #DP-39 เพื่อไปที่งาน หรือ @ชื่อ เพื่อค้นคน"
+  },
+  "templates": {
+    "blank": "ว่าง",
+    "flowchart": "Flowchart",
+    "er": "ER",
+    "architecture": "สถาปัตยกรรม",
+    "whiteboard": "ไวท์บอร์ด"
   }
 }

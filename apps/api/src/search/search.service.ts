@@ -1,15 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { schema as s } from '@friday/db';
-import { and, asc, desc, eq, exists, ilike, inArray, isNull, ne, or } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, ilike, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { initials } from '../common/people.js';
 import { AppError } from '../common/errors.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
+import { PlanLimits } from '../core/plan-limits.js';
 import { projectAccess } from '../projects/permissions.js';
 import { openStatus } from '../common/status-category.js';
 
-export const SEARCH_TYPES = ['task', 'sub', 'bug', 'project', 'comment', 'file', 'person'] as const;
+export const SEARCH_TYPES = ['task', 'sub', 'bug', 'project', 'comment', 'file', 'person', 'diagram'] as const;
 export type SearchType = (typeof SEARCH_TYPES)[number];
 
 export const SearchQuery = z.object({
@@ -53,9 +54,23 @@ interface Hit {
 /** P1 · ค้นหา และ Command palette (Ctrl K) */
 @Injectable()
 export class SearchService {
-  constructor(private readonly db: TenantDb) {}
+  constructor(
+    private readonly db: TenantDb,
+    private readonly limits: PlanLimits,
+  ) {}
+
+  /** แพ็กเกจ Free ไม่มี Diagram: ไม่ค้น และไม่ส่งตัวกรองให้หน้าเว็บ (ไม่ตอบ 402 ในช่องค้นหา) */
+  private async diagramsEnabled(workspaceId: string) {
+    try {
+      await this.limits.assertFeature(workspaceId, 'diagrams');
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
   async search(auth: AuthInfo, tenant: TenantInfo, q: z.infer<typeof SearchQuery>) {
+    const diagrams = await this.diagramsEnabled(tenant.workspaceId);
     return this.db.run(auth, tenant, async (tx) => {
       const projects = await tx
         .select()
@@ -162,6 +177,38 @@ export class SearchService {
         }
       }
 
+      // Diagram: ชื่อ, คำอธิบาย และข้อความในกล่อง / ชื่อ Lane / ป้ายบนเส้น (ผู้ใช้อนุมัติ 2026-11-19) · Guest ที่เป็น Viewer ไม่เห็นแท็บ Diagram
+      if (diagrams && open.length && want('diagram')) {
+        const inBoxes = sql`(exists (select 1 from jsonb_array_elements(${s.diagrams.content} -> 'nodes') n
+          where n -> 'data' ->> 'label' ilike ${pat}
+             or exists (select 1 from jsonb_array_elements_text(coalesce(n -> 'data' -> 'lanes', '[]'::jsonb)) l where l ilike ${pat}))
+          or exists (select 1 from jsonb_array_elements(${s.diagrams.content} -> 'edges') e where e ->> 'label' ilike ${pat}))`;
+        const rows = await tx
+          .select({ d: s.diagrams, who: s.users.displayName })
+          .from(s.diagrams)
+          .leftJoin(s.users, eq(s.users.id, sql`coalesce(${s.diagrams.updatedBy}, ${s.diagrams.createdBy})`))
+          .where(and(inArray(s.diagrams.projectId, open), isNull(s.diagrams.deletedAt), or(ilike(s.diagrams.name, pat), ilike(s.diagrams.description, pat), inBoxes)))
+          .orderBy(desc(s.diagrams.updatedAt))
+          .limit(200);
+        for (const { d, who } of rows) {
+          const name = d.name.toLowerCase();
+          const inName = name.includes(lower);
+          const inDescription = !inName && !!d.description?.toLowerCase().includes(lower);
+          // ข้อความแรกในภาพที่ตรงคำค้น (แสดงว่า "พบในกล่อง …" และเปิดแล้วพาไปที่กล่องนั้น)
+          const content = d.content as { nodes?: { data?: { label?: string; lanes?: string[] } }[]; edges?: { label?: string }[] };
+          const texts = [...(content.nodes ?? []).flatMap((n) => [n.data?.label ?? '', ...(n.data?.lanes ?? [])]), ...(content.edges ?? []).map((e) => e.label ?? '')];
+          const box = inName || inDescription ? null : (texts.find((x) => x.toLowerCase().includes(lower)) ?? null);
+          counts.diagram++;
+          hits.push({
+            type: 'diagram',
+            score: name === lower ? 85 : name.startsWith(lower) ? 58 : inName ? 38 : inDescription ? 18 : 16,
+            updatedAt: d.updatedAt,
+            due: null,
+            data: { id: d.id, name: d.name, template: d.template, issueCount: d.issueIds.length, project: projectLabel(d.projectId), updatedAt: d.updatedAt, updatedBy: who, matchedIn: inName ? 'name' : inDescription ? 'description' : 'box', boxText: box },
+          });
+        }
+      }
+
       // คน (`@ชื่อ`) · Guest ไม่เห็นรายชื่อคนในองค์กร ------------------------------------------------
       if (want('person') && tenant.role !== 'guest') {
         const name = q.q.startsWith('@') ? q.q.slice(1) : q.q;
@@ -192,6 +239,8 @@ export class SearchService {
         q: q.q,
         total,
         counts,
+        /** ชนิดที่ Workspace นี้ค้นได้ (Free ไม่มี diagram) · หน้าเว็บซ่อนตัวกรองที่ไม่มี */
+        features: { diagrams },
         items: hits.slice(0, q.limit).map((h) => ({ type: h.type, ...h.data })),
       };
     });

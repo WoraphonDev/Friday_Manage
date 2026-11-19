@@ -296,3 +296,44 @@ describe("หน้าผลการค้นหา", () => {
     expect(await screen.findByRole("link", { name: /DE-39/ })).toBeInTheDocument();
   });
 });
+
+describe("ค้น Diagram (2026-11-19)", () => {
+  const diagramHits: SearchHit[] = [
+    { type: "diagram", id: "d-1", name: "Flow อนุมัติสัญญาตัวอย่าง", template: "flowchart", issueCount: 3, project, updatedAt: "2026-11-19T03:00:00Z", updatedBy: "สมชาย ตัวอย่าง", matchedIn: "name", boxText: null },
+    { type: "diagram", id: "d-2", name: "สถาปัตยกรรมระบบ", template: "architecture", issueCount: 0, project, updatedAt: "2026-11-19T03:00:00Z", updatedBy: null, matchedIn: "box", boxText: "ตรวจสัญญาตัวอย่าง" },
+  ];
+  const withDiagrams = (features?: { diagrams: boolean }) => {
+    searchResponse = (url) => {
+      const items = features?.diagrams === false ? [] : diagramHits;
+      const counts = Object.fromEntries((["task", "sub", "bug", "project", "comment", "file", "person", "diagram"] as SearchType[]).map((t) => [t, items.filter((h) => h.type === t).length])) as Record<SearchType, number>;
+      return { q: url.searchParams.get("q") ?? "", total: items.length, counts, features, items };
+    };
+  };
+
+  it("Ctrl K: หมวด Diagram · เจอในกล่องบอกว่าเจอที่ไหน และเปิดพร้อม ?find= ไปที่กล่องนั้น", async () => {
+    withDiagrams({ diagrams: true });
+    const { user, dialog, input } = await openPalette();
+    await user.type(input, "สัญญาตัวอย่าง");
+    const group = await dialog.findByRole("group", { name: "Diagram · 2" });
+    const rows = within(group).getAllByRole("option");
+    expect(rows[0]).toHaveTextContent("แผนพัฒนาผลิตภัณฑ์ · Flowchart · ผูก 3 งาน");
+    expect(rows[1]).toHaveTextContent('พบในกล่อง "ตรวจสัญญาตัวอย่าง" · แผนพัฒนาผลิตภัณฑ์');
+    await user.click(rows[1]);
+    expect(router.push).toHaveBeenCalledWith(`/work/sample/p/DE/diagrams/d-2?find=${encodeURIComponent("สัญญาตัวอย่าง")}`);
+  });
+
+  it("หน้าผลการค้นหา: ตัวกรอง Diagram + การ์ดบอกกล่องที่เจอ · แพ็กเกจที่ไม่มี Diagram ไม่มีตัวกรองนี้", async () => {
+    withDiagrams({ diagrams: true });
+    const { unmount } = mountPage(`q=${encodeURIComponent("สัญญาตัวอย่าง")}`);
+    const results = await screen.findByRole("region", { name: "ผลการค้นหา" });
+    const group = await within(results).findByRole("group", { name: "Diagram" });
+    expect(within(group).getByRole("link", { name: /Flow อนุมัติสัญญาตัวอย่าง/ })).toHaveAttribute("href", "/work/sample/p/DE/diagrams/d-1");
+    expect(within(group).getByText(/พบในกล่อง: ตรวจ/)).toBeInTheDocument();
+    expect(within(screen.getByRole("complementary", { name: "ตัวกรอง" })).getByRole("checkbox", { name: /Diagram/ })).toBeInTheDocument();
+    unmount();
+    withDiagrams({ diagrams: false });
+    mountPage(`q=${encodeURIComponent("สัญญาตัวอย่าง")}`);
+    await screen.findByText("ไม่พบผลลัพธ์", { exact: false }).catch(() => undefined);
+    await waitFor(() => expect(within(screen.getByRole("complementary", { name: "ตัวกรอง" })).queryByRole("checkbox", { name: /Diagram/ })).not.toBeInTheDocument());
+  });
+});

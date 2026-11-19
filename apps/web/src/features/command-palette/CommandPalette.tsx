@@ -107,6 +107,9 @@ function PaletteBody({ ws, close }: { ws: string; close: () => void }) {
       { id: "cmd:import", icon: "command", text: t("commands.import"), href: `${base}/p/${projectKey}/table?io=import`, show: workspace.role !== "guest" && !!projectKey },
       { id: "cmd:profile", icon: "command", text: t("commands.profile"), href: `${base}/profile`, show: true },
       { id: "cmd:search", icon: "command", text: t("commands.search"), href: `${base}/search`, show: true },
+      // แท็บ Diagram (2026-11-19) · สร้างใหม่ต้องมีสิทธิ์ diagram.edit (แพ็กเกจ Free เห็นข้อความอัปเกรดที่หน้า Diagram)
+      { id: "cmd:diagrams", icon: "command", text: t("commands.diagrams"), href: `${base}/p/${projectKey}/diagrams`, show: !!projectKey && !perms.data?.guestViewer },
+      { id: "cmd:newDiagram", icon: "command", iconLabel: "+", text: t("commands.newDiagram"), href: `${base}/p/${projectKey}/diagrams?new=1`, show: !!projectKey && !!perms.data?.permissions.includes("diagram.edit") },
     ];
     return list.filter((c) => c.show).map(({ show: _show, ...c }) => ({ ...c, meta: t("meta.command") }));
   }, [t, base, projectKey, perms.data, workspace.role]);
@@ -131,7 +134,7 @@ function PaletteBody({ ws, close }: { ws: string; close: () => void }) {
     for (const g of GROUPS) {
       const hits = items.filter((h) => (g.types as readonly string[]).includes(h.type));
       if (wantedKey && g.id === "issues") hits.sort((a, b) => Number(isIssue(b) && b.key === wantedKey) - Number(isIssue(a) && a.key === wantedKey));
-      const rows = hits.map((h) => toRow(ws, h, t));
+      const rows = hits.map((h) => toRow(ws, h, t, trimmed));
       // `#DP-39` ไปที่งานได้ทันทีแม้ผลค้นหายังไม่กลับมา
       if (wantedKey && g.id === "issues" && !hits.some((h) => isIssue(h) && h.key === wantedKey))
         rows.unshift({ id: `jump:${wantedKey}`, icon: "task", text: t("palette.jump", { key: wantedKey }), meta: t("palette.jumpMeta"), href: issueHref(ws, wantedKey.split("-")[0]!, wantedKey) });
@@ -255,13 +258,14 @@ function NoHit({ q, onAdvanced, children }: { q: string; onAdvanced: () => void;
 }
 
 type T = ReturnType<typeof useTranslations>;
-function toRow(ws: string, h: SearchHit, t: T): Row {
-  const href = hitHref(ws, h);
+function toRow(ws: string, h: SearchHit, t: T, q: string): Row {
+  const href = hitHref(ws, h, q);
   switch (h.type) {
     case "project": return { id: `project:${h.key}`, icon: "project", text: h.name, meta: h.archived ? `${h.key} · ${t("meta.archived")}` : h.key, href };
     case "comment": return { id: `comment:${h.commentId}`, icon: "comment", text: h.snippet ?? h.issueTitle, meta: `${h.issueKey} · ${h.project.name}`, href };
     case "file": return { id: `file:${h.id}`, icon: "file", text: h.name, meta: t("meta.files", { project: h.project.name }), href };
     case "person": return { id: `person:${h.id}`, icon: "person", text: h.displayName, meta: h.jobTitle ?? h.email, href };
+    case "diagram": return { id: `diagram:${h.id}`, icon: "diagram", text: h.name, meta: h.matchedIn === "box" && h.boxText ? t("meta.inBox", { text: h.boxText, project: h.project.name }) : [h.project.name, t(`templates.${h.template}`), h.issueCount ? t("meta.linked", { n: h.issueCount }) : ""].filter(Boolean).join(" · "), href };
     default: return { id: `issue:${h.key}`, icon: h.type, text: `${h.key} ${h.title}`, meta: `${h.project.name} · ${h.status.name}`, href };
   }
 }

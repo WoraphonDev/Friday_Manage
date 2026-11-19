@@ -12,7 +12,7 @@ export type NavKey =
   | "system" | "ops" | "deliveries" | "flags" | "ratelimit" | "scripts"
   | "privacy" | "abuse" | "legal" | "restore" | "jit" | "staff" | "audit" | "roadmap";
 export type GroupKey = "" | "customers" | "sales" | "money" | "marketing" | "analytics" | "support" | "system" | "security" | "team";
-export type TaskKey = "paymentExceptions" | "slipsToReview" | "approvals" | "ticketsBreached" | "ticketsUnassigned" | "incidentsOpen" | "invoicesOverdue" | "trialEndingSoon" | "privacyDueSoon" | "breachesOpen" | "abuseOpen" | "rateLimitStreak" | "jitPending" | "playbookDue";
+export type TaskKey = "paymentExceptions" | "slipsToReview" | "approvals" | "ticketsBreached" | "ticketsUnassigned" | "incidentsOpen" | "invoicesOverdue" | "trialEndingSoon" | "privacyDueSoon" | "breachesOpen" | "abuseOpen" | "rateLimitStreak" | "jitPending" | "playbookDue" | "leadsDue";
 
 export interface NavItem {
   key: NavKey;
@@ -40,7 +40,7 @@ export const NAV: { group: GroupKey; items: NavItem[] }[] = [
       { key: "renewals", href: "/renewals", built: true, roles: ["owner", "finance", "support", "auditor"] },
     ],
   },
-  { group: "sales", items: [{ key: "leads", roles: ["owner"] }, { key: "quotes", roles: ["owner", "finance"] }] },
+  { group: "sales", items: [{ key: "leads", href: "/leads", built: true, roles: ["owner"], badge: ["leadsDue"] }, { key: "quotes", roles: ["owner", "finance"] }] },
   {
     group: "money",
     items: [

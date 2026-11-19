@@ -11,7 +11,7 @@ import type { BillingOverview } from "./types";
 import styles from "./billing.module.css";
 
 // ช่องทางติดต่อฝ่ายขายเดียวกับหน้า /pricing
-const SALES_URL = process.env.NEXT_PUBLIC_SALES_URL ?? "/signup?plan=enterprise";
+const SALES_URL = process.env.NEXT_PUBLIC_SALES_URL ?? "/contact-sales";
 
 /**
  * ตารางเปรียบเทียบแพ็กเกจของ Workspace นี้ · ปุ่มของแต่ละแพ็กเกจไปหน้าชำระเงินของ Workspace (ไม่ใช่สมัครใหม่แบบหน้า /pricing)

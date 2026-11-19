@@ -20,8 +20,9 @@ describe("เมนูซ้ายตามบทบาท", () => {
     expect(side().getByRole("link", { name: "ภาพรวม" })).toHaveAttribute("aria-current", "page");
     for (const name of ["Workspaces", "พนักงานและสิทธิ์", "Feature flags"]) expect(side().getByRole("link", { name })).toBeInTheDocument();
     expect(await side().findByLabelText("7 รายการรอ")).toBeInTheDocument();
-    expect(side().getByRole("link", { name: /Lead และดีล/ })).toHaveAttribute("href", "/soon?f=leads");
-    expect(within(side().getByRole("link", { name: /Lead และดีล/ })).getByText("เร็ว ๆ นี้")).toBeInTheDocument();
+    expect(side().getByRole("link", { name: /สคริปต์ดูแลข้อมูล/ })).toHaveAttribute("href", "/soon?f=scripts");
+    expect(within(side().getByRole("link", { name: /สคริปต์ดูแลข้อมูล/ })).getByText("เร็ว ๆ นี้")).toBeInTheDocument();
+    expect(side().getByRole("link", { name: /Lead และดีล/ })).toHaveAttribute("href", "/leads");
     expect(side().getByText("Owner · การเงิน · Support · วิศวกร")).toBeInTheDocument();
   });
 

@@ -241,3 +241,14 @@
   .btn { border-radius: 12px; }
   .menuButton { width: 44px; height: 44px; border-radius: 12px; }
 }
+/* ฟอร์มติดต่อฝ่ายขาย (O54) */
+.contactGrid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.2fr); gap:40px; align-items:start; }
+.contactCard { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:24px; display:flex; flex-direction:column; gap:14px; }
+.contactPair { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.contactNeeds { border:0; margin:0; padding:0; display:grid; grid-template-columns:1fr 1fr; gap:6px 12px; font-size:14px; }
+.contactNeeds legend { font-weight:600; margin-bottom:6px; font-size:14px; }
+.consent { display:flex; gap:8px; align-items:flex-start; font-size:13px; }
+.honeypot { position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
+@media (max-width: 760px) {
+  .contactGrid, .contactPair, .contactNeeds { grid-template-columns:1fr; }
+}

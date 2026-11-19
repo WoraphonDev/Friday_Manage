@@ -15,7 +15,7 @@ export type Cyc = "monthly" | "yearly";
 /** ปุ่มของแต่ละแพ็กเกจ · ไม่มี href = แสดงเป็นป้ายเฉย ๆ (เช่น แพ็กเกจปัจจุบัน) */
 export type PlanCta = { label: string; href?: string };
 // ช่องทางติดต่อฝ่ายขายตั้งตอน deploy · ไม่ตั้ง = ไปหน้าสมัครพร้อมแพ็กเกจ Enterprise ให้ทีมติดต่อกลับ
-const SALES_URL = process.env.NEXT_PUBLIC_SALES_URL ?? "/signup?plan=enterprise";
+const SALES_URL = process.env.NEXT_PUBLIC_SALES_URL ?? "/contact-sales";
 
 /**
  * R1 · ราคาเหมาตามขนาดทีม (ใช้ทั้งใน Landing, /pricing และ /work/:ws/billing/plans) · ราคาและขีดจำกัดจาก `GET public/plans`

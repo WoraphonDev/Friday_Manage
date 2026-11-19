@@ -1,0 +1,171 @@
+{
+  "templates": {
+    "blank": "Blank",
+    "flowchart": "Flowchart",
+    "er": "ER",
+    "architecture": "Architecture",
+    "whiteboard": "Whiteboard"
+  },
+  "shapes": {
+    "terminator": "Start/End",
+    "process": "Process",
+    "decision": "Decision",
+    "data": "Data",
+    "document": "Document",
+    "connector": "Connector",
+    "table": "Table",
+    "service": "Service",
+    "database": "Database",
+    "queue": "Queue",
+    "actor": "User",
+    "external": "External system",
+    "group": "Group",
+    "note": "Note",
+    "text": "Text",
+    "frame": "Frame"
+  },
+  "colors": {
+    "default": "Default",
+    "purple": "Purple",
+    "green": "Green",
+    "yellow": "Yellow",
+    "pink": "Pink",
+    "gray": "Gray"
+  },
+  "defaults": {
+    "text": "Text"
+  },
+  "list": {
+    "search": "Search diagrams",
+    "type": "Type",
+    "allTypes": "Type: All",
+    "sort": "Sort",
+    "sortUpdated": "Sort: Last edited",
+    "sortName": "Sort: Name",
+    "sortCreated": "Sort: Newest",
+    "create": "New diagram",
+    "emptyTitle": "No diagrams in this project yet",
+    "emptyEdit": "Draw flowcharts, ER diagrams, system architecture or whiteboards, and link boxes to tasks to see their status in one picture",
+    "emptyView": "Diagrams your team creates will appear here",
+    "noMatch": "No diagrams match your search",
+    "linked": "{n} linked tasks",
+    "editing": "{name} is editing",
+    "editingYou": "You are editing",
+    "updatedBy": "Edited by {name} · {date}"
+  },
+  "trash": {
+    "toggle": "Trash",
+    "empty": "Trash is empty",
+    "deletedBy": "Deleted by {name} · {date}",
+    "restore": "Restore",
+    "restored": "Restored \"{name}\""
+  },
+  "plan": {
+    "title": "Diagrams are available on Team plans and above",
+    "description": "Draw flowcharts, ER diagrams, system architecture and whiteboards in your projects, with boxes linked to live task status. Upgrade to start.",
+    "upgrade": "Upgrade plan"
+  },
+  "create": {
+    "title": "New diagram",
+    "name": "Name",
+    "nameRequired": "Give the diagram a name",
+    "description": "Description",
+    "optional": "Optional",
+    "descriptionPlaceholder": "e.g. supports BRD SCR-107",
+    "template": "Start from",
+    "templateHint": "Templates add sample boxes. You can mix shapes from every group while drawing.",
+    "cancel": "Cancel",
+    "submit": "Create"
+  },
+  "rename": {
+    "title": "Rename diagram",
+    "save": "Save"
+  },
+  "editor": {
+    "back": "Back to diagrams",
+    "rename": "Edit name and description",
+    "lastEdited": "Last edited by {name} · {date}",
+    "undo": "Undo (Ctrl Z)",
+    "redo": "Redo (Ctrl Shift Z)",
+    "export": "Export",
+    "exportPng": "PNG image",
+    "exportSvg": "SVG file",
+    "full": "Full screen",
+    "exitFull": "Exit full screen",
+    "delete": "Delete diagram",
+    "edit": "Edit",
+    "done": "Done",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fit": "Fit to screen",
+    "label": "Box text",
+    "doubleClick": "Double-click to type",
+    "emptyEdit": "Drag a shape from the left, or click a shape to place it in the middle",
+    "emptyView": "This diagram is empty"
+  },
+  "save": {
+    "saved": "You are editing · Saved",
+    "pending": "You are editing · Waiting to save",
+    "saving": "You are editing · Saving…",
+    "error": "Couldn't save · will retry on your next change"
+  },
+  "lock": {
+    "banner": "{name} is editing · you can view only · this page updates when {name} saves",
+    "takeover": "Take over editing",
+    "takeoverTitle": "Take over from {name}?",
+    "takeoverDescription": "{name} switches to view-only. Everything {name} already saved stays. Use this when {name} forgot to press Done.",
+    "tookOver": "You are now editing"
+  },
+  "palette": {
+    "search": "Search shapes",
+    "hint": "Drag onto the canvas, or click to place in the middle",
+    "add": "Add {shape}"
+  },
+  "panel": {
+    "title": "Selected box",
+    "text": "Text",
+    "tableName": "Table name",
+    "shape": "Shape",
+    "color": "Color",
+    "colorLinked": "Boxes linked to a task use the task's status color for the border",
+    "columns": "Columns",
+    "columnName": "Name",
+    "columnType": "Type",
+    "columnKey": "Key",
+    "addColumn": "Add column",
+    "removeColumn": "Remove column",
+    "issue": "Link to task",
+    "optional": "(optional)",
+    "issueSearch": "Search by task number or title",
+    "issueHint": "One task per box · unlink any time",
+    "searching": "Searching…",
+    "noIssue": "No tasks found in this project",
+    "unlink": "Unlink",
+    "hiddenIssue": "Task you can't view",
+    "deletedIssue": "Task deleted",
+    "deleteNode": "Delete box",
+    "edgeTitle": "Selected line",
+    "edgeLabel": "Line label",
+    "edgeLabelPlaceholder": "e.g. Yes / No",
+    "dashed": "Dashed line",
+    "cardinality": "Relationship",
+    "cardinalityNone": "Not set",
+    "deleteEdge": "Delete line"
+  },
+  "chip": {
+    "hidden": "Task you can't view",
+    "deleted": "Task deleted",
+    "open": "Open {key} {title}"
+  },
+  "deleteDialog": {
+    "title": "Delete \"{name}\"?",
+    "description": "The diagram moves to trash. Project admins can restore it from the Trash button on the list.",
+    "confirm": "Delete",
+    "done": "Deleted \"{name}\""
+  },
+  "errors": {
+    "unknown": "Something went wrong. Try again.",
+    "save": "Couldn't save",
+    "export": "Export failed. Try again."
+  }
+}

@@ -7,7 +7,7 @@ import { useSlidingIndicator } from "@/lib/motion";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import * as Popover from "@radix-ui/react-popover";
-import { CalendarDays, ChartGantt, Check, ChevronDown, ChevronLeft, Columns3, EyeOff, FileBarChart, Folder, GanttChartSquare, LayoutDashboard, LayoutGrid, History, ListTodo, MoreHorizontal, PauseCircle, Plus, Search, Settings, Table2, Users, X } from "lucide-react";
+import { CalendarDays, ChartGantt, Check, ChevronDown, ChevronLeft, Columns3, EyeOff, FileBarChart, Folder, GanttChartSquare, LayoutDashboard, LayoutGrid, History, ListTodo, MoreHorizontal, PauseCircle, Plus, Search, Settings, Table2, Users, Workflow, X } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, formatDateRange } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
@@ -65,6 +65,8 @@ export const projectTabs = [
   { path: "/calendar", label: "calendar", hiddenForGuestViewer: true, mobile: true },
   { path: "/members", label: "members", permission: "project.workload.view" },
   { path: "/files", label: "files", hiddenForGuestViewer: true, mobile: true },
+  // แท็บ Diagram (ผู้ใช้อนุมัติ storyboard 2026-11-19) · มือถือดูได้อย่างเดียว
+  { path: "/diagrams", label: "diagrams", hiddenForGuestViewer: true, mobile: true },
   {
     path: "/settings",
     label: "settings",
@@ -77,7 +79,7 @@ const VIEW_ICONS: Record<string, typeof Plus> = { reports: FileBarChart, backlog
 /** มือถือ (W32): ไอคอนของทุกมุมมองในเมนู "มุมมอง ▾" ตามต้นแบบ proj.view-switch */
 const MOBILE_VIEW_ICONS: Record<string, typeof Plus> = {
   overview: LayoutDashboard, reports: FileBarChart, backlog: ListTodo, table: Table2, board: Columns3, timeline: GanttChartSquare,
-  gantt: ChartGantt, calendar: CalendarDays, members: Users, files: Folder, settings: Settings,
+  gantt: ChartGantt, calendar: CalendarDays, members: Users, files: Folder, diagrams: Workflow, settings: Settings,
 };
 
 export function allowedProjectTab(

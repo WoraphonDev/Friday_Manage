@@ -6,6 +6,7 @@ import { ApprovalsService, type ApprovalContext } from '../approvals/approvals.s
 import { staffAudit } from '../audit.js';
 import { has, type Staff, type StaffRole } from '../auth/auth.guard.js';
 import { OPS_DB } from '../db.js';
+import { sqlRows } from '../sql-rows.js';
 import { AppError } from '../errors.js';
 import { PageQuery } from '../paging.js';
 import { PushService } from '../push/push.service.js';
@@ -57,9 +58,8 @@ export class JitService implements OnModuleInit, OnModuleDestroy {
     if (this.timer) clearInterval(this.timer);
   }
 
-  private async rows<T>(q: SQL) {
-    const r = await this.db.execute(q);
-    return ((r as unknown as { rows?: unknown[] }).rows ?? (r as unknown as unknown[])) as T[];
+  private rows<T>(q: SQL) {
+    return sqlRows<T>(this.db, q);
   }
 
   private async assertCanHave(staffId: string, role: StaffRole) {

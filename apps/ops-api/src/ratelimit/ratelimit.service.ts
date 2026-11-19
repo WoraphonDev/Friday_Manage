@@ -7,6 +7,7 @@ import type { Staff } from '../auth/auth.guard.js';
 import { billingContacts, mailAll } from '../billing/ledger.js';
 import { config } from '../config.js';
 import { OPS_DB } from '../db.js';
+import { sqlRows } from '../sql-rows.js';
 import { EntitlementsService, type Gated } from '../entitlements/entitlements.service.js';
 import { AppError } from '../errors.js';
 import { Mailer } from '../mail.js';
@@ -115,9 +116,8 @@ export class RateLimitService {
     private readonly mail: Mailer,
   ) {}
 
-  private async rows<T>(q: SQL, db: Db | Tx = this.db) {
-    const r = await db.execute(q);
-    return ((r as unknown as { rows?: unknown[] }).rows ?? (r as unknown as unknown[])) as T[];
+  private rows<T>(q: SQL, db: Db | Tx = this.db) {
+    return sqlRows<T>(db, q);
   }
 
   /** เพดานที่ใช้อยู่: ค่าล่าสุดที่ API บันทึก → override → ค่าของแพ็กเกจ (ยังไม่มีสถิติ) */

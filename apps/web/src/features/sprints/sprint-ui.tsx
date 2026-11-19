@@ -3,7 +3,7 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { Command } from "cmdk";
-import { Check, Plus } from "lucide-react";
+import { Check, ChevronDown, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button, Dialog, Input, Select } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
@@ -80,8 +80,10 @@ export function SprintPicker({ label, sprints, value, year, onChange, onCreate, 
  * ตัวกรองหลายตัวเลือก (Module / Sprint ในแท็บ Table) · ค่าเป็น id คั่นด้วย , ส่งต่อให้ API ตรง ๆ
  * options.group = หัวข้อย่อยในรายการ (เช่น "Sprint ทั้งหมด")
  */
-export function MultiFilter({ label, allLabel, options, value, onChange, className }: {
+export function MultiFilter({ label, allLabel, options, value, onChange, className, field }: {
   label: string; allLabel: string; value: string[]; onChange: (next: string[]) => void; className?: string;
+  /** field = วางในแผงตัวกรองที่มีป้ายชื่ออยู่ด้านบนแล้ว ปุ่มจึงแสดงเฉพาะค่าที่เลือกแบบช่องเลือก */
+  field?: boolean;
   options: { id: string; name: string; meta?: string; badge?: ReactNode; swatch?: string | null; group?: string }[];
 }) {
   const t = useTranslations("sprints");
@@ -92,7 +94,9 @@ export function MultiFilter({ label, allLabel, options, value, onChange, classNa
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
-        <button type="button" className={className} aria-label={`${label}: ${text}`}>{label}: <b className={styles.filterValue}>{text}</b></button>
+        <button type="button" className={className} aria-label={`${label}: ${text}`}>
+          {field ? <><span className={styles.fieldValue}>{text}</span><ChevronDown size={16} aria-hidden="true" /></> : <>{label}: <b className={styles.filterValue}>{text}</b></>}
+        </button>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content className={`popover combobox-popover ${styles.pop}`} align="start" sideOffset={6}>

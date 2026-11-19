@@ -132,9 +132,9 @@ describe("Table (2)", () => {
     const [head, body] = screen.getAllByRole("table");
     expect(Number.parseInt(body.style.minWidth)).toBeGreaterThan(1100);
     expect(head.style.minWidth).toBe(body.style.minWidth);
-    // FR / Screen ซ่อนไว้ก่อน เปิดได้จากเมนู Columns
+    // FR / Screen ซ่อนไว้ก่อน เปิดได้จากส่วน Columns ในแผงแสดงผล
     expect(screen.queryByRole("columnheader", { name: "FR / Screen" })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Columns" }));
+    await user.click(screen.getByRole("button", { name: "แสดงผล" }));
     await user.click(screen.getByRole("checkbox", { name: "FR / Screen" }));
     expect(screen.getByRole("columnheader", { name: "FR / Screen" })).toBeInTheDocument();
     expect(within(screen.getByTestId("row-DE-1")).getByText("FR-01.2 · SCR-101")).toBeInTheDocument();
@@ -143,19 +143,31 @@ describe("Table (2)", () => {
     await user.click(screen.getByRole("button", { name: "ย่อ Module A" }));
     expect(screen.queryByTestId("row-DE-1")).not.toBeInTheDocument();
     expect(screen.getByTestId("row-DE-3")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "แสดงผล" }));
     await user.click(screen.getByRole("button", { name: "Expand all" }));
-    // Status / Priority / ระดับ อยู่ในแผง Filter ตาม Canvas
-    await user.click(screen.getByRole("button", { name: "Filter" }));
+    await user.keyboard("{Escape}");
+    // ตัวกรองทุกอย่างอยู่ในแผง Filter (แบบ A ผู้ใช้เลือก 2026-11-19) · ปุ่มนับจำนวนตัวกรองที่ใช้อยู่ (Overdue จาก URL = 1)
+    expect(screen.getByRole("button", { name: /^Filter/ })).toHaveTextContent("Filter1");
+    await user.click(screen.getByRole("button", { name: /^Filter/ }));
     await user.selectOptions(screen.getByLabelText("Status"), "done");
     await waitFor(() => expect(urls.at(-1)?.searchParams.get("status")).toBe("done"));
-    expect(screen.getByRole("button", { name: /Filter/ })).toHaveTextContent("Filter1");
-    await user.keyboard("{Escape}");
+    expect(screen.getByRole("button", { name: /^Filter/ })).toHaveTextContent("Filter2");
     await user.selectOptions(screen.getByLabelText("Dev"), "me");
     await waitFor(() => expect(urls.at(-1)?.searchParams.get("assignee")).toBe("me"));
     await user.selectOptions(screen.getByLabelText("BA"), "u2");
     await waitFor(() => expect(urls.at(-1)?.searchParams.get("ba")).toBe("u2"));
+    await user.keyboard("{Escape}");
+    // ปิดแผงแล้วเห็นชิปของตัวกรองที่ใช้อยู่ · กด × เอาออกทีละตัว
+    const chips = screen.getByRole("group", { name: "ตัวกรองที่ใช้อยู่" });
+    expect(within(chips).getByText("Dev: ฉัน")).toBeInTheDocument();
+    expect(within(chips).getByText("Overdue")).toBeInTheDocument();
+    await user.click(within(chips).getByRole("button", { name: "เอาตัวกรอง Dev: ฉัน ออก" }));
+    await waitFor(() => expect(urls.at(-1)?.searchParams.get("assignee")).toBeNull());
+    expect(urls.at(-1)?.searchParams.get("ba")).toBe("u2");
+    await user.click(screen.getByRole("button", { name: "แสดงผล" }));
     await user.click(screen.getByRole("checkbox", { name: "Show completed" }));
-    await user.click(screen.getByRole("button", { name: /Filter/ }));
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: /^Filter/ }));
     await user.selectOptions(screen.getByLabelText("Status"), "");
     await waitFor(() => expect(urls.at(-1)?.searchParams.get("status")).toBe("open"));
   });
@@ -179,8 +191,10 @@ describe("Table (2)", () => {
     await waitFor(() => expect(screen.getByRole("columnheader", { name: "ลูกค้า" })).toBeInTheDocument());
     expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Name", "Dev", "Status", "ลูกค้า", "Size · MD", "Plan End"]);
     // BA ซ่อนทั้งสองระดับ: ไม่มีตัวกรอง BA · Size ยังใช้ใน Task จึงกรองได้
+    await user.click(screen.getByRole("button", { name: "Filter" }));
     expect(screen.queryByLabelText("BA")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Size")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
     expect(within(screen.getByTestId("row-DE-1")).getByText("ร้าน ก")).toBeInTheDocument();
     // Size ซ่อนในระดับ Sub-task: แถว Sub-task ไม่แสดงค่าและแก้ไม่ได้
     expect(within(screen.getByTestId("row-DE-2")).queryByRole("button", { name: /แก้ Size/ })).not.toBeInTheDocument();
@@ -189,8 +203,8 @@ describe("Table (2)", () => {
     await user.click(within(screen.getByTestId("row-DE-1")).getByRole("button", { name: "แก้ ลูกค้า ของ DE-1" }));
     await user.click(await screen.findByRole("button", { name: "ร้าน ข" }));
     await waitFor(() => expect(patches.at(-1)).toMatchObject({ key: "DE-1", body: { customFields: { cf1: "k2" } }, etag: '"2"' }));
-    // เมนู Columns: BA ซ่อนทั้งสองระดับจึงไม่มีให้เลือก · เปิด SA เพิ่มแล้วจำไว้ในเครื่อง
-    await user.click(screen.getByRole("button", { name: "Columns" }));
+    // ส่วน Columns ในแผงแสดงผล: BA ซ่อนทั้งสองระดับจึงไม่มีให้เลือก · เปิด SA เพิ่มแล้วจำไว้ในเครื่อง
+    await user.click(screen.getByRole("button", { name: "แสดงผล" }));
     expect(screen.queryByRole("checkbox", { name: "BA" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("checkbox", { name: "SA" }));
     expect(screen.getByRole("columnheader", { name: "SA" })).toBeInTheDocument();
@@ -199,7 +213,7 @@ describe("Table (2)", () => {
     mount(<TableView ws="sample" projectKey="DE" />);
     await screen.findByTestId("row-DE-1");
     await waitFor(() => expect(screen.getByRole("columnheader", { name: "SA" })).toBeInTheDocument());
-    await user.click(screen.getByRole("button", { name: "Columns" }));
+    await user.click(screen.getByRole("button", { name: "แสดงผล" }));
     await user.click(screen.getByRole("button", { name: "คืนค่าตามโปรเจกต์" }));
     expect(screen.queryByRole("columnheader", { name: "SA" })).not.toBeInTheDocument();
     window.localStorage.clear();
@@ -217,11 +231,13 @@ describe("Table (2)", () => {
       ],
     })));
     tableData = table([row("DE-1")]);
+    const user = userEvent.setup();
     mount(<TableView ws="sample" projectKey="DE" />);
     await screen.findByTestId("row-DE-1");
+    await user.click(screen.getByRole("button", { name: "Filter" }));
     const names = (label: string) => within(screen.getAllByLabelText(label)[0] as HTMLSelectElement).getAllByRole("option").map((o) => o.textContent);
     await waitFor(() => expect(names("BA")).toContain("นักวิเคราะห์หนึ่ง"));
-    expect(names("BA")).toEqual(["BA: ทุกคน", "นักวิเคราะห์หนึ่ง", "ดูแลระบบสี่"]);
+    expect(names("BA")).toEqual(["ทุกคน", "นักวิเคราะห์หนึ่ง", "ดูแลระบบสี่"]);
     expect(names("Dev").slice(3)).toEqual(["หน้าบ้านสอง", "ดูแลระบบสี่"]);
   });
 
@@ -244,7 +260,7 @@ describe("Table (2)", () => {
     await screen.findByTestId("row-DE-1");
     await waitFor(() => expect(screen.getByRole("columnheader", { name: "QA Due" })).toBeInTheDocument());
     expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Name", "Dev", "Status", "Plan End", "QA Due", "หมายเหตุ"]);
-    await user.click(screen.getByRole("button", { name: "Columns" }));
+    await user.click(screen.getByRole("button", { name: "แสดงผล" }));
     const picks = screen.getAllByRole("checkbox").map((c) => c.getAttribute("aria-label") ?? c.closest("label")?.textContent?.trim());
     expect(picks.indexOf("QA Due")).toBe(picks.indexOf("Plan End") + 1);
   });
@@ -418,6 +434,7 @@ describe("Table (2)", () => {
     await user.selectOptions(within(bar).getByLabelText("Status"), "st-done");
     await user.click(within(bar).getByRole("button", { name: "ใช้" }));
     await waitFor(() => expect(patches.map((p) => [p.key, p.body.statusId, p.etag]).sort()).toEqual([["DE-1", "st-done", '"2"'], ["DE-3", "st-done", '"2"']]));
+    await user.click(screen.getByRole("button", { name: "แสดงผล" }));
     await user.selectOptions(screen.getByLabelText("Group by"), "status");
     expect(screen.getByRole("button", { name: "ย่อ To do" })).toBeInTheDocument();
   });
@@ -578,6 +595,7 @@ describe("Sprint ในแท็บ Table (ผู้ใช้ขอ 2026-11-19)"
     const user = userEvent.setup();
     mount(<TableView ws="sample" projectKey="DE" />);
     await screen.findByTestId("row-DE-1");
+    await user.click(screen.getByRole("button", { name: "Filter" }));
     await user.click(screen.getByRole("button", { name: "Module: ทั้งหมด" }));
     await user.click(await screen.findByRole("option", { name: /Module A/ }));
     await user.click(screen.getByRole("option", { name: /ไม่ระบุ Module/ }));
@@ -595,6 +613,7 @@ describe("Sprint ในแท็บ Table (ผู้ใช้ขอ 2026-11-19)"
     tableData = table([row("DE-3", { sprintId: null }), row("DE-1", { sprintId: "sp-3" }), row("DE-4", { sprintId: "sp-2" })]);
     mount(<TableView ws="sample" projectKey="DE" />);
     await screen.findByTestId("row-DE-1");
+    await user.click(screen.getByRole("button", { name: "แสดงผล" }));
     await user.selectOptions(screen.getByLabelText("Group by"), "sprint");
     await waitFor(() => expect(screen.getByRole("button", { name: "ย่อ Sprint 2" })).toBeInTheDocument());
     const order = ["Sprint 2", "Sprint 3", "ยังไม่เข้า Sprint"].map((name) => screen.getAllByRole("row").findIndex((r) => r.querySelector(`[aria-label="ย่อ ${name}"]`)));

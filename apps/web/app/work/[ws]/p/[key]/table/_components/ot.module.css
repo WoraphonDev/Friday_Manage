@@ -109,6 +109,27 @@
 .tsel { border:0; font:inherit; font-size:var(--text-label); font-weight:600; background:transparent; color:var(--primary-text); cursor:pointer; }
 .pop { display:flex; flex-direction:column; gap:10px; min-width:220px; padding:12px; }
 .colCheck { display:flex; align-items:center; gap:8px; font-size:12px; }
+/* แถบเครื่องมือแบบ A (2026-11-19): แถวเดียว + แผง Filter / แสดงผล + แถวชิปตัวกรองที่ใช้อยู่ */
+.toolbarWrap { display:flex; flex-direction:column; gap:10px; }
+.toolbarWrap .search { min-width:280px; }
+.tbtnOn, .tbtnOn:hover { border-color:var(--primary-border); background:var(--primary-soft); color:var(--primary-text); }
+.count { display:inline-grid; place-items:center; min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:var(--primary); color:var(--on-primary); font-size:11px; font-weight:700; line-height:1; }
+.filterPop { width:440px; max-width:calc(100vw - 32px); gap:8px; padding:14px; }
+.displayPop { width:380px; max-width:calc(100vw - 32px); gap:10px; padding:14px; max-height:min(560px, calc(100vh - 140px)); overflow:auto; }
+.popHead { margin:4px 0 0; font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--faint); }
+.popHead:first-child { margin-top:0; }
+.popGrid { display:grid; grid-template-columns:1fr 1fr; gap:10px 12px; }
+.popRow { display:flex; gap:8px; flex-wrap:wrap; }
+.colGrid { display:grid; grid-template-columns:1fr 1fr; gap:8px 12px; }
+.fieldLabel { font-size:var(--text-label); font-weight:600; }
+.fieldBtn { display:flex; align-items:center; gap:6px; width:100%; min-width:0; min-height:32px; padding:0 10px; border:1px solid var(--input); border-radius:var(--radius-control); background:var(--card); color:var(--foreground); font:inherit; font-size:var(--text-label); cursor:pointer; }
+.fieldBtn:hover { border-color:var(--faint); }
+.fieldBtn svg { flex:none; color:var(--muted); }
+.chips { gap:6px; }
+.fchip { display:inline-flex; align-items:center; gap:2px; min-height:28px; max-width:320px; padding:0 2px 0 10px; border-radius:6px; border:1px solid var(--primary-border); background:var(--primary-soft); color:var(--foreground); font-size:12px; }
+.fchipText { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fchip button { display:inline-grid; place-items:center; width:22px; height:22px; flex:none; border:0; border-radius:4px; background:transparent; color:var(--muted); cursor:pointer; }
+.fchip button:hover { background:var(--card); color:var(--foreground); }
 .cb { width:16px; height:16px; margin:0; flex:none; }
 .addb { border:0; background:transparent; color:var(--primary-text); font:inherit; font-size:12px; font-weight:500; cursor:pointer; min-height:32px; padding:0 8px; border-radius:6px; display:inline-flex; align-items:center; text-decoration:none; }
 .addb:hover { background:var(--primary-soft); }

@@ -21,10 +21,10 @@
 
 ## เสร็จเมื่อ
 
-- [ ] หน้าตรงกับ storyboard ที่ 1440 px · ใช้งานได้ที่ 390 px
-- [ ] e2e ของ API ที่แก้ + component test ของหน้า
-- [ ] `pnpm typecheck` และ test ของแพ็กเกจที่แก้ผ่าน
-- [ ] deploy Docker ในเครื่องตาม CLAUDE.md และตรวจผ่าน :4000 / :3000
+- [x] หน้าตรงกับ storyboard ที่ 1440 px · ใช้งานได้ที่ 390 px
+- [x] e2e ของ API ที่แก้ + component test ของหน้า
+- [x] `pnpm typecheck` และ test ของแพ็กเกจที่แก้ผ่าน
+- [x] deploy Docker ในเครื่องตาม CLAUDE.md และตรวจผ่าน :4000 / :3000
 
 ## บันทึกผล
 
@@ -42,3 +42,7 @@
 - ยังนับในหน่วยความจำของ API ตัวเดียว (หลายเครื่องรอ I01 · ระบุในหน้าแล้ว)
 
 **คำขอนอก lane**: `docs/spec/01-entities.md` (api_usage_minute, api_usage_hour) · `packages/db/test` (ตารางใหม่) · `apps/ops-api/src/entitlements` (พารามิเตอร์ headroom + export service)
+
+**Test** (ฐานแยก friday_o50): api 864 ผ่าน / 7 ข้าม · ops-api 331 ผ่าน / 1 ข้าม · ops-web 309 · db 167 · `pnpm typecheck` ผ่าน
+
+**Deploy ในเครื่อง** (worktree `wt-ops-ratelimit` · override uploads ชี้ checkout หลัก): migration 0056 ลง friday_canvas_qa และ friday · API :3001 · ops-web :4000 · ops-api :4001 (web :3000 ไม่เปลี่ยน) · เรียก API ด้วย token ทดสอบ 3 ครั้งได้แถว `GET /w/:ws/projects` calls 3 limit 60 ใน api_usage_minutes จริง (ลบ token และสถิติทดสอบแล้ว) · หน้า `/ratelimit` กราฟและแผงขวาที่ 1440 / 390 px ไม่มีเลื่อนแนวนอน

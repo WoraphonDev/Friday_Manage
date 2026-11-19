@@ -43,7 +43,7 @@ export function QuoteDrawer({ id, onClose, onOpen }: { id: string; onClose: () =
   const extend = useMutation({ mutationFn: () => api.post(`/quotes/${id}/extend`, { days: 14 }), onSuccess: () => (toast(t("extended")), refresh()) });
   const retry = useMutation({ mutationFn: () => api.post(`/quotes/${id}/setup`), onSuccess: refresh });
   const d = q.data;
-  const approval = d && d.discountPct > 0 ? td("approval", { pct: d.discountPct, state: d.approvedBy ? td("approved", { name: d.approvedBy }) : d.approvalStatus === "pending" ? td("approvalPending") : td("notApproved") }) : null;
+  const approval = d && d.discountPct > 0 ? td("approval", { pct: d.discountPct, state: d.approvedBy ? td("approved", { name: d.approvedBy }) : d.approvalStatus === "pending" ? td("approvalPending") : d.status === "draft" ? td("notApproved") : td("withinLimit") }) : null;
   return (
     <Drawer open onOpenChange={(o) => !o && onClose()} title={d ? `${d.number} · ${d.company}` : t("title")} description={d ? td("meta", { company: d.company, seats: fmt.num(d.seats), months: d.months, total: fmt.money(d.totalSatang) }) : undefined} wide>
       {q.isPending ? (

@@ -38,12 +38,13 @@ describe('BA หลายคน', () => {
     expect((card.bas as { id: string }[]).map((p) => p.id)).toEqual([devId, leadId]);
     expect(card.attachments).toBeNull();
 
-    // BA คนที่สองเห็นบทบาท BA ใน My Tasks
+    // lead เป็น Dev และ BA: เห็นงานใน My Tasks พร้อมบทบาท BA
     const mine = (await lead.get(`${team.ws}/my-issues?tab=assigned`)).body;
     const item = mine.groups.flatMap((g: { items: { key: string; myRoles: string[] }[] }) => g.items).find((x: { key: string }) => x.key === key);
     expect(item.myRoles).toEqual(expect.arrayContaining(['dev', 'ba']));
+    // dev เป็นแค่ BA: "มอบหมายให้ฉัน" นับเฉพาะ Dev จึงไม่เห็นงานนี้ (ผู้ใช้สั่ง 19 พ.ย. 2026)
     const devMine = (await dev.get(`${team.ws}/my-issues?tab=assigned`)).body;
-    expect(devMine.groups.flatMap((g: { items: { key: string }[] }) => g.items).map((x: { key: string }) => x.key)).toContain(key);
+    expect(devMine.groups.flatMap((g: { items: { key: string }[] }) => g.items).map((x: { key: string }) => x.key)).not.toContain(key);
   });
 
   it('แก้ด้วย baIds แทนทั้งชุด · baId แบบเดิมยังใช้ได้ · ประวัติบันทึก baIds', async () => {

@@ -1,4 +1,5 @@
 import { type CanActivate, type ExecutionContext, Inject, Injectable } from '@nestjs/common';
+import { routeLabel } from '../core/api-usage.js';
 import { Reflector } from '@nestjs/core';
 import type { Db } from '@friday/db';
 import { AppError } from '../common/errors.js';
@@ -41,7 +42,7 @@ export class AuthGuard implements CanActivate {
         // ฟีเจอร์ API token และ "API ต่อนาที" ตามแพ็กเกจ (O21) · ตอบ 402 / 429 พร้อม header ให้ระบบภายนอกถอยเอง
         const res = ctx.switchToHttp().getResponse<{ setHeader(name: string, value: string): void }>();
         try {
-          const rl = await this.limits.rateLimit(id.workspaceId);
+          const rl = await this.limits.rateLimit(id.workspaceId, Date.now(), { tokenId: id.tokenId, route: routeLabel(req.method, (req as { route?: { path?: string } }).route?.path, req.path) });
           if (rl.limit !== null) {
             res.setHeader('X-RateLimit-Limit', String(rl.limit));
             res.setHeader('X-RateLimit-Remaining', String(rl.remaining));

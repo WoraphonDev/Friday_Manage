@@ -2,6 +2,7 @@
 import { DEFAULT_MATRIX } from '@friday/db';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { ApiUsage, routeLabel } from '../src/core/api-usage.js';
 import { PlanLimits } from '../src/core/plan-limits.js';
 import { addMember, client, seedTeam, signup, startApp, type TestApp } from './helpers.js';
 
@@ -161,6 +162,24 @@ describe('API ต่อนาที และ Automation ต่อเดือ�
     expect(third.status).toBe(429);
     expect(third.body.error.code).toBe('rate_limited');
     expect(Number(third.headers['retry-after'])).toBeGreaterThan(0);
+    // O51: สถิติรายนาทีต่อ token + route (เขียนเป็นชุด) · ยุบเป็นรายชั่วโมงได้ซ้ำโดยไม่นับเกิน
+    const usage = t.app.get(ApiUsage);
+    expect(await usage.flush()).toBe(1);
+    const rows = await t.owner.query(`SELECT token_id, route, calls, rejected, limit_rpm FROM api_usage_minutes WHERE workspace_id = $1`, [wsId]);
+    expect(rows.rows).toEqual([{ token_id: minted.body.id, route: 'GET /w/:ws/projects', calls: 3, rejected: 1, limit_rpm: 2 }]);
+    await call();
+    await usage.flush();
+    expect((await t.owner.query(`SELECT calls, rejected FROM api_usage_minutes WHERE workspace_id = $1`, [wsId])).rows).toEqual([{ calls: 4, rejected: 2 }]);
+    await usage.rollup();
+    await usage.rollup();
+    expect((await t.owner.query(`SELECT calls, rejected, peak_rpm, limit_rpm FROM api_usage_hours WHERE workspace_id = $1`, [wsId])).rows).toEqual([{ calls: 4, rejected: 2, peak_rpm: 4, limit_rpm: 2 }]);
+    await t.owner.query(`UPDATE api_usage_minutes SET minute = minute - interval '8 days' WHERE workspace_id = $1`, [wsId]);
+    expect((await usage.rollup()).minutesPurged).toBe(1);
+  });
+
+  it('ชื่อ route ในสถิติไม่แตกตาม id', () => {
+    expect(routeLabel('get', '/api/v1/:ws/issues/:key', '/api/v1/acme/issues/A-1')).toBe('GET /:ws/issues/:key');
+    expect(routeLabel('GET', undefined, '/api/v1/acme/x/0190a1b2-0000-7000-8000-000000000001/7')).toBe('GET /acme/x/:id/:n');
   });
 
   it('Automation ครบโควตาเดือนนี้แล้วถูกข้าม', async () => {

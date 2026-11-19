@@ -22,6 +22,8 @@ export const IP_BURST = 5;
 export const INVITE_BURST = 50;
 export const HEAVY_ISSUES = 100;
 export const HEAVY_INVITES = 20;
+/** ชนเพดาน API ต่อเนื่องกี่นาที (ช่วงที่จบภายใน 1 ชม.) */
+export const RATE_STREAK = 15;
 /** ตัดสินเรื่องเดิมแล้ว ไม่เปิดเคสซ้ำภายใน 30 วัน (ไม่ใช่การใช้ผิด = ไม่รบกวนลูกค้าจริงซ้ำ · ระงับ / บล็อก = จัดการไปแล้ว) */
 export const QUIET_DAYS = 30;
 /** ระงับอัตโนมัติแล้วต้องมีคนยืนยันภายใน 24 ชม. · เกินแล้วแจ้ง Owner ซ้ำทุก 24 ชม. (ไม่ปลดเอง) */
@@ -29,9 +31,9 @@ export const CONFIRM_HOURS = 24;
 
 /**
  * กฎตรวจจับ · `waiting` = ยังเปิดไม่ได้เพราะไม่มีข้อมูล (หน้าจอแสดงเหตุผล)
- * card_declines รอ Gateway จริง (A35b) · geo_mismatch รอฐานข้อมูล GeoIP · api_ratelimit รอสถิติรายนาทีของ O51
+ * card_declines รอ Gateway จริง (A35b) · geo_mismatch รอฐานข้อมูล GeoIP · api_ratelimit ใช้สถิติรายนาทีของ O51 (api_usage_minutes)
  */
-export const RULES: Record<RuleKey, { kind: AbuseKind; points: number; waiting?: 'A35b' | 'geoip' | 'O51' }> = {
+export const RULES: Record<RuleKey, { kind: AbuseKind; points: number; waiting?: 'A35b' | 'geoip' }> = {
   temp_email: { kind: 'fake_signup', points: 30 },
   ip_burst: { kind: 'fake_signup', points: 35 },
   invite_burst: { kind: 'invite_spam', points: 40 },
@@ -39,7 +41,7 @@ export const RULES: Record<RuleKey, { kind: AbuseKind; points: number; waiting?:
   unverified_heavy: { kind: 'fake_signup', points: 20 },
   card_declines: { kind: 'payment', points: 45, waiting: 'A35b' },
   geo_mismatch: { kind: 'payment', points: 15, waiting: 'geoip' },
-  api_ratelimit: { kind: 'api_abuse', points: 30, waiting: 'O51' },
+  api_ratelimit: { kind: 'api_abuse', points: 30 },
 };
 
 const RuleSetting = z.object({ points: z.number().int().min(0, 'คะแนนต้องไม่ติดลบ').max(100, 'คะแนนต่อกฎไม่เกิน 100'), on: z.boolean() }).strict();

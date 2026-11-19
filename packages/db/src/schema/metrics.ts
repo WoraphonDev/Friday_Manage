@@ -86,3 +86,19 @@ export const infraCosts = pgTable('infra_costs', {
 export const marketingCosts = pgTable('marketing_costs', {
   month: date().notNull(), source: text().notNull(), amountSatang: bigint({ mode: 'number' }).notNull(), note: text(), createdAt: createdAt(),
 }, (t) => [primaryKey({ columns: [t.month, t.source] }), check('marketing_costs_first_day', sql`extract(day from ${t.month}) = 1`)]);
+
+/**
+ * สถิติการเรียก API ด้วย token ต่อนาที (O51 · Rate limit ต่อลูกค้า) · API ลูกค้ารวมในหน่วยความจำแล้วเขียนเป็นชุดทุก 10 วินาที (ไม่เขียนทุกคำขอ)
+ * route = "GET /issues" (path ของ route ไม่ใช่ URL จริง) · limit_rpm = เพดานตอนนั้น (null = ไม่จำกัด) ใช้วาดเส้นเพดานในกราฟ
+ * เก็บ 7 วัน · ยุบเป็นรายชั่วโมงใน api_usage_hours เก็บ 90 วัน · token_id ไม่ใส่ FK ให้เขียนเร็วและเก็บสถิติได้แม้ลบ token
+ */
+export const apiUsageMinutes = pgTable('api_usage_minutes', {
+  workspaceId: workspaceId(), minute: tstz().notNull(), tokenId: uuid().notNull(), route: text().notNull(),
+  calls: integer().notNull().default(0), rejected: integer().notNull().default(0), limitRpm: integer(),
+}, (t) => [primaryKey({ columns: [t.workspaceId, t.minute, t.tokenId, t.route] }), index('api_usage_minutes_minute_idx').on(t.minute)]);
+
+/** สถิติ API รายชั่วโมง (ยุบจาก api_usage_minutes) · peak_rpm = นาทีที่เรียกมากสุดในชั่วโมงนั้น */
+export const apiUsageHours = pgTable('api_usage_hours', {
+  workspaceId: workspaceId(), hour: tstz().notNull(), tokenId: uuid().notNull(), route: text().notNull(),
+  calls: integer().notNull().default(0), rejected: integer().notNull().default(0), peakRpm: integer().notNull().default(0), limitRpm: integer(),
+}, (t) => [primaryKey({ columns: [t.workspaceId, t.hour, t.tokenId, t.route] }), index('api_usage_hours_hour_idx').on(t.hour)]);

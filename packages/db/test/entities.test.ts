@@ -21,7 +21,9 @@ const opsTables = ['staff_users', 'support_sessions', 'feature_flags', 'feature_
   // มุมมองที่บันทึก · ผูก Ticket กับเหตุขัดข้อง (ช่วง 3 · 0050)
   'ops_saved_views', 'ops_view_prefs', 'support_ticket_incidents', 'customer_accounts', 'customer_account_workspaces', 'customer_account_files',
   // ตรวจจับการใช้ผิด (เฟส 3 · 0055)
-  'abuse_cases', 'abuse_blocks'];
+  'abuse_cases', 'abuse_blocks',
+  // สถิติ API ต่อลูกค้า (เฟส 3 · 0056)
+  'api_usage_minutes', 'api_usage_hours'];
 
 beforeAll(() => owner.connect());
 afterAll(() => owner.end());

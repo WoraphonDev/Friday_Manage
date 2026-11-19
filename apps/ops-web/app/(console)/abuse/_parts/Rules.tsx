@@ -14,7 +14,7 @@ interface Rule {
   key: string;
   points: number;
   on: boolean;
-  waiting: "A35b" | "geoip" | "O51" | null;
+  waiting: "A35b" | "geoip" | null;
   hits7d: number;
   falsePositivePct: number | null;
 }

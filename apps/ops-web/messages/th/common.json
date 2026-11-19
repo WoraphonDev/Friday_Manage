@@ -124,7 +124,8 @@
     "tagPrivacy": "PDPA",
     "openApprovals": "เปิดคำขอที่ส่งถึงฉัน",
     "abuse": "เคสใช้ผิดรอตรวจ {count}",
-    "tagAbuse": "ใช้ผิด"
+    "tagAbuse": "ใช้ผิด",
+    "rateLimit": "ลูกค้าชนเพดาน API ต่อเนื่อง {count} ราย"
   },
   "account": {
     "name": "ชื่อ",

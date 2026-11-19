@@ -71,6 +71,7 @@ const TASKS: { task: TaskKey; who: "approvals" | "money" | "support" | "engineer
   { task: "privacyDueSoon", who: "privacy", roles: ["owner", "support"], href: "/privacy", tone: "warn" },
   { task: "breachesOpen", who: "privacy", roles: ["owner", "engineer"], href: "/privacy", tone: "bad" },
   { task: "abuseOpen", who: "engineer", roles: ["owner", "engineer"], href: "/abuse", tone: "warn" },
+  { task: "rateLimitStreak", who: "engineer", roles: ["owner", "engineer"], href: "/ratelimit", tone: "warn" },
 ];
 const PLANS = Object.keys(PLAN_LABEL);
 const monthLabel = (f: ReturnType<typeof useFormatter>, m: string) => f.dateTime(new Date(`${m}-15T00:00:00Z`), { month: "short" });

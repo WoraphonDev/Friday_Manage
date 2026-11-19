@@ -116,7 +116,7 @@
 .count { display:inline-grid; place-items:center; min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:var(--primary); color:var(--on-primary); font-size:11px; font-weight:700; line-height:1; }
 .filterPop { width:440px; max-width:calc(100vw - 32px); gap:8px; padding:14px; }
 .displayPop { width:380px; max-width:calc(100vw - 32px); gap:10px; padding:14px; max-height:min(560px, calc(100vh - 140px)); overflow:auto; }
-.popHead { margin:4px 0 0; font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--faint); }
+.popHead { margin:8px 0 0; font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--faint); }
 .popHead:first-child { margin-top:0; }
 .popGrid { display:grid; grid-template-columns:1fr 1fr; gap:10px 12px; }
 .popRow { display:flex; gap:8px; flex-wrap:wrap; }

@@ -73,6 +73,11 @@
       "other": "Notification",
       "digest__daily": "Daily summary"
     },
+    "assignVerbs": {
+      "removed": "removed you from",
+      "addedRole": "assigned you as {role} on",
+      "removedRole": "removed you as {role} from"
+    },
     "verbs": {
       "project__paused": "paused the project",
       "project__resumed": "resumed the project",

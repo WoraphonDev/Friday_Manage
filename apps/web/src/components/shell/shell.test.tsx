@@ -534,4 +534,64 @@ describe("Workspace / Project shell", () => {
     expect(await again.findByRole("link", { name: "Backlog", hidden: true })).toHaveAttribute("href", "/work/sample/p/DE/backlog");
     expect(again.queryByRole("link", { name: "Gantt", hidden: true })).not.toBeInTheDocument();
   });
+
+  it("ย่อ Sidebar เหลือไอคอนด้วยปุ่มท้ายเมนูหรือคีย์ [ แล้วจำไว้ในเครื่อง", async () => {
+    const user = userEvent.setup();
+    const shell = (
+      <WorkspaceShell ws="sample">
+        <p>หน้าหลัก</p>
+      </WorkspaceShell>
+    );
+    const { container, unmount } = renderWithProviders(shell);
+    const sidebar = within(await screen.findByRole("complementary"));
+    const collapse = sidebar.getByRole("button", { name: "ย่อเมนู" });
+    expect(collapse).toHaveAttribute("aria-expanded", "true");
+    await user.click(collapse);
+    expect(container.querySelector(".workspace-body")).toHaveClass("sidebar-rail");
+    expect(localStorage.getItem("fm-sidebar")).toBe("rail");
+    // ข้อความซ่อนด้วย CSS แต่ชื่อลิงก์ยังเหมือนเดิม (ตัวย่อโปรเจกต์ไม่ปนในชื่อ)
+    expect(sidebar.getByRole("link", { name: "แผนพัฒนาผลิตภัณฑ์" })).toBeInTheDocument();
+    expect(sidebar.getByRole("button", { name: "กางเมนู" })).toHaveAttribute("aria-expanded", "false");
+    unmount();
+
+    const again = renderWithProviders(shell);
+    const next = within(await screen.findByRole("complementary"));
+    expect(next.getByRole("button", { name: "กางเมนู" })).toBeInTheDocument();
+    await user.keyboard("[[");
+    expect(next.getByRole("button", { name: "ย่อเมนู" })).toBeInTheDocument();
+    expect(again.container.querySelector(".workspace-body")).not.toHaveClass("sidebar-rail");
+    expect(localStorage.getItem("fm-sidebar")).toBeNull();
+  });
+
+  it("คีย์ [ ไม่ย่อ Sidebar ขณะพิมพ์ในช่องกรอก", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <WorkspaceShell ws="sample">
+        <input aria-label="ช่องทดสอบ" />
+      </WorkspaceShell>,
+    );
+    await user.type(await screen.findByRole("textbox", { name: "ช่องทดสอบ" }), "[[");
+    expect(screen.getByRole("button", { name: "ย่อเมนู" })).toBeInTheDocument();
+  });
+
+  it("หน้า Timeline ย่อ Sidebar ให้เอง · กางเองแล้วหน้ากว้างอื่นไม่ย่อให้อีก", async () => {
+    const user = userEvent.setup();
+    navigation.pathname = "/work/sample/p/DE/timeline";
+    const { unmount } = renderWithProviders(<ProjectExample />);
+    const sidebar = within(await screen.findByRole("complementary"));
+    await user.click(sidebar.getByRole("button", { name: "กางเมนู" }));
+    expect(localStorage.getItem("fm-sidebar-auto")).toBe("off");
+    expect(localStorage.getItem("fm-sidebar")).toBeNull();
+    unmount();
+
+    navigation.pathname = "/work/sample/p/DE/diagrams";
+    renderWithProviders(<ProjectExample />);
+    expect(await within(await screen.findByRole("complementary")).findByRole("button", { name: "ย่อเมนู" })).toBeInTheDocument();
+  });
+
+  it("หน้าทั่วไปไม่ย่อ Sidebar อัตโนมัติ", async () => {
+    navigation.pathname = "/work/sample/p/DE/board";
+    renderWithProviders(<ProjectExample />);
+    expect(await within(await screen.findByRole("complementary")).findByRole("button", { name: "ย่อเมนู" })).toBeInTheDocument();
+  });
 });

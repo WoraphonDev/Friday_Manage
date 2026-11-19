@@ -77,7 +77,8 @@
       "palette": "ค้นหา / Command palette",
       "help": "เปิดแผงช่วยเหลือ",
       "focus": "ไปที่ช่องค้นหาในศูนย์ช่วยเหลือ",
-      "switch": "สลับ Workspace ลำดับที่ 1–9"
+      "switch": "สลับ Workspace ลำดับที่ 1–9",
+      "sidebar": "ย่อ / กางเมนูด้านซ้าย"
     }
   },
   "routes": {

@@ -137,6 +137,8 @@
   --space-6: 24px;
   /* ขนาดตัวอักษรและ layout ตาม FridayManagement (หน้าตา component คงเดิม) */
   --sidebar-width: 216px;
+  /* Sidebar ตอนย่อเหลือไอคอน: ขอบใน 10px สองข้าง + ปุ่มไอคอน 38px */
+  --sidebar-rail-width: 58px;
   --topbar-h: 46px;
   --control-h: 32px;
   --text-body: 13px;

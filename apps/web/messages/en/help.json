@@ -77,7 +77,8 @@
       "palette": "Search / command palette",
       "help": "Open the help panel",
       "focus": "Jump to the help center search",
-      "switch": "Switch to workspace 1–9"
+      "switch": "Switch to workspace 1–9",
+      "sidebar": "Collapse / expand the sidebar"
     }
   },
   "routes": {

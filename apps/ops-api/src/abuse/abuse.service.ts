@@ -14,7 +14,7 @@ import { PageQuery } from '../paging.js';
 import { PushService } from '../push/push.service.js';
 import {
   AbuseSettings, CONFIRM_HOURS, DEFAULT_SETTINGS, DISPOSABLE_DOMAINS, domainOf, HEAVY_INVITES, HEAVY_ISSUES, INVITE_BURST, IP_BURST, kindOf,
-  QUIET_DAYS, RULE_KEYS, RULES, type RuleKey, type Signal,
+  QUIET_DAYS, RATE_STREAK, RULE_KEYS, RULES, type RuleKey, type Signal,
 } from './rules.js';
 
 const s = schema;
@@ -280,6 +280,19 @@ export class AbuseService implements OnModuleInit, OnModuleDestroy {
         if (!c.userIds.includes(r.user_id)) c.userIds.push(r.user_id);
         c.signals.push({ rule: 'unverified_heavy', points: pts('unverified_heavy'), detail: `ไม่ยืนยันอีเมลเกิน 24 ชม. แต่สร้างงาน ${r.issues.toLocaleString('th-TH')} · เชิญ ${r.invites.toLocaleString('th-TH')} ใน 24 ชม.` });
       }
+    }
+
+    if (on('api_ratelimit')) {
+      // ช่วงนาทีที่ถูกปฏิเสธ (429) ต่อเนื่อง จาก api_usage_minutes ของ O51 · นับช่วงที่จบภายใน 1 ชม.
+      const rows = await this.rows<{ id: string; name: string; slug: string; n: number; token: string | null }>(sql`
+        with m as (select workspace_id, minute from api_usage_minutes where minute > ${new Date(now.getTime() - DAY)} group by 1, 2 having sum(rejected) > 0),
+        isl as (select workspace_id, count(*)::int as n, max(minute) as e from (select workspace_id, minute, minute - (row_number() over (partition by workspace_id order by minute)) * interval '1 minute' as g from m) x group by workspace_id, g)
+        select w.id, w.name, w.slug, max(isl.n)::int as n,
+          (select t.name from api_usage_minutes u join api_tokens t on t.id = u.token_id where u.workspace_id = w.id and u.minute > ${new Date(now.getTime() - HOUR)} group by t.id, t.name order by sum(u.rejected) desc limit 1) as token
+        from isl join workspaces w on w.id = isl.workspace_id
+        where isl.n >= ${RATE_STREAK} and isl.e > ${new Date(now.getTime() - HOUR)} and ${live}
+        group by w.id`);
+      for (const r of rows) wsCand(r.id, r.name, r.slug).signals.push({ rule: 'api_ratelimit', points: pts('api_ratelimit'), detail: `ชนเพดาน API ติดกัน ${r.n} นาที${r.token ? ` (token "${r.token}")` : ''}` });
     }
 
     const ips: Candidate[] = [];

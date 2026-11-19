@@ -69,5 +69,5 @@ export class EntitlementsController {
   }
 }
 
-@Module({ imports: [AnnouncementsModule], controllers: [EntitlementsController], providers: [EntitlementsService] })
+@Module({ imports: [AnnouncementsModule], controllers: [EntitlementsController], providers: [EntitlementsService], exports: [EntitlementsService] })
 export class EntitlementsModule {}

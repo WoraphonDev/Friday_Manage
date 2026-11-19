@@ -434,13 +434,14 @@ export class EntitlementsService implements OnModuleInit, OnModuleDestroy {
     return plan[key];
   }
 
-  async createOverride(staff: Staff, input: z.infer<typeof OverrideBody>): Promise<Gated<{ id: string }>> {
+  /** `headroom` = ปรับเกินแพ็กเกจได้กี่เท่าโดยไม่ต้องอนุมัติ · หน้า Rate limit (O51) ใช้ 3 เท่าตาม storyboard · หน้านี้ใช้ 20% */
+  async createOverride(staff: Staff, input: z.infer<typeof OverrideBody>, headroom = OVERRIDE_HEADROOM): Promise<Gated<{ id: string }>> {
     const [u] = await this.usage(new Date(), [input.workspaceId]);
     if (!u) throw new AppError(404, 'not_found', 'ไม่พบ Workspace หรือยังไม่มีแพ็กเกจ');
     const base = this.base((await versionAt(this.db, new Date())).matrix, u, input.key);
     const v = input.value;
     const over =
-      typeof v === 'boolean' ? v === true && base !== true : v === null ? base !== null : typeof base === 'number' && v > base * OVERRIDE_HEADROOM;
+      typeof v === 'boolean' ? v === true && base !== true : v === null ? base !== null : typeof base === 'number' && v > base * headroom;
     const exceeds = over || !input.expiresAt;
     const pending = await this.approvals.gate(staff, {
       kind: 'entitlements.override',
@@ -451,7 +452,7 @@ export class EntitlementsService implements OnModuleInit, OnModuleDestroy {
       exceeds,
       rule: !input.expiresAt
         ? `ปรับสิทธิ์เฉพาะรายโดยไม่มีวันหมดอายุ (สัญญา ${input.contractRef}) ต้องให้ Owner อนุมัติ`
-        : `ปรับ${KEY_NAMES[input.key]}เป็น ${show(input.key, v)} เกินแพ็กเกจ (${show(input.key, base)}) เกิน 20% หรือเปิดฟีเจอร์นอกแพ็กเกจ ต้องให้ Owner อนุมัติ`,
+        : `ปรับ${KEY_NAMES[input.key]}เป็น ${show(input.key, v)} เกินแพ็กเกจ (${show(input.key, base)}) ${headroom === OVERRIDE_HEADROOM ? 'เกิน 20%' : `เกิน ${headroom} เท่า`} หรือเปิดฟีเจอร์นอกแพ็กเกจ ต้องให้ Owner อนุมัติ`,
     });
     if (pending) return { pendingApproval: pending };
     return this.applyOverride(staff, input);

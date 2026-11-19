@@ -151,8 +151,7 @@
     "noChange": "ไม่มีอะไรเปลี่ยน",
     "waiting": {
       "A35b": "รอเชื่อม Gateway จริง (A35b)",
-      "geoip": "รอฐานข้อมูล GeoIP",
-      "O51": "รอสถิติ Rate limit (O51)"
+      "geoip": "รอฐานข้อมูล GeoIP"
     },
     "names": {
       "temp_email": "อีเมลจากโดเมนชั่วคราว",

@@ -8,6 +8,7 @@ import { ProjectsService } from '../projects/projects.service.js';
 import { EventBus } from './events.js';
 import { Mailer } from './mail.js';
 import { PlanLimits } from './plan-limits.js';
+import { ApiUsage } from './api-usage.js';
 
 /**
  * บริการที่ทุก module ใช้ร่วมกัน · inject ได้ทุกที่โดยไม่ต้อง import module นี้
@@ -16,7 +17,7 @@ import { PlanLimits } from './plan-limits.js';
 @Global()
 @Module({
   imports: [DbModule],
-  providers: [SessionService, TenantDb, TenantGuard, ProjectsService, IssuesService, Notifier, EventBus, PlanLimits, Mailer],
-  exports: [SessionService, TenantDb, TenantGuard, ProjectsService, IssuesService, Notifier, EventBus, PlanLimits, Mailer],
+  providers: [SessionService, TenantDb, TenantGuard, ProjectsService, IssuesService, Notifier, EventBus, PlanLimits, ApiUsage, Mailer],
+  exports: [SessionService, TenantDb, TenantGuard, ProjectsService, IssuesService, Notifier, EventBus, PlanLimits, ApiUsage, Mailer],
 })
 export class CoreModule {}

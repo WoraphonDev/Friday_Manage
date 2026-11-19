@@ -4,6 +4,7 @@ import { and, eq, gte, isNull, ne, sql } from 'drizzle-orm';
 import { smallestPlanForSeats, GB, PLAN_CATALOG, PLAN_ORDER, TRIAL_DAYS, TRIAL_PLAN, effectivePlan, type PlanCode, type PlanSpec } from '../billing/catalog.js';
 import { AppError } from '../common/errors.js';
 import { SYSTEM_DB } from '../db/db.module.js';
+import { ApiUsage } from './api-usage.js';
 
 const { plans, subscriptions, workspaces, projects, workspaceMembers, fileVersions, automationRuns } = schema;
 
@@ -58,7 +59,10 @@ const EXITS: Record<LimitKind, string[]> = {
  */
 @Injectable()
 export class PlanLimits {
-  constructor(@Inject(SYSTEM_DB) private readonly system: Db) {}
+  constructor(
+    @Inject(SYSTEM_DB) private readonly system: Db,
+    private readonly usage: ApiUsage,
+  ) {}
 
   async assert(tx: Tx, workspaceId: string, kind: LimitKind, increment = 1): Promise<void> {
     const snap = await this.snapshot(tx, workspaceId);
@@ -159,21 +163,25 @@ export class PlanLimits {
 
   /**
    * จำกัดคำขอผ่าน API token ต่อ Workspace ต่อนาที (Rate limit ต่อลูกค้า รวมเข้าเป็น "API ต่อนาที" ของ O21)
-   * นับในหน่วยความจำของ process (API ตอนนี้รัน 1 ตัว) · หลายเครื่องต้องย้ายไป Valkey
+   * นับในหน่วยความจำของ process (API ตอนนี้รัน 1 ตัว) · หลายเครื่องต้องย้ายไป Valkey (I01)
+   * `meta` = token และ route ของคำขอ → เก็บสถิติรายนาทีให้หน้า Rate limit ของ Friday Ops (O51)
    */
-  async rateLimit(workspaceId: string, now = Date.now()): Promise<{ limit: number | null; remaining: number | null }> {
+  async rateLimit(workspaceId: string, now = Date.now(), meta?: { tokenId: string; route: string }): Promise<{ limit: number | null; remaining: number | null }> {
     await this.assertFeature(workspaceId, 'api', true);
     const { values } = await this.current(workspaceId, true);
     const limit = values.api_rpm as number | null;
-    if (limit === null) return { limit, remaining: null };
+    const track = (rejected: boolean) => meta && this.usage.record({ workspaceId, tokenId: meta.tokenId, route: meta.route, rejected, limit }, now);
+    if (limit === null) return (track(false), { limit, remaining: null });
     const hits = (this.windows.get(workspaceId) ?? []).filter((t) => t > now - MINUTE);
     if (hits.length >= limit) {
+      track(true);
       this.windows.set(workspaceId, hits);
       const retryAfter = Math.max(1, Math.ceil((hits[0] + MINUTE - now) / 1000));
       throw new AppError(429, 'rate_limited', `เรียก API เกิน ${limit} ครั้งต่อนาทีของแพ็กเกจ · ลองใหม่ใน ${retryAfter} วินาที`, { limit, retryAfter });
     }
     hits.push(now);
     this.windows.set(workspaceId, hits);
+    track(false);
     return { limit, remaining: limit - hits.length };
   }
 

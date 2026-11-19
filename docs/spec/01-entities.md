@@ -289,6 +289,8 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `subscription_change` | ทุกครั้งที่ MRR เปลี่ยน · append-only | workspace_id, kind, plan_from / to, seats_from / to, mrr_before / after_satang, actor_kind, effective_at | Ops 1, 16 |
 | `cancellation_response` | คำตอบตอนกดยกเลิกแพ็กเกจ | workspace_id, user_id, reason, missing_feature, switched_to, offer_shown, outcome | Ops 16 |
 | `daily_usage` | ยอดใช้ต่อ Workspace ต่อวัน | workspace_id, date, line_messages, emails, webhook_calls, storage_bytes, api_calls, automation_runs, active_users | Ops 16 |
+| `api_usage_minute` | สถิติการเรียก API ด้วย token ต่อนาที (O51 · Rate limit ต่อลูกค้า) · API เขียนเป็นชุดทุก 10 วินาที · เก็บ 7 วัน | workspace_id, minute, token_id, route ("GET /issues"), calls, rejected (429), limit_rpm (เพดานตอนนั้น) | Ops Rate limit |
+| `api_usage_hour` | สถิติ API รายชั่วโมงที่ยุบจากรายนาที · เก็บ 90 วัน | workspace_id, hour, token_id, route, calls, rejected, peak_rpm, limit_rpm | Ops Rate limit |
 | `cost_rate` | ต้นทุนต่อหน่วย | resource, unit_cost_satang หรือ pct, effective_from | Ops 16 (B9) |
 | `infra_cost` | ค่าใช้จ่ายส่วนกลางรายเดือน | month, category, amount_satang | Ops 16 |
 | `marketing_cost` | ค่าการตลาดรายเดือนตามช่องทาง | month, source, amount_satang, note | Ops 16 (B10) |

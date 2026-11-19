@@ -538,3 +538,46 @@ export const abuseBlocks = pgTable('abuse_blocks', {
   index('abuse_blocks_created_idx').on(t.createdAt),
   check('abuse_blocks_kind_valid', oneOf(t.kind, ABUSE_BLOCK_KINDS)),
   check('abuse_blocks_ip_valid', sql`${t.kind} <> 'ip' OR ${t.value}::inet IS NOT NULL`)]);
+
+/** คะแนนสุขภาพรายวันของลูกค้าที่จ่ายเงิน (O53) · ใช้ดู "↓14 ใน 7 วัน" และเงื่อนไข "ติดกัน N วัน" ของ Playbook · คำนวณด้วย healthScore() ของ ops-api */
+export const healthDaily = pgTable('health_daily', {
+  workspaceId: uuid().notNull().references(() => workspaces.id, { onDelete: 'cascade' }), date: date().notNull(),
+  score: smallint().notNull(), usage: smallint().notNull(), payment: smallint().notNull(), support: smallint().notNull(), growth: smallint().notNull(),
+  createdAt: createdAt(),
+}, (t) => [primaryKey({ columns: [t.workspaceId, t.date] }), index('health_daily_date_idx').on(t.date)]);
+
+export const PLAYBOOK_TRIGGERS = ['usage_drop', 'overdue', 'team_shrink', 'tickets_backlog', 'renewal_low_health'] as const;
+
+/**
+ * Playbook รับมือเมื่อสุขภาพตก (O53) · trigger = { kind, threshold, days } · steps = [{ kind: email | task | wait, title, body?, days, branches? }]
+ * branches ของงานคน = { reached | no_answer | will_cancel: เลขขั้นถัดไป (0-based) | 'close' } · ไม่ระบุ = ขั้นถัดไป
+ */
+export const playbooks = pgTable('playbooks', {
+  id: pk(), key: text().notNull().unique(), name: text().notNull(), trigger: jsonb().notNull(), steps: jsonb().notNull().default(sql`'[]'::jsonb`),
+  enabled: boolean().notNull().default(true), updatedBy: uuid().references(() => staffUsers.id), createdAt: createdAt(), updatedAt: updatedAt(),
+}, (t) => [check('playbooks_trigger_valid', sql`${t.trigger}->>'kind' IN (${sql.raw(PLAYBOOK_TRIGGERS.map((k) => `'${k}'`).join(', '))})`)]);
+
+/** ลูกค้าหนึ่งรายใน Playbook หนึ่ง · active ได้ครั้งละหนึ่งต่อ Playbook · recovered = คะแนนฟื้น · churned = ยกเลิกแพ็กเกจ · closed = คนปิด / จบขั้น */
+export const playbookRuns = pgTable('playbook_runs', {
+  id: pk(), playbookId: uuid().notNull().references(() => playbooks.id, { onDelete: 'cascade' }),
+  workspaceId: uuid().notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  status: text().notNull().default('active'), ownerId: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
+  stepIndex: integer().notNull().default(0), scoreAtStart: smallint(),
+  startedAt: tstz().notNull().defaultNow(), closedAt: tstz(), closeReason: text(),
+  createdAt: createdAt(), updatedAt: updatedAt(),
+}, (t) => [uniqueIndex('playbook_runs_active_key').on(t.playbookId, t.workspaceId).where(sql`${t.status} = 'active'`),
+  index('playbook_runs_status_idx').on(t.status, t.closedAt), index('playbook_runs_workspace_idx').on(t.workspaceId),
+  check('playbook_runs_status_valid', oneOf(t.status, ['active', 'recovered', 'churned', 'closed'])),
+  check('playbook_runs_closed', sql`(${t.status} = 'active') = (${t.closedAt} IS NULL)`)]);
+
+/** ขั้นที่เกิดขึ้นจริงของแต่ละ run · งานของคนมีผู้รับผิดชอบและวันครบกำหนด · outcome ของงานโทร = reached | no_answer | will_cancel */
+export const playbookRunSteps = pgTable('playbook_run_steps', {
+  id: pk(), runId: uuid().notNull().references(() => playbookRuns.id, { onDelete: 'cascade' }),
+  stepIndex: integer().notNull(), kind: text().notNull(), title: text().notNull(),
+  assigneeId: uuid().references(() => staffUsers.id, { onDelete: 'set null' }), dueOn: date(),
+  status: text().notNull().default('pending'), outcome: text(), note: text(),
+  doneAt: tstz(), doneBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }), createdAt: createdAt(),
+}, (t) => [index('playbook_run_steps_run_idx').on(t.runId, t.stepIndex), index('playbook_run_steps_due_idx').on(t.status, t.dueOn),
+  check('playbook_run_steps_kind_valid', oneOf(t.kind, ['email', 'task', 'wait'])),
+  check('playbook_run_steps_status_valid', oneOf(t.status, ['pending', 'done', 'skipped'])),
+  check('playbook_run_steps_outcome_valid', sql`${t.outcome} IS NULL OR ${t.outcome} IN ('reached', 'no_answer', 'will_cancel', 'sent', 'recovered', 'waited')`)]);

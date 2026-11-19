@@ -9,7 +9,7 @@ const owner = new pg.Client({ connectionString: process.env.DATABASE_OWNER_URL ?
 const spec = readFileSync(new URL('../../../docs/spec/01-entities.md', import.meta.url), 'utf8');
 const entities = [...spec.matchAll(/^\| `(\w+)` \|/gm)].map((m) => m[1]);
 // คำนามนับไม่ได้ใช้ชื่อเดิม (progress, feedback)
-const uncountable = new Set(['onboarding_progress', 'help_feedback', 'ops_presence']);
+const uncountable = new Set(['onboarding_progress', 'help_feedback', 'ops_presence', 'health_daily']);
 const plural = (name: string) => uncountable.has(name) ? name : /[^aeiou]y$/.test(name) ? `${name.slice(0, -1)}ies` : /(?:s|x|ch|sh)$/.test(name) ? `${name}es` : `${name}s`;
 const opsTables = ['staff_users', 'support_sessions', 'feature_flags', 'feature_flag_overrides', 'announcements', 'entitlement_versions', 'entitlement_overrides', 'email_suppressions', 'email_feedback_events', 'support_settings', 'support_rules', 'support_agents', 'support_account_managers', 'support_canned_replies', 'staff_push_subscriptions', 'staff_push_notices', 'plan_price_versions', 'coupons',
   'changelog_stats', 'onboarding_followups', 'help_article_versions', 'help_search_stats', 'help_search_misses', 'help_article_tickets',
@@ -23,7 +23,9 @@ const opsTables = ['staff_users', 'support_sessions', 'feature_flags', 'feature_
   // ตรวจจับการใช้ผิด (เฟส 3 · 0055)
   'abuse_cases', 'abuse_blocks',
   // สถิติ API ต่อลูกค้า (เฟส 3 · 0056)
-  'api_usage_minutes', 'api_usage_hours'];
+  'api_usage_minutes', 'api_usage_hours',
+  // สุขภาพและ Playbook (เฟส 3 · 0058)
+  'health_daily', 'playbooks', 'playbook_runs', 'playbook_run_steps'];
 
 beforeAll(() => owner.connect());
 afterAll(() => owner.end());

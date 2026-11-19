@@ -12,7 +12,7 @@ export type NavKey =
   | "system" | "ops" | "deliveries" | "flags" | "ratelimit" | "scripts"
   | "privacy" | "abuse" | "legal" | "restore" | "jit" | "staff" | "audit" | "roadmap";
 export type GroupKey = "" | "customers" | "sales" | "money" | "marketing" | "analytics" | "support" | "system" | "security" | "team";
-export type TaskKey = "paymentExceptions" | "slipsToReview" | "approvals" | "ticketsBreached" | "ticketsUnassigned" | "incidentsOpen" | "invoicesOverdue" | "trialEndingSoon" | "privacyDueSoon" | "breachesOpen" | "abuseOpen" | "rateLimitStreak" | "jitPending";
+export type TaskKey = "paymentExceptions" | "slipsToReview" | "approvals" | "ticketsBreached" | "ticketsUnassigned" | "incidentsOpen" | "invoicesOverdue" | "trialEndingSoon" | "privacyDueSoon" | "breachesOpen" | "abuseOpen" | "rateLimitStreak" | "jitPending" | "playbookDue";
 
 export interface NavItem {
   key: NavKey;
@@ -36,7 +36,7 @@ export const NAV: { group: GroupKey; items: NavItem[] }[] = [
       // ช่วง 3 · บัญชีลูกค้าระดับบริษัท: ทุกคนอ่านได้ · วันต่อสัญญาเปิดให้ทีมที่ดูแลลูกค้า (Support ไม่เห็นยอดเงิน)
       { key: "accounts", href: "/accounts", built: true, roles: ALL },
       { key: "users", href: "/users", built: true, roles: ["owner", "support"] },
-      { key: "success", roles: ["owner", "support"] },
+      { key: "success", href: "/success", built: true, roles: ["owner", "support"], badge: ["playbookDue"] },
       { key: "renewals", href: "/renewals", built: true, roles: ["owner", "finance", "support", "auditor"] },
     ],
   },

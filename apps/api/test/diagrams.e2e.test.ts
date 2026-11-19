@@ -41,7 +41,7 @@ describe('สร้างและอ่าน', () => {
     expect(list.status).toBe(200);
     expect(list.body.items[0]).toMatchObject({ name: 'Workflow อนุมัติวงเงิน', template: 'flowchart', issueCount: 0, lock: { userId: team.leadId } });
     expect(list.body.items[0].preview.nodes).toHaveLength(3);
-    expect(list.body.permissions).toMatchObject({ edit: true, takeover: false });
+    expect(list.body.permissions).toMatchObject({ edit: true, takeover: false, trash: false });
   });
 
   it('ชื่อว่างหรือแบบเริ่มต้นที่ไม่รู้จัก → 400', async () => {
@@ -152,6 +152,9 @@ describe('ลบและกู้คืน', () => {
     expect((await team.dev.get(`${base}/diagrams/${mine}`)).status).toBe(404);
     const row = await t.owner.query('SELECT deleted_by FROM diagrams WHERE id = $1', [mine]);
     expect(row.rows[0].deleted_by).toBe(team.devId);
+    expect((await team.dev.get(`${base}/diagrams?trashed=true`)).status).toBe(403);
+    const trash = await team.lead.get(`${base}/diagrams?trashed=true`);
+    expect(trash.body.items.map((d: { id: string; deletedBy: { id: string } }) => [d.id, d.deletedBy.id])).toEqual([[mine, team.devId]]);
     expect((await team.dev.post(`${base}/diagrams/${mine}/restore`)).status).toBe(403);
     const restored = await team.lead.post(`${base}/diagrams/${mine}/restore`);
     expect(restored.status).toBe(200);

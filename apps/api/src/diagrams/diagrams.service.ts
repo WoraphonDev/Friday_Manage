@@ -26,6 +26,8 @@ export const ListDiagramsQuery = z.object({
   sort: z.enum(['updated', 'name', 'created']).default('updated'),
   /** Diagram ที่มีกล่องผูกกับงานนี้ (แผงรายละเอียดงาน) */
   issue: z.uuid().optional(),
+  /** ถังขยะของแท็บ Diagram · ต้องมีสิทธิ์ project.trash */
+  trashed: z.stringbool().default(false),
 });
 export const CreateDiagramBody = z.object({ name: Name, description: Description.nullish(), template: Template.default('blank') });
 export const PatchDiagramBody = z
@@ -96,12 +98,12 @@ export class DiagramsService {
   async list(auth: AuthInfo, tenant: TenantInfo, key: string, q: z.infer<typeof ListDiagramsQuery>) {
     await this.feature(tenant);
     return this.db.run(auth, tenant, async (tx) => {
-      const { project, access } = await this.ctx(tx, auth, tenant, key);
-      const where = [eq(s.diagrams.projectId, project.id), isNull(s.diagrams.deletedAt)];
+      const { project, access } = await this.ctx(tx, auth, tenant, key, q.trashed ? 'project.trash' : undefined);
+      const where = [eq(s.diagrams.projectId, project.id), q.trashed ? isNotNull(s.diagrams.deletedAt) : isNull(s.diagrams.deletedAt)];
       if (q.template) where.push(eq(s.diagrams.template, q.template));
       if (q.q) where.push(or(ilike(s.diagrams.name, `%${q.q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`), ilike(sql`coalesce(${s.diagrams.description}, '')`, `%${q.q}%`))!);
       if (q.issue) where.push(sql`${s.diagrams.issueIds} @> ARRAY[${q.issue}]::uuid[]`);
-      const order = q.sort === 'name' ? [asc(s.diagrams.name)] : q.sort === 'created' ? [desc(s.diagrams.createdAt)] : [desc(s.diagrams.updatedAt)];
+      const order = q.trashed ? [desc(s.diagrams.deletedAt)] : q.sort === 'name' ? [asc(s.diagrams.name)] : q.sort === 'created' ? [desc(s.diagrams.createdAt)] : [desc(s.diagrams.updatedAt)];
       const rows = await tx
         .select({
           id: s.diagrams.id,
@@ -116,12 +118,14 @@ export class DiagramsService {
           updatedAt: s.diagrams.updatedAt,
           lockedBy: s.diagrams.lockedBy,
           lockedUntil: s.diagrams.lockedUntil,
+          deletedAt: s.diagrams.deletedAt,
+          deletedBy: s.diagrams.deletedBy,
         })
         .from(s.diagrams)
         .where(and(...where))
         .orderBy(...order)
         .limit(500);
-      const people = await loadPeople(tx, rows.flatMap((r) => [r.createdBy, r.updatedBy, r.lockedBy]));
+      const people = await loadPeople(tx, rows.flatMap((r) => [r.createdBy, r.updatedBy, r.lockedBy, r.deletedBy]));
       const issues = await this.issueChips(tx, project, rows.flatMap((r) => r.issueIds));
       return {
         items: rows.map((r) => {
@@ -137,11 +141,13 @@ export class DiagramsService {
             createdAt: r.createdAt,
             updatedAt: r.updatedAt,
             lock: this.lockOf(r, people),
+            deletedAt: r.deletedAt,
+            deletedBy: (r.deletedBy && people.get(r.deletedBy)) || null,
             // สถานะงานของภาพย่อ (สีกรอบ) · ไม่ส่งชื่องานในรายการ
             preview: { ...preview, nodes: preview.nodes.map((n) => ({ ...n, i: undefined, s: n.i ? (issues.get(n.i)?.tone ?? null) : null })) },
           };
         }),
-        permissions: this.perms(access),
+        permissions: { ...this.perms(access), trash: access.perms.has('project.trash') },
       };
     });
   }

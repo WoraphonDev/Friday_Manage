@@ -1,7 +1,7 @@
 "use client";
 
 import "@xyflow/react/dist/base.css";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -43,6 +43,12 @@ const DRAG_TYPE = "application/x-friday-shape";
 const SAVE_DELAY = 1500;
 const HEARTBEAT_MS = 60_000;
 const CARD_TEXT: Record<NonNullable<ContentEdge["cardinality"]>, string> = { "1-1": "1 : 1", "1-n": "1 : N", "n-n": "N : N" };
+// ค่าคงที่ของ React Flow ต้องอ้างอิงเดิมทุก render (ส่ง object ใหม่ = ไลบรารีอัปเดต store ซ้ำ)
+const SNAP_GRID: [number, number] = [8, 8];
+const FIT_OPTIONS = { padding: 0.2, maxZoom: 1 };
+const DELETE_KEYS = ["Backspace", "Delete"];
+const PRO_OPTIONS = { hideAttribution: true };
+const EDGE_OPTIONS = { type: "smoothstep" };
 const rid = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`).replace(/-/g, "").slice(0, 10);
 
 // ---------------------------------------------------------------------------
@@ -50,12 +56,14 @@ const rid = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? cry
 // ---------------------------------------------------------------------------
 function toFlowNode(n: ContentNode): FlowNode {
   const size = defaultSize(n.type);
+  // กล่องที่ผูกงานต้องสูงพอให้ชิปอยู่ใต้ข้อความ (ข้อมูลที่บันทึกก่อนขยายอัตโนมัติ)
+  const minHeight = n.data.issueId && !isContainer(n.type) && n.type !== "table" ? size.h + 26 : 0;
   return {
     id: n.id,
     type: n.type,
     position: n.position,
     width: n.width ?? size.w,
-    height: n.height ?? size.h,
+    height: Math.max(n.height ?? size.h, minHeight),
     zIndex: isContainer(n.type) ? -1 : n.zIndex,
     data: { label: n.data.label ?? "", color: n.data.color ?? "default", issueId: n.data.issueId ?? null, ...(n.data.columns ? { columns: n.data.columns } : {}) },
   };
@@ -136,6 +144,7 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
   const [exportOpen, setExportOpen] = useState(false);
   const [, setHistoryTick] = useState(0);
   const wrapper = useRef<HTMLDivElement>(null);
+  const page = useRef<HTMLDivElement>(null);
 
   const detail = useQuery({
     queryKey: detailKey,
@@ -256,14 +265,21 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
   // ---------------------------------------------------------------------------
   // บันทึกอัตโนมัติ + ถือสิทธิ์แก้
   // ---------------------------------------------------------------------------
+  /** ออกจากโหมดแก้: ล้างการเลือก ไม่ให้กรอบม่วงค้างในโหมดดู */
+  const clearSelection = useCallback(() => {
+    setNodes((cur) => (cur.some((n) => n.selected) ? cur.map((n) => (n.selected ? { ...n, selected: false } : n)) : cur));
+    setEdges((cur) => (cur.some((e) => e.selected) ? cur.map((e) => (e.selected ? { ...e, selected: false } : e)) : cur));
+  }, [setEdges, setNodes]);
+
   const lostLock = useCallback(
     (message: string) => {
+      clearSelection();
       setEditing(false);
       setSaveState("saved");
       toast({ message, tone: "error" });
       void cache.invalidateQueries({ queryKey: detailKey });
     },
-    [cache, detailKey, toast],
+    [cache, detailKey, toast, clearSelection],
   );
 
   const save = useCallback(async (): Promise<void> => {
@@ -349,6 +365,7 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
     // รอการบันทึกที่กำลังส่งให้จบก่อน แล้วบันทึกส่วนที่เหลือ ไม่ให้ของที่แก้ล่าสุดหายตอนปล่อยสิทธิ์
     while (saving.current) await new Promise((r) => setTimeout(r, 100));
     await save();
+    clearSelection();
     setEditing(false);
     try {
       await api.delete(`${api$}/lock`);
@@ -454,6 +471,16 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
     [pathname, router],
   );
   const ctx = useMemo(() => ({ editing, issues, openIssue, setLabel }), [editing, issues, openIssue, setLabel]);
+  // React Flow เรียก onSelectionChange ซ้ำเมื่อฟังก์ชันเปลี่ยน จึงต้อง memo และไม่ set state ถ้าการเลือกเหมือนเดิม
+  const onSelectionChange = useCallback(({ nodes: n, edges: e }: OnSelectionChangeParams<FlowNode, FlowEdge>) => {
+    const next = { nodes: n.map((x) => x.id), edges: e.map((x) => x.id) };
+    setSelection((cur) => (cur.nodes.join() === next.nodes.join() && cur.edges.join() === next.edges.join() ? cur : next));
+  }, []);
+  const beforeDelete = useCallback(async () => {
+    snapshot();
+    return true;
+  }, [snapshot]);
+  const focusEdgeLabel = useCallback(() => document.getElementById("diagram-edge-label")?.focus(), []);
 
   async function exportImage(kind: "png" | "svg") {
     setExportOpen(false);
@@ -486,6 +513,25 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
     }
   }
 
+  // พื้นที่วาดสูงพอดีจอใต้หัวโปรเจกต์ (หัวสูงไม่เท่ากัน เช่น มีแถบทดลองใช้) · เต็มจอใช้ CSS แทน
+  const loaded = !!data;
+  useLayoutEffect(() => {
+    const el = page.current;
+    if (!el) return;
+    if (full) {
+      el.style.height = "";
+      return;
+    }
+    const fit = () => {
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      // มือถือมีแถบเมนูล่างทับ ~76 px
+      el.style.height = `${Math.max(mobile ? 420 : 520, Math.floor(window.innerHeight - top - (mobile ? 76 : 0)))}px`;
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [loaded, full, mobile]);
+
   // แพ็กเกจ Free: กลับไปหน้ารายการซึ่งแสดงข้อความอัปเกรด
   const planBlocked = detail.error instanceof ApiError && detail.error.code === "plan_feature_unavailable";
   useEffect(() => {
@@ -505,14 +551,14 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
 
   return (
     <DiagramContext.Provider value={ctx}>
-      <div className={cn(styles.editorPage, full && styles.full)}>
+      <div ref={page} className={cn(styles.editorPage, full && styles.full)}>
         <div className={styles.editor}>
           <div className={styles.bar}>
             <Link href={listHref} className={styles.iconBtn} aria-label={t("editor.back")} title={t("editor.back")}>
               <ArrowLeft size={16} aria-hidden="true" />
             </Link>
-            <h1 className={styles.title}>{data.name}</h1>
-            {data.permissions.edit && (
+            <h2 className={styles.title}>{data.name}</h2>
+            {canEdit && (
               <button type="button" className={styles.iconBtn} aria-label={t("editor.rename")} title={t("editor.rename")} onClick={() => setRenaming(true)}>
                 <Pencil size={14} aria-hidden="true" />
               </button>
@@ -549,7 +595,7 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
             <Button size="small" className={styles.desktopOnly} onClick={() => setFull((v) => !v)}>
               {full ? <Minimize2 size={14} aria-hidden="true" /> : <Maximize2 size={14} aria-hidden="true" />} {full ? t("editor.exitFull") : t("editor.full")}
             </Button>
-            {!editing && data.permissions.delete && !lockedByOther && (
+            {!editing && data.permissions.delete && !lockedByOther && !mobile && (
               <button type="button" className={styles.iconBtn} onClick={() => setConfirm("delete")} aria-label={t("editor.delete")} title={t("editor.delete")}>
                 <Trash2 size={16} aria-hidden="true" />
               </button>
@@ -603,29 +649,26 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
                 onNodesChange={onNodesChange}
                 onEdgesChange={editing ? onEdgesChange : undefined}
                 onConnect={onConnect}
-                onNodeDragStart={() => snapshot()}
-                onBeforeDelete={async () => {
-                  snapshot();
-                  return true;
-                }}
-                onSelectionChange={({ nodes: n, edges: e }: OnSelectionChangeParams<FlowNode, FlowEdge>) => setSelection({ nodes: n.map((x) => x.id), edges: e.map((x) => x.id) })}
-                onEdgeDoubleClick={() => document.getElementById("diagram-edge-label")?.focus()}
+                onNodeDragStart={snapshot}
+                onBeforeDelete={beforeDelete}
+                onSelectionChange={onSelectionChange}
+                onEdgeDoubleClick={focusEdgeLabel}
                 connectionMode={ConnectionMode.Loose}
                 nodesDraggable={editing}
                 nodesConnectable={editing}
                 elementsSelectable={editing}
                 edgesFocusable={editing}
                 nodesFocusable={editing}
-                deleteKeyCode={editing ? ["Backspace", "Delete"] : null}
+                deleteKeyCode={editing ? DELETE_KEYS : null}
                 zoomOnDoubleClick={false}
                 snapToGrid
-                snapGrid={[8, 8]}
+                snapGrid={SNAP_GRID}
                 minZoom={0.1}
                 maxZoom={3}
                 fitView
-                fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
-                proOptions={{ hideAttribution: true }}
-                defaultEdgeOptions={{ type: "smoothstep" }}
+                fitViewOptions={FIT_OPTIONS}
+                proOptions={PRO_OPTIONS}
+                defaultEdgeOptions={EDGE_OPTIONS}
               />
               <ZoomBar />
               {!nodes.length && (
@@ -912,7 +955,8 @@ function NodePanel({
         onChange={(chip) => {
           onSnapshot();
           if (chip) onIssue(chip);
-          setData({ issueId: chip?.id ?? null });
+          // ชิปงานต้องมีที่อยู่ใต้ข้อความ: กล่องเตี้ย (เช่น เริ่ม/จบ 44 px) ขยายให้เอง
+          onPatch((n) => ({ ...n, height: chip && type !== "table" && !isContainer(type) ? Math.max(n.height ?? 0, defaultSize(type).h + 26) : n.height, data: { ...n.data, issueId: chip?.id ?? null } }));
         }}
       />
       <Button size="small" variant="danger" onClick={onDelete}>

@@ -472,6 +472,23 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | CRUD | `p/folders` | `file.upload` | |
 | GET | `p/trash` · POST `{type}/{id}:restore` | Admin | |
 
+### 3.8.1 Diagram (แท็บ Diagram · ผู้ใช้อนุมัติ storyboard 2026-11-19)
+
+ทุก route ตอบ 402 `plan_feature_unavailable` (`feature: diagrams`) เมื่อเป็นแพ็กเกจ Free · Guest Viewer → 403 `guest_view_limited` · แก้ได้ทีละคน ไม่มีประวัติเวอร์ชัน
+
+| Method | Path | สิทธิ์ | หมายเหตุ |
+|---|---|---|---|
+| GET | `p/diagrams?q&template&sort&issue&trashed` | `project.view` · `trashed=true` ต้องมี `project.trash` | ภาพย่อ (`preview`), ผู้ถือสิทธิ์แก้ (`lock`), `permissions` · `issue` = Diagram ที่มีกล่องผูกงานนั้น |
+| POST | `p/diagrams` | `diagram.edit` | `{ name, description?, template }` · ใส่กล่องตัวอย่างตามแบบเริ่มต้น · คนสร้างถือสิทธิ์แก้ทันที |
+| GET | `p/diagrams/{id}` | `project.view` | `content` (nodes, edges), `revision`, `issues` (ชิปสถานะของงานที่ผูก · เลยกำหนดชนะสถานะ) |
+| PATCH | `p/diagrams/{id}` | `diagram.edit` | ชื่อ / คำอธิบาย · ไม่ต้องถือสิทธิ์แก้ภาพ |
+| PUT | `p/diagrams/{id}/content` | `diagram.edit` + ถือสิทธิ์แก้ (หรือสิทธิ์หมดอายุและยังไม่มีใครรับต่อ) | `{ revision, content }` · revision ไม่ตรง → 409 `diagram_conflict` · คนอื่นถืออยู่ → 409 `diagram_locked` · งานนอกโปรเจกต์ → 422 `diagram_issue_not_found` · เกิน 1 MB → 413 |
+| POST | `p/diagrams/{id}/lock` | `diagram.edit` · `takeover: true` ต้องมี `diagram.takeover` | ขอ / ต่ออายุสิทธิ์แก้ 5 นาที (หน้าเว็บส่งทุก 60 วินาที) · คนอื่นถืออยู่ → 409 `diagram_locked` พร้อม `details.lock` · แก้ไขแทนบันทึก Audit `diagram.takeover` |
+| DELETE | `p/diagrams/{id}/lock` | `project.view` | ปล่อยสิทธิ์ของตัวเอง |
+| DELETE | `p/diagrams/{id}` | `diagram.edit` · Member ลบได้เฉพาะที่ตัวเองสร้าง | ย้ายไปถังขยะ · คนอื่นกำลังแก้ → 409 (Admin ลบได้) |
+| POST | `p/diagrams/{id}/restore` | `project.trash` | |
+| GET | `p/diagram-issue-options?q` | `diagram.edit` | ตัวเลือกช่อง "ผูกกับงาน" · ค้นด้วยเลขงาน (39, DP-39) หรือชื่อ · 20 รายการ |
+
 ### 3.9 แจ้งเตือน, ค้นหา, รายงาน และ Automation
 
 | Method | Path | สิทธิ์ | หมายเหตุ |

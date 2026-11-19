@@ -55,11 +55,11 @@ a.card:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
 }
 
 /* ---------------------------------------------------------------- Editor */
-.editorPage { padding:16px 24px; min-width:0; display:flex; flex-direction:column; height:calc(100dvh - 150px); min-height:520px; }
+.editorPage { padding:16px 24px; min-width:0; display:flex; flex-direction:column; height:calc(100dvh - 220px); }
 .full { position:fixed; inset:0; z-index:60; padding:12px; height:auto; background:var(--background); }
 .editor { flex:1; min-height:0; display:flex; flex-direction:column; background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
 .bar { display:flex; align-items:center; gap:8px; padding:8px 10px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
-.title { margin:0; font-size:14px; font-weight:700; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:36ch; }
+.bar .title { margin:0; font-size:14px; line-height:1.4; font-weight:700; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:36ch; }
 .spacer { flex:1; }
 .iconBtn { display:inline-grid; place-items:center; width:30px; height:30px; border:0; border-radius:8px; background:transparent; color:var(--muted); cursor:pointer; flex:none; }
 .iconBtn:hover:not(:disabled) { background:var(--hover); color:var(--foreground); }
@@ -219,8 +219,8 @@ button.chip:focus-visible { outline:2px solid var(--focus); outline-offset:1px; 
 .check { display:flex; gap:8px; align-items:center; font-size:12.5px; color:var(--foreground); }
 
 @media (max-width:760px) {
-  .editorPage { padding:10px 12px; height:calc(100dvh - 170px); min-height:420px; }
-  .title { max-width:20ch; }
+  .editorPage { padding:10px 12px; }
+  .bar .title { max-width:22ch; font-size:15px; }
   .bar .sub { display:none; }
 }
 @media (prefers-reduced-motion:reduce) {

@@ -1,114 +1,46 @@
 "use client";
 
 import "@xyflow/react/dist/base.css";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
-  ConnectionMode,
-  MarkerType,
-  ReactFlow,
-  ReactFlowProvider,
-  getNodesBounds,
-  getViewportForBounds,
-  useEdgesState,
-  useNodesState,
-  useReactFlow,
-  useViewport,
-  type Connection,
-  type Edge,
-  type Node,
-  type NodeChange,
-  type OnSelectionChangeParams,
+  ConnectionMode, MiniMap, NodeToolbar, Position, ReactFlow, ReactFlowProvider, getNodesBounds, getViewportForBounds, useEdgesState, useNodesState,
+  useReactFlow, useViewport, type Connection, type NodeChange, type OnSelectionChangeParams,
 } from "@xyflow/react";
-import { ArrowLeft, Download, Lock, Maximize2, Minimize2, Minus, Pencil, Plus, Redo2, Scan, Trash2, Undo2, X } from "lucide-react";
-import { Button, ConfirmDialog, Dialog, ErrorState, Input, LoadingState, NotFound, Select, useToast } from "@/components/ui";
+import { ArrowLeft, Download, Lock, Maximize2, Minimize2, Minus, Pencil, Plus, Redo2, Scan, Search as SearchIcon, Trash2, Undo2, X } from "lucide-react";
+import { Button, ConfirmDialog, Dialog, ErrorState, Input, LoadingState, NotFound, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { useIsMobile } from "@/lib/use-mobile";
 import { cn } from "@/lib/utils";
-import { DiagramContext, SHAPE_GROUPS, ShapeIcon, defaultSize, isContainer, nodeTypes } from "./shapes";
-import { COLORS, SHAPES, type Column, type Content, type ContentEdge, type ContentNode, type Diagram, type IssueChip, type IssueOption, type Lock as LockInfo, type NodeColor, type NodeData, type SaveResult, type Shape } from "./types";
+import type { Permissions } from "@/lib/types";
+import { EdgeContext, EdgeMarkers, edgeTypes, type EdgeData, type FlowEdge } from "./edges";
+import { ISSUE_DRAG, Library, SHAPE_DRAG } from "./library";
+import { LinkDialog } from "./link-dialog";
+import { align, boundsOf, childrenOf, distribute, duplicate, rid, sameSize, toContent, toFlowEdge, toFlowNode, type AlignMode, type FlowNode } from "./ops";
+import { CreateTaskDialog, EdgePanel, NodePanel } from "./panel";
+import { DiagramContext, SHAPE_DEFS, defaultSize, isContainer, nodeTypes, type PaletteItem } from "./shapes";
+import { EdgeBar, MultiBar, NodeBar, TopToolbar, type Tool } from "./toolbars";
+import { chipOf, MAX_ISSUES_PER_NODE, type Content, type Diagram, type IssueChip, type IssueOption, type Lock as LockInfo, type NodeData, type SaveResult, type Shape } from "./types";
 import styles from "./diagrams.module.css";
 
-type FlowNode = Node<NodeData, Shape>;
-type EdgeData = { cardinality?: ContentEdge["cardinality"]; dashed?: boolean; text?: string };
-type FlowEdge = Edge<EdgeData>;
 type SaveState = "saved" | "pending" | "saving" | "error";
 
-const DRAG_TYPE = "application/x-friday-shape";
 const SAVE_DELAY = 1500;
 const HEARTBEAT_MS = 60_000;
-const CARD_TEXT: Record<NonNullable<ContentEdge["cardinality"]>, string> = { "1-1": "1 : 1", "1-n": "1 : N", "n-n": "N : N" };
 // ค่าคงที่ของ React Flow ต้องอ้างอิงเดิมทุก render (ส่ง object ใหม่ = ไลบรารีอัปเดต store ซ้ำ)
 const SNAP_GRID: [number, number] = [8, 8];
 const FIT_OPTIONS = { padding: 0.2, maxZoom: 1 };
 const DELETE_KEYS = ["Backspace", "Delete"];
 const PRO_OPTIONS = { hideAttribution: true };
-const EDGE_OPTIONS = { type: "smoothstep" };
-const rid = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`).replace(/-/g, "").slice(0, 10);
-
-// ---------------------------------------------------------------------------
-// แปลงระหว่าง content ที่ API เก็บ กับ node / edge ของ React Flow
-// ---------------------------------------------------------------------------
-function toFlowNode(n: ContentNode): FlowNode {
-  const size = defaultSize(n.type);
-  // กล่องที่ผูกงานต้องสูงพอให้ชิปอยู่ใต้ข้อความ (ข้อมูลที่บันทึกก่อนขยายอัตโนมัติ)
-  const minHeight = n.data.issueId && !isContainer(n.type) && n.type !== "table" ? size.h + 26 : 0;
-  return {
-    id: n.id,
-    type: n.type,
-    position: n.position,
-    width: n.width ?? size.w,
-    height: Math.max(n.height ?? size.h, minHeight),
-    zIndex: isContainer(n.type) ? -1 : n.zIndex,
-    data: { label: n.data.label ?? "", color: n.data.color ?? "default", issueId: n.data.issueId ?? null, ...(n.data.columns ? { columns: n.data.columns } : {}) },
-  };
-}
-function edgeText(label?: string, cardinality?: ContentEdge["cardinality"]) {
-  return [label, cardinality ? CARD_TEXT[cardinality] : ""].filter(Boolean).join(" · ") || undefined;
-}
-function toFlowEdge(e: ContentEdge): FlowEdge {
-  return {
-    id: e.id,
-    source: e.source,
-    target: e.target,
-    sourceHandle: e.sourceHandle ?? null,
-    targetHandle: e.targetHandle ?? null,
-    type: "smoothstep",
-    label: edgeText(e.label, e.cardinality),
-    markerEnd: e.cardinality ? undefined : { type: MarkerType.ArrowClosed, width: 16, height: 16 },
-    style: e.dashed ? { strokeDasharray: "6 4" } : undefined,
-    data: { cardinality: e.cardinality, dashed: e.dashed, text: e.label },
-  };
-}
-function toContent(nodes: FlowNode[], edges: FlowEdge[]): Content {
-  return {
-    nodes: nodes.map((n) => ({
-      id: n.id,
-      type: n.type as Shape,
-      position: { x: Math.round(n.position.x), y: Math.round(n.position.y) },
-      // ใช้ขนาดที่ตั้งไว้เท่านั้น (ไม่ใช้ measured) เปิดหน้าแล้วจึงไม่นับว่าแก้
-      width: Math.round(n.width ?? defaultSize(n.type as Shape).w),
-      height: Math.round(n.height ?? defaultSize(n.type as Shape).h),
-      ...(n.zIndex !== undefined && !isContainer(n.type as Shape) ? { zIndex: n.zIndex } : {}),
-      data: { label: n.data.label, color: n.data.color, issueId: n.data.issueId, ...(n.data.columns ? { columns: n.data.columns } : {}) },
-    })),
-    edges: edges.map((e) => ({
-      id: e.id,
-      source: e.source,
-      target: e.target,
-      sourceHandle: e.sourceHandle ?? null,
-      targetHandle: e.targetHandle ?? null,
-      ...(e.data?.text ? { label: e.data.text } : {}),
-      ...(e.data?.cardinality ? { cardinality: e.data.cardinality } : {}),
-      ...(e.data?.dashed ? { dashed: true } : {}),
-    })),
-  };
-}
+const EDGE_OPTIONS = { type: "diagram" };
+const PAN_BUTTONS = [1, 2];
+/** คลิปบอร์ดของ Diagram (คัดลอกข้าม Diagram ในโปรเจกต์เดียวกันได้ ใน session นี้) */
+let clipboard: { project: string; content: Content } | null = null;
 
 export function DiagramEditorPage(props: { ws: string; projectKey: string; id: string }) {
   return (
@@ -142,6 +74,19 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
   const [confirm, setConfirm] = useState<null | "delete" | "takeover">(null);
   const [renaming, setRenaming] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [tool, setTool] = useState<Tool>("select");
+  const [grid, setGrid] = useState(true);
+  const [minimap, setMinimap] = useState(false);
+  const [panelTab, setPanelTab] = useState<"format" | "tasks">("format");
+  const [linkFor, setLinkFor] = useState<string | null>(null);
+  const [createFor, setCreateFor] = useState<string | null>(null);
+  const [openTag, setOpenTag] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const [finding, setFinding] = useState(false);
+  const [findQ, setFindQ] = useState("");
+  const [findAt, setFindAt] = useState(0);
+  const [shortcuts, setShortcuts] = useState(false);
+  const [iconFocus, setIconFocus] = useState(0);
   const [, setHistoryTick] = useState(0);
   const wrapper = useRef<HTMLDivElement>(null);
   const page = useRef<HTMLDivElement>(null);
@@ -153,6 +98,8 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
     // คนดูเห็นสิ่งที่คนแก้บันทึกภายในไม่กี่วินาที · ตอนแก้เองไม่ดึงทับ
     refetchInterval: (q) => (editing ? false : q.state.data?.lock && q.state.data.lock.userId !== me.id ? 5000 : 30_000),
   });
+  const perms = useQuery({ queryKey: ["permissions", ws, projectKey], queryFn: () => api.get<Permissions>(`${base}/my-permissions`), staleTime: 60_000 });
+  const canCreateTask = !!perms.data?.permissions.includes("issue.create");
   const data = detail.data;
   const lockedByOther: LockInfo | null = data?.lock && data.lock.userId !== me.id ? data.lock : null;
 
@@ -171,6 +118,7 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
   const undoStack = useRef<string[]>([]);
   const redoStack = useRef<string[]>([]);
   const resizing = useRef(false);
+  const containerDrag = useRef<{ id: string; start: { x: number; y: number }; children: Map<string, { x: number; y: number }> } | null>(null);
 
   const contentKey = useMemo(() => JSON.stringify(toContent(nodes, edges)), [nodes, edges]);
   const contentKeyRef = useRef(contentKey);
@@ -208,7 +156,7 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
     const first = loadedRevision.current === null;
     load(data);
     // เปิดครั้งแรก: จัดให้เห็นทั้งภาพ (prop fitView ทำงานเฉพาะตอนที่มีกล่องตั้งแต่ mount)
-    if (first) setTimeout(() => void flow.fitView({ padding: 0.2, maxZoom: 1 }), 50);
+    if (first) setTimeout(() => void flow.fitView(FIT_OPTIONS), 50);
   }, [data, load, flow]);
 
   // เพิ่งสร้าง / เปิดหน้าใหม่ระหว่างที่ตัวเองถือสิทธิ์อยู่ = เข้าโหมดแก้ต่อเลย (มือถือดูได้อย่างเดียว)
@@ -242,25 +190,6 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
     apply(JSON.parse(next) as Content);
     setHistoryTick((x) => x + 1);
   }, [apply]);
-
-  useEffect(() => {
-    if (!editing) return;
-    const onKey = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target && (target.closest("input, textarea, select, [contenteditable=true]"))) return;
-      if (!(e.metaKey || e.ctrlKey)) return;
-      const key = e.key.toLowerCase();
-      if (key === "z" && !e.shiftKey) {
-        e.preventDefault();
-        undo();
-      } else if ((key === "z" && e.shiftKey) || key === "y") {
-        e.preventDefault();
-        redo();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [editing, undo, redo]);
 
   // ---------------------------------------------------------------------------
   // บันทึกอัตโนมัติ + ถือสิทธิ์แก้
@@ -303,8 +232,7 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
       setIssues((cur) => ({ ...cur, ...r.issues }));
       setSaveState(contentKeyRef.current === key ? "saved" : "pending");
     } catch (e) {
-      if (e instanceof ApiError && e.code === "diagram_locked") lostLock(e.message);
-      else if (e instanceof ApiError && e.code === "diagram_conflict") lostLock(e.message);
+      if (e instanceof ApiError && (e.code === "diagram_locked" || e.code === "diagram_conflict")) lostLock(e.message);
       else {
         setSaveState("error");
         toast({ message: e instanceof Error ? e.message : t("errors.save"), tone: "error" });
@@ -366,6 +294,7 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
     while (saving.current) await new Promise((r) => setTimeout(r, 100));
     await save();
     clearSelection();
+    setTool("select");
     setEditing(false);
     try {
       await api.delete(`${api$}/lock`);
@@ -381,8 +310,8 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
   const onNodesChange = useCallback(
     (changes: NodeChange<FlowNode>[]) => {
       if (!editingRef.current) {
-        // ดูอย่างเดียว: รับเฉพาะการวัดขนาด ไม่รับการย้าย / ลบ
-        onNodesChangeBase(changes.filter((c) => c.type === "dimensions" && !c.resizing));
+        // ดูอย่างเดียว: รับเฉพาะการวัดขนาดและการเลือก (ค้นหาในภาพ) ไม่รับการย้าย / ลบ
+        onNodesChangeBase(changes.filter((c) => (c.type === "dimensions" && !c.resizing) || c.type === "select"));
         return;
       }
       const resize = changes.find((c) => c.type === "dimensions" && c.resizing !== undefined);
@@ -395,32 +324,49 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
     [onNodesChangeBase, snapshot],
   );
 
-  const addNode = useCallback(
-    (type: Shape, at?: { x: number; y: number }) => {
-      snapshot();
+  const flowPoint = useCallback((clientX: number, clientY: number) => flow.screenToFlowPosition({ x: clientX, y: clientY }), [flow]);
+  const viewCenter = useCallback(() => {
+    const rect = wrapper.current?.getBoundingClientRect();
+    return flowPoint((rect?.left ?? 0) + (rect?.width ?? 600) / 2, (rect?.top ?? 0) + (rect?.height ?? 400) / 2);
+  }, [flowPoint]);
+
+  const newNode = useCallback(
+    (item: PaletteItem, center: { x: number; y: number }, extra: Partial<NodeData> = {}): FlowNode => {
+      const type = item.type;
       const size = defaultSize(type);
-      let position = at;
-      if (!position) {
-        const rect = wrapper.current?.getBoundingClientRect();
-        const center = flow.screenToFlowPosition({ x: (rect?.left ?? 0) + (rect?.width ?? 600) / 2, y: (rect?.top ?? 0) + (rect?.height ?? 400) / 2 });
-        position = { x: center.x - size.w / 2, y: center.y - size.h / 2 };
-      }
-      const label = type === "text" ? t("defaults.text") : type === "table" ? "table_name" : t(`shapes.${type}`);
-      const node: FlowNode = toFlowNode({
+      const lanes = [t("defaults.lane", { n: 1 }), t("defaults.lane", { n: 2 })];
+      const defaults: Partial<NodeData> =
+        type === "table" || type === "er-view" ? { columns: [{ name: "id", type: "uuid", key: "pk" }] }
+        : type === "er-enum" ? { columns: [{ name: "ACTIVE", type: "", key: null }, { name: "INACTIVE", type: "", key: null }] }
+        : type === "uml-class" || type === "uml-interface" ? { body: "- id: uuid\n---\n+ save(): void" }
+        : type === "pool" ? { lanes }
+        : type === "note" ? { color: "yellow" }
+        : {};
+      const label = ["table", "er-view", "er-enum", "uml-class", "uml-interface", "lane-h", "lane-v", "pool", "text", "note", "frame"].includes(type) ? t(`defaults.${type}`) : t(`shapes.${type}`);
+      return toFlowNode({
         id: `n-${rid()}`,
         type,
-        position: { x: Math.round(position.x / 8) * 8, y: Math.round(position.y / 8) * 8 },
-        data: {
-          label,
-          color: type === "note" ? "yellow" : "default",
-          issueId: null,
-          ...(type === "table" ? { columns: [{ name: "id", type: "uuid", key: "pk" as const }] } : {}),
-        },
+        position: { x: Math.round((center.x - size.w / 2) / 8) * 8, y: Math.round((center.y - size.h / 2) / 8) * 8 },
+        data: { label, color: "default", issueIds: [], ...defaults, ...item.preset, ...extra },
       });
-      setNodes((cur) => [...cur.map((n) => ({ ...n, selected: false })), { ...node, selected: true }]);
-      setEdges((cur) => cur.map((e) => ({ ...e, selected: false })));
     },
-    [flow, setEdges, setNodes, snapshot, t],
+    [t],
+  );
+
+  const insertNodes = useCallback(
+    (fresh: FlowNode[], freshEdges: FlowEdge[] = []) => {
+      setNodes((cur) => [...cur.map((n) => (n.selected ? { ...n, selected: false } : n)), ...fresh.map((n) => ({ ...n, selected: true }))]);
+      setEdges((cur) => [...cur.map((e) => (e.selected ? { ...e, selected: false } : e)), ...freshEdges]);
+    },
+    [setEdges, setNodes],
+  );
+
+  const addItem = useCallback(
+    (item: PaletteItem, at?: { x: number; y: number }) => {
+      snapshot();
+      insertNodes([newNode(item, at ?? viewCenter())]);
+    },
+    [insertNodes, newNode, snapshot, viewCenter],
   );
 
   const onConnect = useCallback(
@@ -441,17 +387,39 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
   );
 
   const patchNode = useCallback(
-    (nodeId: string, patch: (n: FlowNode) => FlowNode) => setNodes((cur) => cur.map((n) => (n.id === nodeId ? patch(n) : n))),
+    (nodeId: string, d: Partial<NodeData>, size?: { width?: number; height?: number }) =>
+      setNodes((cur) =>
+        cur.map((n) => {
+          if (n.id !== nodeId) return n;
+          const data = { ...n.data, ...d };
+          return { ...n, ...size, data, draggable: data.locked ? false : undefined };
+        }),
+      ),
     [setNodes],
+  );
+  const setType = useCallback(
+    (nodeId: string, type: Shape) => {
+      snapshot();
+      setNodes((cur) =>
+        cur.map((n) => {
+          if (n.id !== nodeId) return n;
+          const kind = SHAPE_DEFS[type].kind;
+          const data = { ...n.data };
+          if ((kind === "table" || kind === "enum") && !data.columns) data.columns = [{ name: "id", type: "uuid", key: "pk" }];
+          if (kind === "pool" && !data.lanes) data.lanes = [t("defaults.lane", { n: 1 }), t("defaults.lane", { n: 2 })];
+          return { ...n, type, zIndex: isContainer(type) ? -1 : undefined, data };
+        }),
+      );
+    },
+    [setNodes, snapshot, t],
   );
   const patchEdge = useCallback(
     (edgeId: string, d: Partial<EdgeData>) =>
       setEdges((cur) =>
         cur.map((e) => {
           if (e.id !== edgeId) return e;
-          const next = { ...e.data, ...d };
-          const fresh = toFlowEdge({ id: e.id, source: e.source, target: e.target, sourceHandle: e.sourceHandle, targetHandle: e.targetHandle, label: next.text, cardinality: next.cardinality, dashed: next.dashed });
-          return { ...fresh, selected: e.selected };
+          const data = { ...e.data, ...d };
+          return { ...e, data, label: data.text || undefined };
         }),
       ),
     [setEdges],
@@ -463,14 +431,65 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
     setEdges((cur) => cur.filter((e) => !e.selected && !gone.has(e.source) && !gone.has(e.target)));
   }, [setEdges, setNodes, snapshot]);
 
+  const selectedIds = useCallback(() => new Set(nodesRef.current.filter((n) => n.selected).map((n) => n.id)), []);
+  const doAlign = useCallback((m: AlignMode) => { snapshot(); setNodes((cur) => align(cur, selectedIds(), m)); }, [selectedIds, setNodes, snapshot]);
+  const doDistribute = useCallback(() => { snapshot(); setNodes((cur) => distribute(cur, selectedIds())); }, [selectedIds, setNodes, snapshot]);
+  const doSameSize = useCallback(() => { snapshot(); setNodes((cur) => sameSize(cur, selectedIds())); }, [selectedIds, setNodes, snapshot]);
+  const doDuplicate = useCallback(() => {
+    const ids = selectedIds();
+    if (!ids.size) return;
+    snapshot();
+    const copy = duplicate(nodesRef.current, edgesRef.current, ids);
+    insertNodes(copy.nodes, copy.edges);
+  }, [insertNodes, selectedIds, snapshot]);
+  const doGroup = useCallback(() => {
+    const ids = selectedIds();
+    if (ids.size < 2) return;
+    snapshot();
+    const b = boundsOf(nodesRef.current, ids);
+    const frame = toFlowNode({ id: `n-${rid()}`, type: "group", position: { x: b.x, y: b.y }, width: b.w, height: b.h, data: { label: t("defaults.group"), color: "default", issueIds: [] } });
+    setNodes((cur) => [{ ...frame, selected: false }, ...cur]);
+  }, [selectedIds, setNodes, snapshot, t]);
+  const doArrange = useCallback(
+    (dir: "front" | "back") => {
+      const ids = selectedIds();
+      snapshot();
+      const zs = nodesRef.current.map((n) => n.zIndex ?? 0);
+      const z = dir === "front" ? Math.max(0, ...zs) + 1 : Math.min(0, ...zs.filter((x) => x > -1)) - 1;
+      setNodes((cur) => cur.map((n) => (ids.has(n.id) && !isContainer(n.type as Shape) ? { ...n, zIndex: Math.max(-900, z) } : n)));
+    },
+    [selectedIds, setNodes, snapshot],
+  );
+  const copySelection = useCallback(() => {
+    const ids = selectedIds();
+    if (!ids.size) return;
+    const content = toContent(nodesRef.current.filter((n) => ids.has(n.id)), edgesRef.current.filter((e) => ids.has(e.source) && ids.has(e.target)));
+    clipboard = { project: base, content };
+    toast({ message: t("editor.copied", { n: ids.size }) });
+  }, [base, selectedIds, t, toast]);
+  const paste = useCallback(() => {
+    if (!clipboard?.content.nodes.length) return;
+    snapshot();
+    const keepIssues = clipboard.project === base;
+    const map = new Map<string, string>();
+    const fresh = clipboard.content.nodes.map((n) => {
+      const nid = `n-${rid()}`;
+      map.set(n.id, nid);
+      return toFlowNode({ ...n, id: nid, position: { x: n.position.x + 32, y: n.position.y + 32 }, data: { ...n.data, issueIds: keepIssues ? n.data.issueIds : [] } });
+    });
+    const freshEdges = clipboard.content.edges.map((e) => toFlowEdge({ ...e, id: `e-${rid()}`, source: map.get(e.source)!, target: map.get(e.target)!, bend: e.bend ? { x: e.bend.x + 32, y: e.bend.y + 32 } : undefined }));
+    clipboard = { ...clipboard, content: toContent(fresh, freshEdges) };
+    insertNodes(fresh, freshEdges);
+  }, [base, insertNodes, snapshot]);
+
   const openIssue = useCallback(
     (key: string) => {
-      const params = new URLSearchParams({ issue: key });
-      router.push(`${pathname}?${params}`, { scroll: false });
+      setOpenTag(null);
+      router.push(`${pathname}?${new URLSearchParams({ issue: key })}`, { scroll: false });
     },
     [pathname, router],
   );
-  const ctx = useMemo(() => ({ editing, issues, openIssue, setLabel }), [editing, issues, openIssue, setLabel]);
+  const ctx = useMemo(() => ({ editing, issues, openIssue, setLabel, openTag, setOpenTag, dropTarget }), [editing, issues, openIssue, setLabel, openTag, dropTarget]);
   // React Flow เรียก onSelectionChange ซ้ำเมื่อฟังก์ชันเปลี่ยน จึงต้อง memo และไม่ set state ถ้าการเลือกเหมือนเดิม
   const onSelectionChange = useCallback(({ nodes: n, edges: e }: OnSelectionChangeParams<FlowNode, FlowEdge>) => {
     const next = { nodes: n.map((x) => x.id), edges: e.map((x) => x.id) };
@@ -480,7 +499,198 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
     snapshot();
     return true;
   }, [snapshot]);
-  const focusEdgeLabel = useCallback(() => document.getElementById("diagram-edge-label")?.focus(), []);
+  const focusEdgeLabel = useCallback(() => setTimeout(() => document.getElementById("diagram-edge-label")?.focus(), 0), []);
+
+  // ลากกรอบ / Lane / Pool: กล่องที่อยู่ข้างในย้ายตาม
+  const onNodeDragStart = useCallback(
+    (_: unknown, node: FlowNode, dragged: FlowNode[]) => {
+      snapshot();
+      if (dragged.length === 1 && isContainer(node.type as Shape)) {
+        const kids = childrenOf(nodesRef.current, node);
+        containerDrag.current = { id: node.id, start: { ...node.position }, children: new Map(nodesRef.current.filter((n) => kids.includes(n.id)).map((n) => [n.id, { ...n.position }])) };
+      } else containerDrag.current = null;
+    },
+    [snapshot],
+  );
+  const onNodeDrag = useCallback(
+    (_: unknown, node: FlowNode) => {
+      const drag = containerDrag.current;
+      if (!drag || drag.id !== node.id || !drag.children.size) return;
+      const dx = node.position.x - drag.start.x;
+      const dy = node.position.y - drag.start.y;
+      setNodes((cur) => cur.map((n) => {
+        const from = drag.children.get(n.id);
+        return from ? { ...n, position: { x: from.x + dx, y: from.y + dy } } : n;
+      }));
+    },
+    [setNodes],
+  );
+  const onNodeDragStop = useCallback(() => {
+    containerDrag.current = null;
+  }, []);
+
+  // เครื่องมือ ข้อความ / โน้ต / กรอบ: คลิกพื้นที่ว่างเพื่อวาง
+  const onPaneClick = useCallback(
+    (e: React.MouseEvent) => {
+      setOpenTag(null);
+      if (!editingRef.current || (tool !== "text" && tool !== "note" && tool !== "frame")) return;
+      addItem({ key: tool, type: tool }, flowPoint(e.clientX, e.clientY));
+      setTool("select");
+    },
+    [addItem, flowPoint, tool],
+  );
+
+  // เครื่องมือเส้นอิสระ: กดค้างแล้วลาก = จุดต้น → จุดปลาย
+  const onPointerDownCapture = useCallback(
+    (e: ReactPointerEvent) => {
+      if (!editingRef.current || tool !== "line" || e.button !== 0) return;
+      if (!(e.target as HTMLElement).closest(".react-flow__pane")) return;
+      e.stopPropagation();
+      e.preventDefault();
+      snapshot();
+      const p = flowPoint(e.clientX, e.clientY);
+      const point = (): FlowNode => toFlowNode({ id: `p-${rid()}`, type: "point", position: { x: p.x - 6, y: p.y - 6 }, data: { label: "", color: "default", issueIds: [] } });
+      const a = point();
+      const b = point();
+      const edge = toFlowEdge({ id: `e-${rid()}`, source: a.id, target: b.id, sourceHandle: "c", targetHandle: "c", path: "straight", markerEnd: "arrow" });
+      setNodes((cur) => [...cur.map((n) => (n.selected ? { ...n, selected: false } : n)), a, b]);
+      setEdges((cur) => [...cur, edge]);
+      const move = (ev: PointerEvent) => {
+        const q = flowPoint(ev.clientX, ev.clientY);
+        setNodes((cur) => cur.map((n) => (n.id === b.id ? { ...n, position: { x: q.x - 6, y: q.y - 6 } } : n)));
+      };
+      const up = () => {
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", up);
+        setTool("select");
+      };
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", up);
+    },
+    [flowPoint, setEdges, setNodes, snapshot, tool],
+  );
+
+  // ลากรูปทรง / งานจากคลังซ้าย
+  const nodeUnder = (x: number, y: number) => {
+    const el = document.elementsFromPoint(x, y).find((d) => d instanceof HTMLElement && d.classList.contains("react-flow__node")) as HTMLElement | undefined;
+    const nid = el?.dataset.id;
+    return nid && nodesRef.current.find((n) => n.id === nid && n.type !== "point") ? nid : null;
+  };
+  function onDragOver(e: DragEvent) {
+    if (!editing) return;
+    const types = Array.from(e.dataTransfer.types);
+    if (!types.includes(SHAPE_DRAG) && !types.includes(ISSUE_DRAG)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    const target = types.includes(ISSUE_DRAG) ? nodeUnder(e.clientX, e.clientY) : null;
+    if (target !== dropTarget) setDropTarget(target);
+  }
+  function onDrop(e: DragEvent) {
+    if (!editing) return;
+    const shape = e.dataTransfer.getData(SHAPE_DRAG);
+    const issue = e.dataTransfer.getData(ISSUE_DRAG);
+    const target = dropTarget ?? (issue ? nodeUnder(e.clientX, e.clientY) : null);
+    setDropTarget(null);
+    if (!shape && !issue) return;
+    e.preventDefault();
+    const p = flowPoint(e.clientX, e.clientY);
+    if (shape) {
+      addItem(JSON.parse(shape) as PaletteItem, p);
+      return;
+    }
+    const o = JSON.parse(issue) as IssueOption;
+    setIssues((cur) => ({ ...cur, [o.id]: chipOf(o) }));
+    if (target) {
+      const node = nodesRef.current.find((n) => n.id === target);
+      if (!node) return;
+      if (node.data.issueIds.includes(o.id)) return toast({ message: t("link.already", { key: o.key }) });
+      if (node.data.issueIds.length >= MAX_ISSUES_PER_NODE) return toast({ message: t("link.max", { n: MAX_ISSUES_PER_NODE }), tone: "error" });
+      snapshot();
+      patchNode(target, { issueIds: [...node.data.issueIds, o.id] });
+      toast({ message: t("link.addedTo", { key: o.key, name: node.data.label || t("link.untitled") }) });
+      return;
+    }
+    snapshot();
+    insertNodes([newNode({ key: "process", type: "process" }, p, { label: o.title, issueIds: [o.id] })]);
+  }
+
+  // ---------------------------------------------------------------------------
+  // ค้นหาในภาพ + คีย์ลัด
+  // ---------------------------------------------------------------------------
+  const findMatches = useMemo(() => {
+    const q = findQ.trim().toLowerCase();
+    if (!q) return [];
+    return nodes.filter((n) => n.data.label.toLowerCase().includes(q) || n.data.issueIds.some((i) => issues[i]?.key.toLowerCase() === q)).map((n) => n.id);
+  }, [findQ, nodes, issues]);
+  const goToMatch = useCallback(
+    (index: number) => {
+      const nid = findMatches[index];
+      const node = nodesRef.current.find((n) => n.id === nid);
+      if (!node) return;
+      setFindAt(index);
+      setNodes((cur) => cur.map((n) => (n.selected !== (n.id === nid) ? { ...n, selected: n.id === nid } : n)));
+      void flow.setCenter(node.position.x + (node.width ?? 0) / 2, node.position.y + (node.height ?? 0) / 2, { zoom: Math.max(flow.getZoom(), 1), duration: 300 });
+    },
+    [findMatches, flow, setNodes],
+  );
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const typing = !!target?.closest("input, textarea, select, [contenteditable=true]");
+      const mod = e.metaKey || e.ctrlKey;
+      const key = e.key.toLowerCase();
+      if (mod && key === "f" && !typing) {
+        e.preventDefault();
+        setFinding(true);
+        return;
+      }
+      if (typing || !editingRef.current) return;
+      if (mod) {
+        if (key === "z" && !e.shiftKey) undo();
+        else if ((key === "z" && e.shiftKey) || key === "y") redo();
+        else if (key === "d") doDuplicate();
+        else if (key === "c") copySelection();
+        else if (key === "v") paste();
+        else if (key === "g") doGroup();
+        else if (key === "a") setNodes((cur) => cur.map((n) => ({ ...n, selected: true })));
+        else if (key === "b") {
+          const picked = nodesRef.current.filter((n) => n.selected);
+          if (picked.length) {
+            snapshot();
+            picked.forEach((n) => patchNode(n.id, { bold: !n.data.bold }));
+          }
+        } else return;
+        e.preventDefault();
+        return;
+      }
+      if (e.altKey) return;
+      const tools: Record<string, Tool> = { v: "select", h: "pan", t: "text", n: "note", f: "frame", l: "line" };
+      if (tools[key]) {
+        setTool(tools[key]);
+        return;
+      }
+      if (e.key === "?") {
+        setShortcuts(true);
+        return;
+      }
+      if (e.key === "Escape") {
+        setTool("select");
+        setOpenTag(null);
+        return;
+      }
+      const arrows: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+      const step = arrows[e.key];
+      if (step && nodesRef.current.some((n) => n.selected)) {
+        e.preventDefault();
+        snapshot();
+        const d = e.shiftKey ? 10 : 1;
+        setNodes((cur) => cur.map((n) => (n.selected && !n.data.locked ? { ...n, position: { x: n.position.x + step[0] * d, y: n.position.y + step[1] * d } } : n)));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [copySelection, doDuplicate, doGroup, paste, patchNode, redo, setNodes, snapshot, undo]);
 
   async function exportImage(kind: "png" | "svg") {
     setExportOpen(false);
@@ -489,9 +699,9 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
     if (!viewport || !all.length) return;
     const { toPng, toSvg } = await import("html-to-image");
     const bounds = getNodesBounds(all);
-    const width = Math.min(4000, Math.ceil(bounds.width + 96));
-    const height = Math.min(4000, Math.ceil(bounds.height + 96));
-    const vp = getViewportForBounds(bounds, width, height, 0.1, 2, 0.05);
+    const width = Math.min(4000, Math.ceil(bounds.width + 120));
+    const height = Math.min(4000, Math.ceil(bounds.height + 120));
+    const vp = getViewportForBounds(bounds, width, height, 0.1, 2, 0.06);
     const background = getComputedStyle(wrapper.current!).getPropertyValue("--card").trim() || "white";
     try {
       const make = kind === "png" ? toPng : toSvg;
@@ -525,7 +735,7 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
     const fit = () => {
       const top = el.getBoundingClientRect().top + window.scrollY;
       // มือถือมีแถบเมนูล่างทับ ~76 px
-      el.style.height = `${Math.max(mobile ? 420 : 520, Math.floor(window.innerHeight - top - (mobile ? 76 : 0)))}px`;
+      el.style.height = `${Math.max(mobile ? 420 : 560, Math.floor(window.innerHeight - top - (mobile ? 76 : 0)))}px`;
     };
     fit();
     window.addEventListener("resize", fit);
@@ -538,204 +748,294 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
     if (planBlocked) router.replace(listHref);
   }, [planBlocked, router, listHref]);
 
+  const selectedNodes = nodes.filter((n) => selection.nodes.includes(n.id));
+  const singleNode = selectedNodes.length === 1 && !selection.edges.length ? selectedNodes[0] : undefined;
+  const singleEdge = selection.edges.length === 1 && !selection.nodes.length ? edges.find((e) => e.id === selection.edges[0]) : undefined;
+  const multiIds = selectedNodes.filter((n) => n.type !== "point").map((n) => n.id);
+  const inDiagram = useMemo(() => new Set(nodes.flatMap((n) => n.data.issueIds)), [nodes]);
+  const linkNode = linkFor ? nodes.find((n) => n.id === linkFor) : undefined;
+  const createNode = createFor ? nodes.find((n) => n.id === createFor) : undefined;
+
+  const edgeCtx = useMemo(
+    () => ({
+      editing,
+      onBendStart: snapshot,
+      setBend: (eid: string, bend: { x: number; y: number } | undefined) => patchEdge(eid, { bend }),
+      selectedOnly: singleEdge?.id ?? null,
+      toolbar: (edge: { id: string; data?: EdgeData }) => (
+        <EdgeBar data={edge.data ?? {}} onPatch={(d) => { snapshot(); patchEdge(edge.id, d); }} onLabel={focusEdgeLabel} onDelete={removeSelected} />
+      ),
+    }),
+    [editing, focusEdgeLabel, patchEdge, removeSelected, singleEdge?.id, snapshot],
+  );
+
   // ---------------------------------------------------------------------------
   if (detail.isLoading) return <LoadingState />;
   if (detail.error instanceof ApiError && (detail.error.status === 404 || detail.error.code === "diagram_not_found")) return <NotFound />;
   if (planBlocked) return <LoadingState />;
   if (detail.error || !data) return <ErrorState error={detail.error} retry={() => void detail.refetch()} />;
 
-  const selectedNode = selection.nodes.length === 1 && !selection.edges.length ? nodes.find((n) => n.id === selection.nodes[0]) : undefined;
-  const selectedEdge = selection.edges.length === 1 && !selection.nodes.length ? edges.find((e) => e.id === selection.edges[0]) : undefined;
   const canEdit = data.permissions.edit && !mobile;
   const editedBy = data.updatedBy?.displayName ?? "";
+  const panOnDrag = !editing || tool === "pan" ? true : PAN_BUTTONS;
 
   return (
     <DiagramContext.Provider value={ctx}>
-      <div ref={page} className={cn(styles.editorPage, full && styles.full)}>
-        <div className={styles.editor}>
-          <div className={styles.bar}>
-            <Link href={listHref} className={styles.iconBtn} aria-label={t("editor.back")} title={t("editor.back")}>
-              <ArrowLeft size={16} aria-hidden="true" />
-            </Link>
-            <h2 className={styles.title}>{data.name}</h2>
-            {canEdit && (
-              <button type="button" className={styles.iconBtn} aria-label={t("editor.rename")} title={t("editor.rename")} onClick={() => setRenaming(true)}>
-                <Pencil size={14} aria-hidden="true" />
-              </button>
-            )}
-            {editing ? (
-              <span className={cn(styles.saveChip, saveState === "error" && styles.saveError)} role="status">
-                {t(`save.${saveState}`)}
-              </span>
-            ) : (
-              <span className={styles.sub}>{t("editor.lastEdited", { name: editedBy, date: formatDate(data.updatedAt, me.yearFormat) })}</span>
-            )}
-            <span className={styles.spacer} />
-            {editing && (
-              <>
-                <button type="button" className={styles.iconBtn} onClick={undo} disabled={!undoStack.current.length} aria-label={t("editor.undo")} title={t("editor.undo")}>
-                  <Undo2 size={16} aria-hidden="true" />
+      <EdgeContext.Provider value={edgeCtx}>
+        <div ref={page} className={cn(styles.editorPage, full && styles.full)}>
+          <div className={styles.editor}>
+            <div className={styles.bar}>
+              <Link href={listHref} className={styles.iconBtn} aria-label={t("editor.back")} title={t("editor.back")}>
+                <ArrowLeft size={16} aria-hidden="true" />
+              </Link>
+              <h2 className={styles.title}>{data.name}</h2>
+              {canEdit && (
+                <button type="button" className={styles.iconBtn} aria-label={t("editor.rename")} title={t("editor.rename")} onClick={() => setRenaming(true)}>
+                  <Pencil size={14} aria-hidden="true" />
                 </button>
-                <button type="button" className={styles.iconBtn} onClick={redo} disabled={!redoStack.current.length} aria-label={t("editor.redo")} title={t("editor.redo")}>
-                  <Redo2 size={16} aria-hidden="true" />
-                </button>
-              </>
-            )}
-            <div className={styles.menuWrap}>
-              <Button size="small" onClick={() => setExportOpen((v) => !v)} aria-expanded={exportOpen} disabled={!nodes.length}>
-                <Download size={14} aria-hidden="true" /> {t("editor.export")}
-              </Button>
-              {exportOpen && (
-                <div className={styles.menu} role="menu">
-                  <button type="button" role="menuitem" onClick={() => void exportImage("png")}>{t("editor.exportPng")}</button>
-                  <button type="button" role="menuitem" onClick={() => void exportImage("svg")}>{t("editor.exportSvg")}</button>
-                </div>
               )}
-            </div>
-            <Button size="small" className={styles.desktopOnly} onClick={() => setFull((v) => !v)}>
-              {full ? <Minimize2 size={14} aria-hidden="true" /> : <Maximize2 size={14} aria-hidden="true" />} {full ? t("editor.exitFull") : t("editor.full")}
-            </Button>
-            {!editing && data.permissions.delete && !lockedByOther && !mobile && (
-              <button type="button" className={styles.iconBtn} onClick={() => setConfirm("delete")} aria-label={t("editor.delete")} title={t("editor.delete")}>
-                <Trash2 size={16} aria-hidden="true" />
-              </button>
-            )}
-            {editing ? (
-              <Button size="small" variant="primary" onClick={() => void finish()}>{t("editor.done")}</Button>
-            ) : (
-              canEdit && (
-                <Button size="small" variant="primary" disabled={!!lockedByOther} onClick={() => void startEdit()}>
-                  <Pencil size={14} aria-hidden="true" /> {t("editor.edit")}
-                </Button>
-              )
-            )}
-          </div>
-
-          {!editing && lockedByOther && (
-            <div className={styles.banner} role="status">
-              <Lock size={16} aria-hidden="true" />
-              <span>{t("lock.banner", { name: lockedByOther.user?.displayName ?? "" })}</span>
+              {editing ? (
+                <span className={cn(styles.saveChip, saveState === "error" && styles.saveError)} role="status">{t(`save.${saveState}`)}</span>
+              ) : (
+                <span className={styles.sub}>{t("editor.lastEdited", { name: editedBy, date: formatDate(data.updatedAt, me.yearFormat) })}</span>
+              )}
               <span className={styles.spacer} />
-              {data.permissions.takeover && !mobile && (
-                <Button size="small" onClick={() => setConfirm("takeover")}>{t("lock.takeover")}</Button>
+              {editing && (
+                <>
+                  <button type="button" className={styles.iconBtn} onClick={undo} disabled={!undoStack.current.length} aria-label={t("editor.undo")} title={t("editor.undo")}><Undo2 size={16} aria-hidden="true" /></button>
+                  <button type="button" className={styles.iconBtn} onClick={redo} disabled={!redoStack.current.length} aria-label={t("editor.redo")} title={t("editor.redo")}><Redo2 size={16} aria-hidden="true" /></button>
+                </>
+              )}
+              {!editing && (
+                <button type="button" className={styles.iconBtn} onClick={() => setFinding(true)} aria-label={t("tools.search")} title={`${t("tools.search")} (Ctrl F)`}><SearchIcon size={15} aria-hidden="true" /></button>
+              )}
+              <div className={styles.menuWrap}>
+                <Button size="small" onClick={() => setExportOpen((v) => !v)} aria-expanded={exportOpen} disabled={!nodes.length}>
+                  <Download size={14} aria-hidden="true" /> {t("editor.export")}
+                </Button>
+                {exportOpen && (
+                  <div className={styles.menu} role="menu">
+                    <button type="button" role="menuitem" onClick={() => void exportImage("png")}>{t("editor.exportPng")}</button>
+                    <button type="button" role="menuitem" onClick={() => void exportImage("svg")}>{t("editor.exportSvg")}</button>
+                  </div>
+                )}
+              </div>
+              <Button size="small" className={styles.desktopOnly} onClick={() => setFull((v) => !v)}>
+                {full ? <Minimize2 size={14} aria-hidden="true" /> : <Maximize2 size={14} aria-hidden="true" />} {full ? t("editor.exitFull") : t("editor.full")}
+              </Button>
+              {!editing && data.permissions.delete && !lockedByOther && !mobile && (
+                <button type="button" className={styles.iconBtn} onClick={() => setConfirm("delete")} aria-label={t("editor.delete")} title={t("editor.delete")}><Trash2 size={16} aria-hidden="true" /></button>
+              )}
+              {editing ? (
+                <Button size="small" variant="primary" onClick={() => void finish()}>{t("editor.done")}</Button>
+              ) : (
+                canEdit && (
+                  <Button size="small" variant="primary" disabled={!!lockedByOther} onClick={() => void startEdit()}>
+                    <Pencil size={14} aria-hidden="true" /> {t("editor.edit")}
+                  </Button>
+                )
               )}
             </div>
-          )}
 
-          <div className={styles.body}>
-            {editing && <Palette onAdd={addNode} />}
-            <div
-              className={cn(styles.canvas, editing ? styles.canvasEdit : styles.canvasView)}
-              ref={wrapper}
-              onDragOver={(e) => {
-                if (!editing) return;
-                e.preventDefault();
-                e.dataTransfer.dropEffect = "copy";
-              }}
-              onDrop={(e) => {
-                if (!editing) return;
-                const type = e.dataTransfer.getData(DRAG_TYPE) as Shape;
-                if (!SHAPES.includes(type)) return;
-                e.preventDefault();
-                const size = defaultSize(type);
-                const p = flow.screenToFlowPosition({ x: e.clientX, y: e.clientY });
-                addNode(type, { x: p.x - size.w / 2, y: p.y - size.h / 2 });
-              }}
-            >
-              <ReactFlow<FlowNode, FlowEdge>
-                nodes={nodes}
-                edges={edges}
-                nodeTypes={nodeTypes}
-                onNodesChange={onNodesChange}
-                onEdgesChange={editing ? onEdgesChange : undefined}
-                onConnect={onConnect}
-                onNodeDragStart={snapshot}
-                onBeforeDelete={beforeDelete}
-                onSelectionChange={onSelectionChange}
-                onEdgeDoubleClick={focusEdgeLabel}
-                connectionMode={ConnectionMode.Loose}
-                nodesDraggable={editing}
-                nodesConnectable={editing}
-                elementsSelectable={editing}
-                edgesFocusable={editing}
-                nodesFocusable={editing}
-                deleteKeyCode={editing ? DELETE_KEYS : null}
-                zoomOnDoubleClick={false}
-                snapToGrid
-                snapGrid={SNAP_GRID}
-                minZoom={0.1}
-                maxZoom={3}
-                fitView
-                fitViewOptions={FIT_OPTIONS}
-                proOptions={PRO_OPTIONS}
-                defaultEdgeOptions={EDGE_OPTIONS}
-              />
-              <ZoomBar />
-              {!nodes.length && (
-                <div className={styles.emptyCanvas}>{editing ? t("editor.emptyEdit") : t("editor.emptyView")}</div>
-              )}
-            </div>
-            {editing && (selectedNode || selectedEdge) && (
-              <aside className={styles.panel} aria-label={t("panel.title")}>
-                {selectedNode && (
-                  <NodePanel
-                    key={selectedNode.id}
-                    node={selectedNode}
-                    issues={issues}
-                    base={base}
-                    onSnapshot={snapshot}
-                    onPatch={(patch) => patchNode(selectedNode.id, patch)}
-                    onIssue={(chip) => setIssues((cur) => ({ ...cur, [chip.id]: chip }))}
-                    onDelete={removeSelected}
-                  />
-                )}
-                {selectedEdge && (
-                  <EdgePanel
-                    key={selectedEdge.id}
-                    edge={selectedEdge}
-                    er={[selectedEdge.source, selectedEdge.target].some((x) => nodes.find((n) => n.id === x)?.type === "table")}
-                    onSnapshot={snapshot}
-                    onPatch={(d) => patchEdge(selectedEdge.id, d)}
-                    onDelete={removeSelected}
-                  />
-                )}
-              </aside>
+            {!editing && lockedByOther && (
+              <div className={styles.banner} role="status">
+                <Lock size={16} aria-hidden="true" />
+                <span>{t("lock.banner", { name: lockedByOther.user?.displayName ?? "" })}</span>
+                <span className={styles.spacer} />
+                {data.permissions.takeover && !mobile && <Button size="small" onClick={() => setConfirm("takeover")}>{t("lock.takeover")}</Button>}
+              </div>
             )}
-          </div>
-        </div>
+            {editing && (
+              <TopToolbar
+                tool={tool}
+                setTool={setTool}
+                grid={grid}
+                setGrid={setGrid}
+                minimap={minimap}
+                setMinimap={setMinimap}
+                selectedCount={multiIds.length}
+                onAlign={doAlign}
+                onDistribute={doDistribute}
+                onArrange={doArrange}
+                onSearch={() => setFinding(true)}
+                onShortcuts={() => setShortcuts(true)}
+              />
+            )}
 
-        <ConfirmDialog
-          open={confirm === "delete"}
-          onOpenChange={(open) => !open && setConfirm(null)}
-          title={t("deleteDialog.title", { name: data.name })}
-          description={t("deleteDialog.description")}
-          confirmLabel={t("deleteDialog.confirm")}
-          onConfirm={async () => {
-            await api.delete(api$);
-            await cache.invalidateQueries({ queryKey: ["diagrams", ws, projectKey, "list"] });
-            toast({ message: t("deleteDialog.done", { name: data.name }) });
-            router.push(listHref);
-          }}
-        />
-        <ConfirmDialog
-          open={confirm === "takeover"}
-          onOpenChange={(open) => !open && setConfirm(null)}
-          destructive={false}
-          title={t("lock.takeoverTitle", { name: lockedByOther?.user?.displayName ?? "" })}
-          description={t("lock.takeoverDescription", { name: lockedByOther?.user?.displayName ?? "" })}
-          confirmLabel={t("lock.takeover")}
-          onConfirm={() => startEdit(true)}
-        />
-        <RenameDialog
-          open={renaming}
-          onOpenChange={setRenaming}
-          diagram={data}
-          onSave={async (input) => {
-            await api.request(api$, { method: "PATCH", body: input });
-            await cache.invalidateQueries({ queryKey: ["diagrams", ws, projectKey] });
-          }}
-        />
-      </div>
+            <div className={styles.body}>
+              {editing && <Library base={base} onAdd={addItem} inDiagram={inDiagram} />}
+              <div
+                className={cn(styles.canvas, editing ? styles.canvasEdit : styles.canvasView, editing && grid && styles.gridOn, editing && tool !== "select" && tool !== "pan" && styles.placing)}
+                ref={wrapper}
+                onDragOver={onDragOver}
+                onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropTarget(null); }}
+                onDrop={onDrop}
+                onPointerDownCapture={onPointerDownCapture}
+              >
+                <EdgeMarkers />
+                <ReactFlow<FlowNode, FlowEdge>
+                  nodes={nodes}
+                  edges={edges}
+                  nodeTypes={nodeTypes}
+                  edgeTypes={edgeTypes}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={editing ? onEdgesChange : undefined}
+                  onConnect={onConnect}
+                  onNodeDragStart={onNodeDragStart}
+                  onNodeDrag={onNodeDrag}
+                  onNodeDragStop={onNodeDragStop}
+                  onBeforeDelete={beforeDelete}
+                  onSelectionChange={onSelectionChange}
+                  onEdgeDoubleClick={focusEdgeLabel}
+                  onPaneClick={onPaneClick}
+                  connectionMode={ConnectionMode.Loose}
+                  nodesDraggable={editing && tool === "select"}
+                  nodesConnectable={editing}
+                  elementsSelectable={editing}
+                  edgesFocusable={editing}
+                  nodesFocusable={editing}
+                  selectionOnDrag={editing && tool === "select"}
+                  panOnDrag={panOnDrag}
+                  multiSelectionKeyCode="Shift"
+                  deleteKeyCode={editing ? DELETE_KEYS : null}
+                  zoomOnDoubleClick={false}
+                  snapToGrid={grid}
+                  snapGrid={SNAP_GRID}
+                  minZoom={0.1}
+                  maxZoom={3}
+                  fitView
+                  fitViewOptions={FIT_OPTIONS}
+                  proOptions={PRO_OPTIONS}
+                  defaultEdgeOptions={EDGE_OPTIONS}
+                >
+                  {editing && singleNode && singleNode.type !== "point" && (
+                    <NodeToolbar nodeId={singleNode.id} isVisible position={Position.Top} offset={14}>
+                      <NodeBar
+                        data={singleNode.data}
+                        onPatch={(d) => { snapshot(); patchNode(singleNode.id, d); }}
+                        onLink={() => { setPanelTab("tasks"); if (!singleNode.data.issueIds.length) setLinkFor(singleNode.id); }}
+                        onIcon={() => { setPanelTab("format"); setIconFocus((x) => x + 1); }}
+                        onDuplicate={doDuplicate}
+                        onDelete={removeSelected}
+                      />
+                    </NodeToolbar>
+                  )}
+                  {editing && multiIds.length > 1 && (
+                    <NodeToolbar nodeId={multiIds} isVisible position={Position.Top} offset={14}>
+                      <MultiBar count={multiIds.length} onAlign={doAlign} onDistribute={doDistribute} onSameSize={doSameSize} onGroup={doGroup} onDuplicate={doDuplicate} onDelete={removeSelected} />
+                    </NodeToolbar>
+                  )}
+                  {minimap && <MiniMap pannable zoomable className={styles.minimap} nodeClassName={styles.minimapNode} />}
+                </ReactFlow>
+                <ZoomBar />
+                {finding && (
+                  <div className={styles.find} role="search">
+                    <SearchIcon size={14} aria-hidden="true" />
+                    <input
+                      autoFocus
+                      aria-label={t("find.label")}
+                      placeholder={t("find.placeholder")}
+                      value={findQ}
+                      onChange={(e) => { setFindQ(e.target.value); setFindAt(0); }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && findMatches.length) goToMatch(e.shiftKey ? (findAt - 1 + findMatches.length) % findMatches.length : (findAt + (nodes.some((n) => n.selected && n.id === findMatches[findAt]) ? 1 : 0)) % findMatches.length);
+                        if (e.key === "Escape") setFinding(false);
+                      }}
+                    />
+                    <span className={styles.findCount}>{findQ ? t("find.count", { at: findMatches.length ? findAt + 1 : 0, n: findMatches.length }) : ""}</span>
+                    <button type="button" className={styles.iconBtn} aria-label={t("find.close")} onClick={() => { setFinding(false); setFindQ(""); }}><X size={14} /></button>
+                  </div>
+                )}
+                {!nodes.length && <div className={styles.emptyCanvas}>{editing ? t("editor.emptyEdit") : t("editor.emptyView")}</div>}
+              </div>
+              {editing && ((singleNode && singleNode.type !== "point") || singleEdge) && (
+                <aside className={styles.panel} aria-label={t("panel.title")}>
+                  {singleNode && singleNode.type !== "point" && (
+                    <NodePanel
+                      key={singleNode.id}
+                      node={singleNode}
+                      tab={panelTab}
+                      setTab={setPanelTab}
+                      issues={issues}
+                      iconFocus={iconFocus}
+                      onSnapshot={snapshot}
+                      onPatch={(d, size) => patchNode(singleNode.id, d, size)}
+                      onType={(type) => setType(singleNode.id, type)}
+                      onLink={() => setLinkFor(singleNode.id)}
+                      onUnlink={(iid) => { snapshot(); patchNode(singleNode.id, { issueIds: singleNode.data.issueIds.filter((x) => x !== iid) }); }}
+                      onCreateTask={() => setCreateFor(singleNode.id)}
+                      canCreateTask={canCreateTask}
+                      onDelete={removeSelected}
+                    />
+                  )}
+                  {singleEdge && <EdgePanel key={singleEdge.id} data={singleEdge.data ?? {}} onSnapshot={snapshot} onPatch={(d) => patchEdge(singleEdge.id, d)} onDelete={removeSelected} />}
+                </aside>
+              )}
+            </div>
+          </div>
+
+          <LinkDialog
+            open={!!linkNode}
+            onOpenChange={(v) => !v && setLinkFor(null)}
+            base={base}
+            boxLabel={linkNode?.data.label ?? ""}
+            linked={linkNode?.data.issueIds ?? []}
+            issues={issues}
+            onSave={(ids, chips) => {
+              if (!linkNode) return;
+              snapshot();
+              setIssues((cur) => ({ ...cur, ...Object.fromEntries(chips.map((c) => [c.id, c])) }));
+              patchNode(linkNode.id, { issueIds: ids });
+              setPanelTab("tasks");
+            }}
+          />
+          <CreateTaskDialog
+            open={!!createNode}
+            onOpenChange={(v) => !v && setCreateFor(null)}
+            base={base}
+            title={createNode?.data.label ?? ""}
+            onCreated={(chip) => {
+              if (!createNode) return;
+              snapshot();
+              setIssues((cur) => ({ ...cur, [chip.id]: chip }));
+              patchNode(createNode.id, { issueIds: [...createNode.data.issueIds, chip.id].slice(0, MAX_ISSUES_PER_NODE) });
+              toast({ message: t("createTask.done", { key: chip.key }) });
+            }}
+          />
+          <ShortcutsDialog open={shortcuts} onOpenChange={setShortcuts} />
+          <ConfirmDialog
+            open={confirm === "delete"}
+            onOpenChange={(open) => !open && setConfirm(null)}
+            title={t("deleteDialog.title", { name: data.name })}
+            description={t("deleteDialog.description")}
+            confirmLabel={t("deleteDialog.confirm")}
+            onConfirm={async () => {
+              await api.delete(api$);
+              await cache.invalidateQueries({ queryKey: ["diagrams", ws, projectKey, "list"] });
+              toast({ message: t("deleteDialog.done", { name: data.name }) });
+              router.push(listHref);
+            }}
+          />
+          <ConfirmDialog
+            open={confirm === "takeover"}
+            onOpenChange={(open) => !open && setConfirm(null)}
+            destructive={false}
+            title={t("lock.takeoverTitle", { name: lockedByOther?.user?.displayName ?? "" })}
+            description={t("lock.takeoverDescription", { name: lockedByOther?.user?.displayName ?? "" })}
+            confirmLabel={t("lock.takeover")}
+            onConfirm={() => startEdit(true)}
+          />
+          <RenameDialog
+            open={renaming}
+            onOpenChange={setRenaming}
+            diagram={data}
+            onSave={async (input) => {
+              await api.request(api$, { method: "PATCH", body: input });
+              await cache.invalidateQueries({ queryKey: ["diagrams", ws, projectKey] });
+            }}
+          />
+        </div>
+      </EdgeContext.Provider>
     </DiagramContext.Provider>
   );
 }
@@ -749,338 +1049,28 @@ function ZoomBar() {
       <button type="button" onClick={() => void zoomOut()} aria-label={t("zoomOut")} title={t("zoomOut")}><Minus size={14} aria-hidden="true" /></button>
       <span className={styles.zoomValue}>{Math.round(zoom * 100)}%</span>
       <button type="button" onClick={() => void zoomIn()} aria-label={t("zoomIn")} title={t("zoomIn")}><Plus size={14} aria-hidden="true" /></button>
-      <button type="button" onClick={() => void fitView({ padding: 0.2, maxZoom: 1, duration: 300 })} aria-label={t("fit")} title={t("fit")}><Scan size={14} aria-hidden="true" /></button>
+      <button type="button" onClick={() => void fitView({ ...FIT_OPTIONS, duration: 300 })} aria-label={t("fit")} title={t("fit")}><Scan size={14} aria-hidden="true" /></button>
     </div>
   );
 }
 
-function Palette({ onAdd }: { onAdd: (type: Shape) => void }) {
-  const t = useTranslations("diagrams");
-  const [q, setQ] = useState("");
-  const match = (s: Shape) => !q.trim() || t(`shapes.${s}`).toLowerCase().includes(q.trim().toLowerCase());
+const SHORTCUTS: [string, string][] = [
+  ["V", "select"], ["H / Space", "pan"], ["T", "text"], ["N", "note"], ["F", "frame"], ["L", "line"],
+  ["Ctrl F", "find"], ["Ctrl Z", "undo"], ["Ctrl Shift Z", "redo"], ["Ctrl C / Ctrl V", "copyPaste"], ["Ctrl D", "duplicate"],
+  ["Ctrl A", "selectAll"], ["Ctrl G", "group"], ["Ctrl B", "bold"], ["Shift + Click", "addSelect"], ["← ↑ → ↓", "nudge"], ["Delete", "delete"], ["?", "shortcuts"],
+];
+function ShortcutsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  const t = useTranslations("diagrams.shortcuts");
   return (
-    <div className={styles.palette}>
-      <input className={styles.paletteSearch} placeholder={t("palette.search")} aria-label={t("palette.search")} value={q} onChange={(e) => setQ(e.target.value)} />
-      <p className={styles.paletteHint}>{t("palette.hint")}</p>
-      {SHAPE_GROUPS.map((g) => {
-        const shapes = g.shapes.filter(match);
-        if (!shapes.length) return null;
-        return (
-          <div key={g.key} className={styles.paletteGroup}>
-            <div className={styles.paletteTitle}>{t(`templates.${g.key}`)}</div>
-            <div className={styles.paletteItems}>
-              {shapes.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  draggable
-                  className={styles.paletteItem}
-                  title={t("palette.add", { shape: t(`shapes.${s}`) })}
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData(DRAG_TYPE, s);
-                    e.dataTransfer.effectAllowed = "copy";
-                  }}
-                  onClick={() => onAdd(s)}
-                >
-                  <ShapeIcon type={s} />
-                  <span>{t(`shapes.${s}`)}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function NodePanel({
-  node,
-  issues,
-  base,
-  onSnapshot,
-  onPatch,
-  onIssue,
-  onDelete,
-}: {
-  node: FlowNode;
-  issues: Record<string, IssueChip>;
-  base: string;
-  onSnapshot: () => void;
-  onPatch: (patch: (n: FlowNode) => FlowNode) => void;
-  onIssue: (chip: IssueChip) => void;
-  onDelete: () => void;
-}) {
-  const t = useTranslations("diagrams");
-  const type = node.type as Shape;
-  const typed = useRef(false);
-  const setData = (d: Partial<NodeData>) => onPatch((n) => ({ ...n, data: { ...n.data, ...d } }));
-  const onceSnapshot = () => {
-    if (!typed.current) onSnapshot();
-    typed.current = true;
-  };
-  const columns = node.data.columns ?? [];
-  const setColumns = (next: Column[]) => setData({ columns: next });
-  return (
-    <div className={styles.panelBody}>
-      <h2 className={styles.panelTitle}>{t("panel.title")}</h2>
-      <label className={styles.field}>
-        <span>{type === "table" ? t("panel.tableName") : t("panel.text")}</span>
-        <textarea
-          id="diagram-node-label"
-          className={styles.textarea}
-          rows={type === "table" ? 1 : 3}
-          maxLength={500}
-          value={node.data.label}
-          onFocus={() => (typed.current = false)}
-          onChange={(e) => {
-            onceSnapshot();
-            setData({ label: e.target.value });
-          }}
-        />
-      </label>
-      <Select
-        size="small"
-        label={t("panel.shape")}
-        value={type}
-        onChange={(e) => {
-          onSnapshot();
-          const next = e.target.value as Shape;
-          onPatch((n) => ({ ...n, type: next, zIndex: isContainer(next) ? -1 : undefined, data: next === "table" && !n.data.columns ? { ...n.data, columns: [{ name: "id", type: "uuid", key: "pk" }] } : n.data }));
-        }}
-      >
-        {SHAPE_GROUPS.map((g) => (
-          <optgroup key={g.key} label={t(`templates.${g.key}`)}>
-            {g.shapes.map((s) => (
-              <option key={s} value={s}>{t(`shapes.${s}`)}</option>
-            ))}
-          </optgroup>
-        ))}
-      </Select>
-      <div className={styles.field}>
-        <span>{t("panel.color")}</span>
-        <div className={styles.swatches} role="radiogroup" aria-label={t("panel.color")}>
-          {COLORS.map((c) => (
-            <button
-              key={c}
-              type="button"
-              role="radio"
-              aria-checked={node.data.color === c}
-              aria-label={t(`colors.${c}`)}
-              title={t(`colors.${c}`)}
-              className={cn(styles.swatch, styles[`color_${c}`], node.data.color === c && styles.swatchOn)}
-              onClick={() => {
-                onSnapshot();
-                setData({ color: c as NodeColor });
-              }}
-            />
+    <Dialog open={open} onOpenChange={onOpenChange} title={t("title")}>
+      <table className={styles.shortcutTable}>
+        <tbody>
+          {SHORTCUTS.map(([k, v]) => (
+            <tr key={v}><td><kbd className={styles.kbd}>{k}</kbd></td><td>{t(v)}</td></tr>
           ))}
-        </div>
-        {node.data.issueId && <p className={styles.hint}>{t("panel.colorLinked")}</p>}
-      </div>
-      {type === "table" && (
-        <div className={styles.field}>
-          <span>{t("panel.columns")}</span>
-          <div className={styles.columns}>
-            {columns.map((c, i) => (
-              <div key={i} className={styles.columnRow}>
-                <input
-                  className={styles.mini}
-                  aria-label={t("panel.columnName")}
-                  placeholder={t("panel.columnName")}
-                  value={c.name}
-                  maxLength={80}
-                  onFocus={() => (typed.current = false)}
-                  onChange={(e) => {
-                    onceSnapshot();
-                    setColumns(columns.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)));
-                  }}
-                />
-                <input
-                  className={styles.mini}
-                  aria-label={t("panel.columnType")}
-                  placeholder={t("panel.columnType")}
-                  value={c.type}
-                  maxLength={40}
-                  onFocus={() => (typed.current = false)}
-                  onChange={(e) => {
-                    onceSnapshot();
-                    setColumns(columns.map((x, j) => (j === i ? { ...x, type: e.target.value } : x)));
-                  }}
-                />
-                <select
-                  className={styles.mini}
-                  aria-label={t("panel.columnKey")}
-                  value={c.key ?? ""}
-                  onChange={(e) => {
-                    onSnapshot();
-                    setColumns(columns.map((x, j) => (j === i ? { ...x, key: (e.target.value || null) as Column["key"] } : x)));
-                  }}
-                >
-                  <option value="">—</option>
-                  <option value="pk">PK</option>
-                  <option value="fk">FK</option>
-                </select>
-                <button
-                  type="button"
-                  className={styles.iconBtn}
-                  aria-label={t("panel.removeColumn")}
-                  onClick={() => {
-                    onSnapshot();
-                    setColumns(columns.filter((_, j) => j !== i));
-                  }}
-                >
-                  <X size={14} aria-hidden="true" />
-                </button>
-              </div>
-            ))}
-            <Button
-              size="small"
-              disabled={columns.length >= 80}
-              onClick={() => {
-                onSnapshot();
-                setColumns([...columns, { name: "", type: "", key: null }]);
-                onPatch((n) => ({ ...n, height: Math.max(n.height ?? 0, 60 + (columns.length + 1) * 22) }));
-              }}
-            >
-              <Plus size={14} aria-hidden="true" /> {t("panel.addColumn")}
-            </Button>
-          </div>
-        </div>
-      )}
-      <IssueLink
-        base={base}
-        issueId={node.data.issueId}
-        chip={node.data.issueId ? issues[node.data.issueId] : undefined}
-        onChange={(chip) => {
-          onSnapshot();
-          if (chip) onIssue(chip);
-          // ชิปงานต้องมีที่อยู่ใต้ข้อความ: กล่องเตี้ย (เช่น เริ่ม/จบ 44 px) ขยายให้เอง
-          onPatch((n) => ({ ...n, height: chip && type !== "table" && !isContainer(type) ? Math.max(n.height ?? 0, defaultSize(type).h + 26) : n.height, data: { ...n.data, issueId: chip?.id ?? null } }));
-        }}
-      />
-      <Button size="small" variant="danger" onClick={onDelete}>
-        <Trash2 size={14} aria-hidden="true" /> {t("panel.deleteNode")}
-      </Button>
-    </div>
-  );
-}
-
-function IssueLink({ base, issueId, chip, onChange }: { base: string; issueId: string | null; chip?: IssueChip; onChange: (chip: IssueChip | null) => void }) {
-  const t = useTranslations("diagrams.panel");
-  const tStatus = useTranslations("common.status");
-  const [input, setInput] = useState("");
-  const [q, setQ] = useState("");
-  useEffect(() => {
-    const h = setTimeout(() => setQ(input.trim()), 250);
-    return () => clearTimeout(h);
-  }, [input]);
-  const options = useQuery({
-    queryKey: ["diagrams", "issue-options", base, q],
-    queryFn: () => api.get<{ items: IssueOption[] }>(`${base}/diagram-issue-options?${new URLSearchParams({ q })}`),
-    enabled: !issueId && q.length > 0,
-    staleTime: 15_000,
-  });
-  const statusText = (o: { tone: string; status: string }) => (o.tone === "overdue" ? tStatus("overdue") : o.status);
-  return (
-    <div className={styles.field}>
-      <span>
-        {t("issue")} <em className={styles.optional}>{t("optional")}</em>
-      </span>
-      {issueId ? (
-        <div className={styles.linked}>
-          <span className={styles.linkedText}>
-            <b>{chip?.key ?? t("hiddenIssue")}</b> {chip?.title}
-            {chip && <span className={cn(styles.chip, styles[`tone_${chip.tone}`])}>{chip.deleted ? t("deletedIssue") : statusText(chip)}</span>}
-          </span>
-          <Button size="small" onClick={() => onChange(null)}>{t("unlink")}</Button>
-        </div>
-      ) : (
-        <>
-          <input className={styles.paletteSearch} placeholder={t("issueSearch")} aria-label={t("issueSearch")} value={input} onChange={(e) => setInput(e.target.value)} />
-          {q && (
-            <div className={styles.options} role="listbox" aria-label={t("issue")}>
-              {options.isLoading ? (
-                <div className={styles.optionEmpty}>{t("searching")}</div>
-              ) : !options.data?.items.length ? (
-                <div className={styles.optionEmpty}>{t("noIssue")}</div>
-              ) : (
-                options.data.items.map((o) => (
-                  <button
-                    key={o.id}
-                    type="button"
-                    role="option"
-                    aria-selected={false}
-                    className={styles.option}
-                    onClick={() => onChange({ id: o.id, key: o.key, title: o.title, status: o.status, category: o.category, tone: o.tone, dueDate: null, deleted: false })}
-                  >
-                    <b>{o.key} {o.title}</b>
-                    <small>
-                      <span className={cn(styles.chip, styles[`tone_${o.tone}`])}>{statusText(o)}</span>
-                      {o.assignee?.displayName}
-                    </small>
-                  </button>
-                ))
-              )}
-            </div>
-          )}
-          <p className={styles.hint}>{t("issueHint")}</p>
-        </>
-      )}
-    </div>
-  );
-}
-
-function EdgePanel({ edge, er, onSnapshot, onPatch, onDelete }: { edge: FlowEdge; er: boolean; onSnapshot: () => void; onPatch: (d: Partial<EdgeData>) => void; onDelete: () => void }) {
-  const t = useTranslations("diagrams.panel");
-  const typed = useRef(false);
-  return (
-    <div className={styles.panelBody}>
-      <h2 className={styles.panelTitle}>{t("edgeTitle")}</h2>
-      <Input
-        id="diagram-edge-label"
-        label={t("edgeLabel")}
-        placeholder={t("edgeLabelPlaceholder")}
-        value={edge.data?.text ?? ""}
-        maxLength={100}
-        onFocus={() => (typed.current = false)}
-        onChange={(e) => {
-          if (!typed.current) onSnapshot();
-          typed.current = true;
-          onPatch({ text: e.target.value });
-        }}
-      />
-      <label className={styles.check}>
-        <input
-          type="checkbox"
-          checked={!!edge.data?.dashed}
-          onChange={(e) => {
-            onSnapshot();
-            onPatch({ dashed: e.target.checked });
-          }}
-        />
-        {t("dashed")}
-      </label>
-      {er && (
-        <Select
-          size="small"
-          label={t("cardinality")}
-          value={edge.data?.cardinality ?? ""}
-          onChange={(e) => {
-            onSnapshot();
-            onPatch({ cardinality: (e.target.value || undefined) as EdgeData["cardinality"] });
-          }}
-        >
-          <option value="">{t("cardinalityNone")}</option>
-          <option value="1-1">1 : 1</option>
-          <option value="1-n">1 : N</option>
-          <option value="n-n">N : N</option>
-        </Select>
-      )}
-      <Button size="small" variant="danger" onClick={onDelete}>
-        <Trash2 size={14} aria-hidden="true" /> {t("deleteEdge")}
-      </Button>
-    </div>
+        </tbody>
+      </table>
+    </Dialog>
   );
 }
 

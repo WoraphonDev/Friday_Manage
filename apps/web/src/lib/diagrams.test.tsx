@@ -44,8 +44,8 @@ function detail(over: Partial<Diagram> = {}): Diagram {
     template: "flowchart",
     content: {
       nodes: [
-        { id: "a", type: "process", position: { x: 0, y: 0 }, width: 180, height: 86, data: { label: "ตรวจหลักประกัน", color: "default", issueId: ISSUE } },
-        { id: "b", type: "decision", position: { x: 0, y: 140 }, data: { label: "ผ่านเกณฑ์?", color: "default", issueId: null } },
+        { id: "a", type: "process", position: { x: 0, y: 0 }, width: 180, height: 86, data: { label: "ตรวจหลักประกัน", color: "default", issueIds: [ISSUE] } },
+        { id: "b", type: "decision", position: { x: 0, y: 140 }, data: { label: "ผ่านเกณฑ์?", color: "default", issueIds: [] } },
       ],
       edges: [{ id: "e1", source: "a", target: "b", label: "ต่อ" }],
     },
@@ -156,8 +156,12 @@ describe("หน้าแก้ไข Diagram", () => {
     mountEditor();
     await user.click(await screen.findByRole("button", { name: "แก้ไข" }));
     await waitFor(() => expect(posts).toContainEqual({ path: `/api/v1/w/sample/projects/DE/diagrams/${ID}/lock`, body: { takeover: false } }));
-    expect(await screen.findByPlaceholderText("ค้นหารูปทรง")).toBeInTheDocument();
-    for (const shape of ["เงื่อนไข", "ตาราง", "Database", "โน้ต"]) expect(screen.getByRole("button", { name: new RegExp(shape) })).toBeInTheDocument();
+    expect(await screen.findByPlaceholderText(/ค้นหารูปทรง/)).toBeInTheDocument();
+    for (const shape of ["เงื่อนไข", "Lane แนวนอน", "Database", "สามเหลี่ยม"]) expect(screen.getByRole("button", { name: shape })).toBeInTheDocument();
+    // หมวด UML / ER พับไว้ก่อน กดหัวหมวดเพื่อเปิด
+    await user.click(screen.getByRole("button", { name: /^ER/ }));
+    expect(screen.getByRole("button", { name: "ตาราง" })).toBeInTheDocument();
+    expect(screen.getByRole("toolbar", { name: "เครื่องมือ" })).toBeInTheDocument();
   });
 });
 
@@ -173,5 +177,53 @@ describe("บรรทัด Diagram ในแผงรายละเอีย�
     renderWithProviders(<IssueDiagrams ws="sample" projectKey="DE" issueId={ISSUE} render={row} />);
     await waitFor(() => expect(listUrls).toHaveLength(2));
     expect(screen.queryByTestId("row")).not.toBeInTheDocument();
+  });
+});
+
+describe("ฟังก์ชันของ editor", () => {
+  it("แปลงข้อมูลเดิม issueId เป็น issueIds และเก็บกลับโดยไม่มีค่าว่าง", async () => {
+    const { toContent, toFlowNode } = await import("@/features/diagrams/ops");
+    const n = toFlowNode({ id: "a", type: "process", position: { x: 1.4, y: 2.6 }, data: { label: "x", color: "default", issueIds: [], issueId: ISSUE } });
+    expect(n.data.issueIds).toEqual([ISSUE]);
+    const c = toContent([n], []);
+    expect(c.nodes[0]).toEqual({ id: "a", type: "process", position: { x: 1, y: 3 }, width: 180, height: 60, data: { label: "x", color: "default", issueIds: [ISSUE] } });
+  });
+
+  it("จัดชิดซ้าย · เว้นระยะเท่ากัน · กล่องในกรอบ", async () => {
+    const { align, childrenOf, distribute, toFlowNode } = await import("@/features/diagrams/ops");
+    const box = (id: string, x: number, y: number) => toFlowNode({ id, type: "process", position: { x, y }, width: 100, height: 50, data: { label: id, color: "default", issueIds: [] } });
+    const nodes = [box("a", 0, 0), box("b", 40, 100), box("c", 500, 200)];
+    const ids = new Set(["a", "b", "c"]);
+    expect(align(nodes, ids, "left").map((n) => n.position.x)).toEqual([0, 0, 0]);
+    expect(distribute(nodes, ids).map((n) => n.position.x)).toEqual([0, 250, 500]);
+    const frame = toFlowNode({ id: "f", type: "frame", position: { x: -10, y: -10 }, width: 200, height: 200, data: { label: "f", color: "default", issueIds: [] } });
+    expect(childrenOf([...nodes, frame], frame)).toEqual(["a", "b"]);
+  });
+});
+
+describe("หน้าต่างผูกงาน", () => {
+  it("เปิดมาเห็นงานพร้อมกลุ่ม · พิมพ์ค้นแล้วส่ง q · เลือกหลายงานแล้วผูก", async () => {
+    const { LinkDialog } = await import("@/features/diagrams/link-dialog");
+    const urls: URL[] = [];
+    const item = (n: number, over = {}) => ({ id: `00000000-0000-4000-8000-00000000010${n}`, key: `DE-${n}`, title: `หลักประกันงาน ${n}`, parentKey: null, level: "task", module: { id: "m1", name: "Credit Line" }, phase: { id: "p1", name: "หลักประกัน" }, status: "To do", category: "todo", tone: "todo", dueDate: "2026-12-01", assignee: DEV, ...over });
+    server.use(
+      http.get("*/api/v1/w/:ws/projects/:key/diagram-issues", ({ request }) => {
+        urls.push(new URL(request.url));
+        return HttpResponse.json({ items: [item(1), item(2, { level: "subtask", parentKey: "DE-1" })], total: 2, page: 1, hasMore: false });
+      }),
+      http.get("*/api/v1/w/:ws/projects/:key/diagram-issue-filters", () => HttpResponse.json({ modules: [{ id: "m1", name: "Credit Line" }], phases: [{ id: "p1", name: "หลักประกัน", moduleId: "m1" }], sprints: [], people: [DEV] })),
+    );
+    const saved: string[][] = [];
+    const user = userEvent.setup();
+    renderWithProviders(<LinkDialog open onOpenChange={() => {}} base="/w/sample/projects/DE" boxLabel="กรอกหลักประกัน" linked={[]} issues={{}} onSave={(ids) => saved.push(ids)} />, { messages: { diagrams } });
+    const dialog = await screen.findByRole("dialog", { name: 'ผูกงานกับกล่อง "กรอกหลักประกัน"' });
+    expect(await within(dialog).findByRole("group", { name: "Credit Line › หลักประกัน" })).toBeInTheDocument();
+    expect(urls[0].searchParams.get("status")).toBe("todo,in_progress,review,blocked");
+    await user.type(within(dialog).getByLabelText(/ค้นด้วยเลขงาน/), "หลักประกัน");
+    await waitFor(() => expect(urls.at(-1)?.searchParams.get("q")).toBe("หลักประกัน"));
+    await user.click(within(dialog).getByRole("option", { name: /^DE-1/ }));
+    await user.click(within(dialog).getByRole("option", { name: /^DE-2/ }));
+    await user.click(within(dialog).getByRole("button", { name: "ผูก 2 งาน" }));
+    expect(saved).toEqual([[item(1).id, item(2).id]]);
   });
 });

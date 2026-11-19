@@ -58,6 +58,8 @@ export interface AuditRow {
   approvedBy: string | null;
   selfApproved: boolean;
   ip: string | null;
+  /** ทำระหว่างใช้สิทธิ์ชั่วคราว (O52) */
+  elevationId?: string | null;
   createdAt: string;
 }
 /** ค่าเริ่มต้นตาม 06 › 3 (ops-api › auth/roles.ts) */

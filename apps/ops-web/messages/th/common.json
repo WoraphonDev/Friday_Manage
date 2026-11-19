@@ -125,7 +125,8 @@
     "openApprovals": "เปิดคำขอที่ส่งถึงฉัน",
     "abuse": "เคสใช้ผิดรอตรวจ {count}",
     "tagAbuse": "ใช้ผิด",
-    "rateLimit": "ลูกค้าชนเพดาน API ต่อเนื่อง {count} ราย"
+    "rateLimit": "ลูกค้าชนเพดาน API ต่อเนื่อง {count} ราย",
+    "jit": "คำขอสิทธิ์ชั่วคราวรออนุมัติ {count}"
   },
   "account": {
     "name": "ชื่อ",
@@ -165,6 +166,7 @@
     "forbiddenTitle": "บทบาท {roles} ดูหน้านี้ไม่ได้",
     "forbiddenFor": "หน้านี้เปิดให้ {roles}",
     "askOwner": "ขอบทบาทเพิ่มจาก Owner",
+    "requestAccess": "ขอสิทธิ์ชั่วคราว",
     "breakGlass": "เปิดสิทธิ์ฉุกเฉิน",
     "clearFilters": "ล้างตัวกรอง",
     "emptyFiltered": "ไม่มีรายการที่ตรงกับตัวกรอง",

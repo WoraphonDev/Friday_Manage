@@ -6,7 +6,8 @@ import { KeyRound, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { ShortcutHelp } from "../shortcut-help";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { type Mine, useLeft } from "@/lib/jit";
 import { LoginMethods } from "@/features/auth/LoginMethods";
 import { loginWithCode, loginWithPassword } from "@/features/auth/password";
 import { keyErrorKind, loginWithKey } from "@/features/auth/webauthn";
@@ -216,36 +217,58 @@ function ExtendSessionDialog({ session, offset, onClose }: { session: OpenSessio
   );
 }
 
-/** แถบแดง: เปิดสิทธิ์ฉุกเฉินอยู่ (A12) · Owner ปิดก่อนหมดเวลาได้ */
-function ElevationBanner({ staff }: { staff: Staff }) {
-  const t = useTranslations("common");
-  const format = useFormatter();
+/**
+ * แถบนับถอยหลังสิทธิ์ชั่วคราว (A12 + O52) ทุกหน้า: บทบาท · เวลาที่เหลือ · ใครอนุมัติ · Ticket · คืนสิทธิ์ได้เลย
+ * อ่าน /jit/me ทุก 30 วินาที → ได้รับอนุมัติแล้วแจ้งทันทีและโหลดสิทธิ์ใหม่ (เมนูที่ได้เพิ่มโผล่) · หมดเวลาแล้วโหลดสิทธิ์ใหม่
+ */
+function ElevationBanner() {
+  const t = useTranslations("jit.banner");
+  const tc = useTranslations("common");
+  const left = useLeft();
   const toast = useToast();
   const cache = useQueryClient();
-  const elevated = staff.elevated ?? [];
-  const list = useQuery({ queryKey: ["ops", "staff"], queryFn: () => api.get<{ items: { id: string; elevations: { id: string; role: string; endsAt: string }[] }[] }>("/staff"), enabled: elevated.length > 0 });
-  const mine = list.data?.items.find((s) => s.id === staff.id)?.elevations ?? [];
+  const mine = useQuery({ queryKey: ["ops", "jit", "me"], queryFn: () => api.get<Mine>("/jit/me"), refetchInterval: 30_000 });
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const i = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(i);
+  }, []);
+  const active = mine.data?.active ?? [];
+  const live = active.filter((a) => Date.parse(a.endsAt) > now).sort((a, b) => Date.parse(a.endsAt) - Date.parse(b.endsAt));
+  const seen = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (!mine.data) return;
+    const ids = new Set(mine.data.active.map((a) => a.id));
+    if (seen.current) {
+      const granted = mine.data.active.filter((a) => a.kind === "approved" && !seen.current!.has(a.id));
+      for (const a of granted) toast(t("granted", { role: tc(`roles.${a.role}`) }));
+      if (granted.length) void cache.invalidateQueries({ queryKey: keys.me });
+    }
+    seen.current = ids;
+  }, [mine.data, toast, t, tc, cache]);
+  useEffect(() => {
+    if (active.length > live.length) void cache.invalidateQueries({ queryKey: ["ops"] });
+  }, [active.length, live.length, cache]);
   const end = useMutation({
     mutationFn: async () => {
-      for (const e of mine) await api.post(`/staff/me/elevations/${e.id}/end`);
+      for (const e of live) await api.post(`/staff/me/elevations/${e.id}/end`);
     },
-    onSuccess: () => {
-      toast(t("banner.elevatedEnded"));
-      void cache.invalidateQueries({ queryKey: ["ops"] });
-    },
+    onSuccess: () => (toast(t("ended")), void cache.invalidateQueries({ queryKey: ["ops"] })),
   });
-  if (!elevated.length) return null;
-  const until = mine.length ? new Date(Math.max(...mine.map((e) => Date.parse(e.endsAt)))) : null;
+  if (!live.length) return null;
+  const first = live[0];
+  const roles = [...new Set(live.map((a) => tc(`roles.${a.role}`)))].join(", ");
+  const soon = Date.parse(first.endsAt) - now < 5 * 60_000;
   return (
     <div className="ops-banner ops-banner-elevated" role="alert">
-      <b>{t("banner.elevated", { roles: elevated.map((r) => t(`roles.${r}`)).join(", ") })}</b>
-      {until && <span>{t("banner.elevatedDetail", { time: format.dateTime(until, { timeStyle: "short" }) })}</span>}
+      <b>⏱ {t("text", { roles, left: left(first.endsAt) })}</b>
+      <span>
+        {[first.kind === "approved" ? t("by", { name: first.approvedBy ?? "—" }) : t("glass"), first.ticketRef ? t("ticket", { ref: first.ticketRef }) : null, soon ? t("soon") : null].filter(Boolean).join(" · ")}
+      </span>
       <span className="grow" />
-      {mine.length > 0 && (
-        <button type="button" disabled={end.isPending} onClick={() => end.mutate()}>
-          {t("banner.elevatedEnd")}
-        </button>
-      )}
+      <button type="button" disabled={end.isPending} onClick={() => end.mutate()}>
+        {t("end")}
+      </button>
     </div>
   );
 }
@@ -372,13 +395,18 @@ export function AppShell({ children }: { children: ReactNode }) {
               onSignOut={() => logout.mutate()}
               onMenu={() => setMenu((v) => !v)}
             />
-            <ElevationBanner staff={staff} />
+            <ElevationBanner />
             <SessionBanner staff={staff} />
             <main className="ops-main">
               {allowed ? (
                 children
               ) : (
-                <NoAccess need={current!.roles} mine={rolesOf(staff)} onBreakGlass={(staff.roles ?? []).includes("owner") ? () => setGlass(true) : undefined} />
+                <NoAccess
+                  need={current!.roles}
+                  mine={rolesOf(staff)}
+                  onBreakGlass={(staff.roles ?? []).includes("owner") ? () => setGlass(true) : undefined}
+                  onRequest={(staff.roles ?? []).includes("owner") ? undefined : () => router.push(`/jit?request=${current!.roles.find((r) => r !== "owner") ?? ""}`)}
+                />
               )}
             </main>
           </div>

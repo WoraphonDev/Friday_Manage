@@ -51,7 +51,8 @@
       "privacyDueSoon": "คำขอ PDPA ใกล้ครบกำหนด",
       "breachesOpen": "เหตุละเมิดข้อมูลที่เปิดอยู่",
       "abuseOpen": "เคสใช้ผิดรอตรวจ / ระงับอัตโนมัติรอยืนยัน",
-      "rateLimitStreak": "ลูกค้าชนเพดาน API ติดกันเกิน 15 นาที"
+      "rateLimitStreak": "ลูกค้าชนเพดาน API ติดกันเกิน 15 นาที",
+      "jitPending": "คำขอสิทธิ์ชั่วคราวรออนุมัติ"
     },
     "who": {
       "approvals": "Owner",

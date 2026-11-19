@@ -133,7 +133,8 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
         (select count(*)::int from data_breaches where closed_at is null) as "breachesOpen",
         (select count(*)::int from abuse_cases where status <> 'closed') as "abuseOpen",
         (select count(*)::int from (select workspace_id from api_usage_minutes where minute >= date_trunc('minute', now()) - interval '16 minutes' and rejected > 0
-          group by workspace_id having count(distinct minute) >= 15) x) as "rateLimitStreak"`);
+          group by workspace_id having count(distinct minute) >= 15) x) as "rateLimitStreak",
+        (select count(*)::int from approval_requests where kind = 'staff.elevate' and status = 'pending' and expires_at > now()) as "jitPending"`);
     const movement = Object.fromEntries(moves.map((m) => [m.kind, { count: m.n, mrrDelta: m.delta }]));
     // MRR สิ้นเดือนย้อนหลัง 11 เดือน (จากประวัติ subscription_changes) + เดือนนี้ = ตอนนี้ · ไว้วาดกราฟ 12 เดือนหน้าภาพรวม
     const mrrHistory: { month: string; mrrSatang: number }[] = [];
@@ -166,7 +167,7 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
         paymentExceptions: counts.paymentExceptions, slipsToReview: counts.slipsToReview, approvals: counts.approvals,
         ticketsBreached: counts.ticketsBreached, ticketsUnassigned: counts.ticketsUnassigned, incidentsOpen: counts.incidentsOpen,
         invoicesOverdue: counts.invoicesOverdue, trialEndingSoon: counts.trialEndingSoon, privacyDueSoon: counts.privacyDueSoon, breachesOpen: counts.breachesOpen,
-        abuseOpen: counts.abuseOpen, rateLimitStreak: counts.rateLimitStreak,
+        abuseOpen: counts.abuseOpen, rateLimitStreak: counts.rateLimitStreak, jitPending: counts.jitPending,
       },
     };
   }

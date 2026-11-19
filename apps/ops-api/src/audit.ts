@@ -39,5 +39,6 @@ export async function staffAudit(db: Db | Tx, staff: Staff | null, action: strin
     workspaceId: workspaceId ?? null,
     approvedBy: approval?.approvedBy ?? null,
     selfApproved: approval?.selfApproved ?? false,
+    elevationId: staff?.elevationId ?? null,
   });
 }

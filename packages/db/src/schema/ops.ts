@@ -42,14 +42,22 @@ export const staffUsers = pgTable('staff_users', {
   check('staff_users_roles_valid', sql`cardinality(${t.roles}) >= 1 AND ${t.roles} <@ ARRAY[${sql.raw(STAFF_ROLES.map((r) => `'${r}'`).join(', '))}]::text[]`),
   check('staff_users_status_valid', oneOf(t.status, STAFF_STATUSES))]);
 
-/** สิทธิ์ฉุกเฉิน: Owner เปิดบทบาทที่ไม่มีให้ตัวเองชั่วคราว */
+/**
+ * สิทธิ์ชั่วคราว · break_glass = Owner เปิดบทบาทที่ไม่มีให้ตัวเอง (ไม่เกิน 1 ชม.) · approved = พนักงานขอแล้ว Owner อนุมัติ (O52 · ไม่เกิน 8 ชม. · ห้ามบทบาท Owner)
+ * approval_request_id ผูกคำขอ · ticket_ref = Ticket ที่เกี่ยวข้อง (ไม่บังคับ)
+ */
 export const staffElevations = pgTable('staff_elevations', {
   id: pk(), staffId: uuid().notNull().references(() => staffUsers.id), role: text().notNull(), reason: text().notNull(),
   startedAt: tstz().notNull().defaultNow(), endsAt: tstz().notNull(), endedAt: tstz(), endedBy: uuid().references(() => staffUsers.id),
+  kind: text().notNull().default('break_glass'), approvalRequestId: uuid().references((): AnyPgColumn => approvalRequests.id), ticketRef: text(),
+  /** เตือนผู้ใช้สิทธิ์ว่าเหลือ 5 นาทีแล้ว */
+  warnedAt: tstz(),
   createdAt: createdAt(),
 }, (t) => [index('staff_elevations_staff_idx').on(t.staffId, t.endsAt),
   check('staff_elevations_role_valid', oneOf(t.role, STAFF_ROLES)),
-  check('staff_elevations_window', sql`${t.endsAt} > ${t.startedAt} AND ${t.endsAt} <= ${t.startedAt} + interval '1 hour'`)]);
+  check('staff_elevations_kind_valid', oneOf(t.kind, ['break_glass', 'approved'])),
+  check('staff_elevations_window', sql`${t.endsAt} > ${t.startedAt} AND ${t.endsAt} <= ${t.startedAt} + CASE WHEN ${t.kind} = 'approved' THEN interval '8 hours' ELSE interval '1 hour' END`),
+  check('staff_elevations_approved', sql`${t.kind} <> 'approved' OR (${t.approvalRequestId} IS NOT NULL AND ${t.role} <> 'owner')`)]);
 
 export const APPROVAL_STATUSES = ['pending', 'approved', 'rejected', 'expired', 'cancelled'] as const;
 
@@ -76,8 +84,12 @@ export const staffAuditLogs = pgTable('staff_audit_logs', {
   staffId: uuid(), roles: text().array().notNull().default(sql`'{}'`),
   action: text().notNull(), targetType: text(), targetId: uuid(), workspaceId: uuid(),
   reason: text(), approvedBy: uuid(), selfApproved: boolean().notNull().default(false),
-  ip: text(), userAgent: text(), createdAt: createdAt(),
-}, (t) => [index('staff_audit_logs_created_idx').on(t.createdAt), index('staff_audit_logs_staff_idx').on(t.staffId, t.createdAt)]);
+  ip: text(), userAgent: text(),
+  /** ทำระหว่างใช้สิทธิ์ชั่วคราว (O52) · หน้า Audit log ติดป้ายและลิงก์กลับคำขอ */
+  elevationId: uuid(),
+  createdAt: createdAt(),
+}, (t) => [index('staff_audit_logs_created_idx').on(t.createdAt), index('staff_audit_logs_staff_idx').on(t.staffId, t.createdAt),
+  index('staff_audit_logs_elevation_idx').on(t.elevationId).where(sql`${t.elevationId} IS NOT NULL`)]);
 
 /** แยก Workspace ด้วย RLS · สมาชิกอ่านได้ แต่เขียนได้เฉพาะ Owner (RLS 0009 + API ของ A31) */
 export const supportAccessGrants = pgTable('support_access_grants', {

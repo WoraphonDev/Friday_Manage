@@ -447,7 +447,7 @@ export function ErrorBlock({ error, retry }: { error: unknown; retry?: () => voi
 }
 
 /** S7 · ไม่มีสิทธิ์ (เปิดจากลิงก์ตรง) · Owner เปิดสิทธิ์ฉุกเฉินได้จากหน้านี้ */
-export function NoAccess({ need, mine = [], onBreakGlass }: { need: OpsRole[]; mine?: OpsRole[]; onBreakGlass?: () => void }) {
+export function NoAccess({ need, mine = [], onBreakGlass, onRequest }: { need: OpsRole[]; mine?: OpsRole[]; onBreakGlass?: () => void; onRequest?: () => void }) {
   const t = useTranslations("common");
   const list = (rs: OpsRole[]) => rs.map((r) => t(`roles.${r}`)).join(" · ");
   return (
@@ -461,6 +461,12 @@ export function NoAccess({ need, mine = [], onBreakGlass }: { need: OpsRole[]; m
       {onBreakGlass && (
         <Button variant="danger" onClick={onBreakGlass}>
           {t("state.breakGlass")}
+        </Button>
+      )}
+      {/* O52: พนักงานที่ไม่ใช่ Owner ขอสิทธิ์ชั่วคราวให้ Owner อนุมัติ */}
+      {onRequest && (
+        <Button variant="primary" onClick={onRequest}>
+          {t("state.requestAccess")}
         </Button>
       )}
     </section>

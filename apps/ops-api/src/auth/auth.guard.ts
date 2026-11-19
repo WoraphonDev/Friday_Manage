@@ -18,6 +18,8 @@ export interface Staff {
   roles: StaffRole[];
   /** บทบาทที่เปิดชั่วคราวด้วยสิทธิ์ฉุกเฉิน (ยังไม่หมดเวลา) */
   elevated: StaffRole[];
+  /** สิทธิ์ชั่วคราวที่เปิดอยู่ (ล่าสุด) · staffAudit ติดป้ายบรรทัดที่ทำระหว่างนั้น (O52) */
+  elevationId?: string | null;
   department: string | null;
   limits: Limits;
 }
@@ -72,7 +74,7 @@ export class AuthGuard implements CanActivate {
     const [row] = await this.db.select().from(schema.staffUsers).where(eq(schema.staffUsers.id, session.sid));
     if (!row || row.status !== 'active' || (row.expiresAt && row.expiresAt.getTime() <= Date.now())) throw unauthorized();
     const elevations = await this.db
-      .select({ role: schema.staffElevations.role })
+      .select({ id: schema.staffElevations.id, role: schema.staffElevations.role, startedAt: schema.staffElevations.startedAt })
       .from(schema.staffElevations)
       .where(and(eq(schema.staffElevations.staffId, row.id), isNull(schema.staffElevations.endedAt), gt(schema.staffElevations.endsAt, new Date())));
     const staff: Staff = {
@@ -81,6 +83,7 @@ export class AuthGuard implements CanActivate {
       name: row.name,
       roles: row.roles as StaffRole[],
       elevated: elevations.map((e) => e.role as StaffRole),
+      elevationId: elevations.sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())[0]?.id ?? null,
       department: row.department,
       limits: limitsOf(row.limits),
     };

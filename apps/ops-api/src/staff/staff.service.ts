@@ -37,6 +37,9 @@ export const AuditQuery = z.object({
   action: z.string().trim().max(60).optional(),
   selfApproved: z.enum(['true', 'false']).optional(),
   workspaceId: z.uuid().optional(),
+  /** เฉพาะที่ทำระหว่างใช้สิทธิ์ชั่วคราว (O52) */
+  elevated: z.enum(['true']).optional(),
+  elevationId: z.uuid().optional(),
   before: z.iso.datetime({ offset: true }).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
@@ -286,6 +289,8 @@ export class StaffService {
           q.action ? sql`${s.staffAuditLogs.action} like ${`${q.action.replace(/[%_]/g, '')}%`}` : undefined,
           q.selfApproved ? eq(s.staffAuditLogs.selfApproved, q.selfApproved === 'true') : undefined,
           q.workspaceId ? eq(s.staffAuditLogs.workspaceId, q.workspaceId) : undefined,
+          q.elevated ? sql`${s.staffAuditLogs.elevationId} is not null` : undefined,
+          q.elevationId ? eq(s.staffAuditLogs.elevationId, q.elevationId) : undefined,
           q.before ? lt(s.staffAuditLogs.createdAt, new Date(q.before)) : undefined,
         ),
       )

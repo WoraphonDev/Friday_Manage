@@ -152,6 +152,12 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 
 พื้นที่ใช้ของ Workspace = ผลรวม `file_version.size_bytes` ที่ยังไม่ถูกลบ (คำนวณ ไม่เก็บ)
 
+### Diagram (แท็บ Diagram · ผู้ใช้อนุมัติ storyboard 2026-11-19)
+
+| Entity | ใช้ทำอะไร | ฟิลด์หลัก | หน้าจอ |
+|---|---|---|---|
+| `diagram` | Flowchart / ER / สถาปัตยกรรม / ไวท์บอร์ด แบบลากวาง · กล่องผูกกับงานได้ (ไม่บังคับ) · แก้ทีละคน ไม่มีประวัติเวอร์ชัน · แพ็กเกจ Free ใช้ไม่ได้ | workspace_id, project_id, name, description, template (blank · flowchart · er · architecture · whiteboard), content (jsonb: nodes, edges, viewport), issue_ids (สรุปจาก content), revision, locked_by, locked_until, created_by, updated_by, updated_at, deleted_at, deleted_by | Diagram |
+
 ## I. Git
 
 | Entity | ใช้ทำอะไร | ฟิลด์หลัก | หน้าจอ |

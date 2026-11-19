@@ -17,6 +17,7 @@ import { CalendarModule } from './calendar/calendar.module.js';
 import { ChangelogModule } from './changelog/changelog.module.js';
 import { ChannelsModule } from './channels/channels.module.js';
 import { CommentsModule } from './comments/comments.module.js';
+import { DiagramsModule } from './diagrams/diagrams.module.js';
 import { DueRequestsModule } from './due-requests/due-requests.module.js';
 import { FilesModule } from './files/files.module.js';
 import { GanttModule } from './gantt/gantt.module.js';
@@ -66,6 +67,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
     ChangelogModule,
     ChannelsModule,
     CommentsModule,
+    DiagramsModule,
     DueRequestsModule,
     FilesModule,
     GanttModule,

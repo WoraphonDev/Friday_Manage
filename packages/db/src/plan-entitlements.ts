@@ -28,6 +28,8 @@ export const ENTITLEMENT_KEYS: readonly EntitlementKey[] = [
   { key: 'history_days', kind: 'limit', unit: 'days', enforced: false },
   { key: 'gantt', kind: 'feature', enforced: false },
   { key: 'import_update', kind: 'feature', enforced: true },
+  // แท็บ Diagram (ผู้ใช้ตัดสิน 2026-11-19: Free ใช้ไม่ได้) · เวอร์ชันที่บันทึกก่อนมีคีย์นี้ได้ค่าตั้งต้นจาก normalizeMatrix
+  { key: 'diagrams', kind: 'feature', enforced: true },
   { key: 'channels', kind: 'feature', enforced: true },
   { key: 'automation', kind: 'feature', enforced: true },
   { key: 'api', kind: 'feature', enforced: true },
@@ -51,11 +53,11 @@ export type OverrideKey = (typeof OVERRIDE_KEYS)[number];
  * ค่าอื่นจากตัวอย่างใน Canvas · null = ไม่จำกัด / ตามสัญญา
  */
 export const DEFAULT_MATRIX: Matrix = {
-  free: { seats: 5, projects: 3, storage_gb_per_member: 1, automation_runs: 100, api_rpm: 0, history_days: 30, gantt: false, import_update: false, channels: false, automation: false, api: false, guests: true, sso: false, sla: false },
-  team_s: { seats: 10, projects: null, storage_gb_per_member: 10, automation_runs: 5000, api_rpm: 60, history_days: 365, gantt: true, import_update: true, channels: true, automation: true, api: true, guests: true, sso: false, sla: false },
-  team_m: { seats: 25, projects: null, storage_gb_per_member: 10, automation_runs: 20000, api_rpm: 120, history_days: 365, gantt: true, import_update: true, channels: true, automation: true, api: true, guests: true, sso: false, sla: false },
-  team_l: { seats: 50, projects: null, storage_gb_per_member: 10, automation_runs: 50000, api_rpm: 300, history_days: 1095, gantt: true, import_update: true, channels: true, automation: true, api: true, guests: true, sso: false, sla: false },
-  enterprise: { seats: null, projects: null, storage_gb_per_member: null, automation_runs: null, api_rpm: 1000, history_days: null, gantt: true, import_update: true, channels: true, automation: true, api: true, guests: true, sso: true, sla: true },
+  free: { seats: 5, projects: 3, storage_gb_per_member: 1, automation_runs: 100, api_rpm: 0, history_days: 30, gantt: false, import_update: false, diagrams: false, channels: false, automation: false, api: false, guests: true, sso: false, sla: false },
+  team_s: { seats: 10, projects: null, storage_gb_per_member: 10, automation_runs: 5000, api_rpm: 60, history_days: 365, gantt: true, import_update: true, diagrams: true, channels: true, automation: true, api: true, guests: true, sso: false, sla: false },
+  team_m: { seats: 25, projects: null, storage_gb_per_member: 10, automation_runs: 20000, api_rpm: 120, history_days: 365, gantt: true, import_update: true, diagrams: true, channels: true, automation: true, api: true, guests: true, sso: false, sla: false },
+  team_l: { seats: 50, projects: null, storage_gb_per_member: 10, automation_runs: 50000, api_rpm: 300, history_days: 1095, gantt: true, import_update: true, diagrams: true, channels: true, automation: true, api: true, guests: true, sso: false, sla: false },
+  enterprise: { seats: null, projects: null, storage_gb_per_member: null, automation_runs: null, api_rpm: 1000, history_days: null, gantt: true, import_update: true, diagrams: true, channels: true, automation: true, api: true, guests: true, sso: true, sla: true },
 };
 
 /** อ่าน matrix จากฐานข้อมูล · คีย์ที่ขาด (เพิ่มทีหลัง) ใช้ค่าตั้งต้น · ค่าผิดชนิดถูกทิ้ง */

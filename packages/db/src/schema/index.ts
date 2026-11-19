@@ -20,3 +20,4 @@ export * from './metrics.ts';
 export * from './promotions.ts';
 export * from './help.ts';
 export * from './engagement.ts';
+export * from './diagrams.ts';

@@ -41,7 +41,7 @@ const PLAN_NAMES: Record<EntitlementPlan, string> = { free: 'Free', team_s: 'Tea
 /** ชื่อไทยของคีย์ (ใช้ในเหตุผล Audit log ที่ลูกค้าเห็น และอีเมล) */
 const KEY_NAMES: Record<string, string> = {
   seats: 'ที่นั่ง', projects: 'โปรเจกต์', storage_gb_per_member: 'พื้นที่ไฟล์ต่อคน', storage_gb: 'พื้นที่ไฟล์', automation_runs: 'Automation ต่อเดือน', api_rpm: 'API ต่อนาที',
-  history_days: 'เก็บประวัติ Activity', gantt: 'Gantt และ Baseline', import_update: 'Import Excel โหมดอัปเดต', channels: 'LINE OA และ Webhook', automation: 'Automation',
+  history_days: 'เก็บประวัติ Activity', gantt: 'Gantt และ Baseline', import_update: 'Import Excel โหมดอัปเดต', diagrams: 'Diagram', channels: 'LINE OA และ Webhook', automation: 'Automation',
   api: 'API token', guests: 'Guest', sso: 'SSO / SAML', sla: 'SLA และผู้ดูแลประจำบัญชี',
 };
 

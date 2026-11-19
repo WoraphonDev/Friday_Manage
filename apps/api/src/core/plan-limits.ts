@@ -8,13 +8,14 @@ import { SYSTEM_DB } from '../db/db.module.js';
 const { plans, subscriptions, workspaces, projects, workspaceMembers, fileVersions, automationRuns } = schema;
 
 /** ฟีเจอร์ที่ API บังคับตามแพ็กเกจ (O21) · ชื่อไทยใช้ในข้อความ 402 */
-export type FeatureKey = 'import_update' | 'channels' | 'automation' | 'api' | 'guests';
+export type FeatureKey = 'import_update' | 'channels' | 'automation' | 'api' | 'guests' | 'diagrams';
 const FEATURE_NAMES: Record<FeatureKey, string> = {
   import_update: 'Import Excel โหมดอัปเดต',
   channels: 'LINE OA และ Webhook',
   automation: 'Automation',
   api: 'API token',
   guests: 'Guest',
+  diagrams: 'Diagram',
 };
 /** คำขอผ่าน API token อ่านสิทธิ์จากที่เก็บไว้ไม่เกิน 10 วินาที (ทุกคำขออ่านฐานข้อมูลไม่ไหว) · แก้แล้วมีผลภายในไม่กี่วินาที */
 const CACHE_MS = 10_000;

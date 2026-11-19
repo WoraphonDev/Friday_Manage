@@ -143,7 +143,8 @@ export class TeamsService {
         projects: sql<number>`(select count(distinct pm.project_id)::int from project_members pm join team_members tm2 on tm2.user_id = pm.user_id where tm2.team_id = ${s.teamMembers.teamId})`,
       })
       .from(s.teamMembers)
-      .innerJoin(s.workspaceMembers, eq(s.workspaceMembers.userId, s.teamMembers.userId))
+      // กรอง Workspace: RLS ให้เห็นแถวสมาชิกของตัวเองทุก Workspace จะนับคนซ้ำ
+      .innerJoin(s.workspaceMembers, and(eq(s.workspaceMembers.userId, s.teamMembers.userId), eq(s.workspaceMembers.workspaceId, s.teamMembers.workspaceId)))
       .where(inArray(s.teamMembers.teamId, teamIds))
       .groupBy(s.teamMembers.teamId);
     for (const r of rows) out.set(r.teamId, { members: r.members, capacityMd: Math.round((r.hours / 8) * 100) / 100, projects: r.projects });
@@ -160,7 +161,7 @@ export class TeamsService {
       .select({ id: s.users.id, displayName: s.users.displayName, avatarUrl: s.users.avatarUrl, role: s.workspaceMembers.role, jobTitle: s.workspaceMembers.jobTitle, capacityHoursWeek: s.workspaceMembers.capacityHoursWeek })
       .from(s.teamMembers)
       .innerJoin(s.users, eq(s.users.id, s.teamMembers.userId))
-      .innerJoin(s.workspaceMembers, eq(s.workspaceMembers.userId, s.teamMembers.userId))
+      .innerJoin(s.workspaceMembers, and(eq(s.workspaceMembers.userId, s.teamMembers.userId), eq(s.workspaceMembers.workspaceId, s.teamMembers.workspaceId)))
       .where(eq(s.teamMembers.teamId, team.id))
       .orderBy(asc(s.users.displayName));
     const lead = members.find((m) => m.id === team.leadUserId);

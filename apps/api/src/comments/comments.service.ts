@@ -158,8 +158,9 @@ export class CommentsService {
 
   private async mentions(tx: Tx, project: Loaded['project'], body: string) {
     if (!body.includes('@')) return [];
+    // RLS ให้เห็นแถวสมาชิกของตัวเองทุก Workspace · ไม่กรองแล้วคนที่อยู่หลาย Workspace จะซ้ำ → @ ตัวเองไม่ได้
     const members = await tx.select({ id: s.users.id, name: s.users.displayName }).from(s.users)
-      .innerJoin(s.workspaceMembers, and(eq(s.workspaceMembers.userId, s.users.id), eq(s.workspaceMembers.status, 'active')))
+      .innerJoin(s.workspaceMembers, and(eq(s.workspaceMembers.userId, s.users.id), eq(s.workspaceMembers.workspaceId, project.workspaceId), eq(s.workspaceMembers.status, 'active')))
       .leftJoin(s.projectMembers, and(eq(s.projectMembers.projectId, project.id), eq(s.projectMembers.userId, s.users.id)))
       .where(and(isNull(s.users.disabledAt), or(eq(s.projectMembers.projectId, project.id), eq(s.users.id, project.ownerUserId))));
     return resolveMentions(body, members);

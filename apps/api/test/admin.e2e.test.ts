@@ -306,6 +306,13 @@ describe('ทีม', () => {
     expect(list.body.items).toEqual([expect.objectContaining({ id: teamId, memberCount: 2, capacityMdWeek: 10 })]);
     expect((await team.lead.get(`${ws}/teams/${teamId}`)).body.members).toHaveLength(2);
     expect((await team.lead.get(`${ws}/teams/nope`)).status).toBe(404);
+    // Admin ที่อยู่อีก Workspace ด้วย ต้องไม่ถูกนับ/แสดงซ้ำ (RLS ให้เห็นแถวสมาชิกของตัวเองทุก Workspace)
+    const host = await client(t.app);
+    await signup(host, 'host@teams.example.com', 'Host Tenant');
+    await host.post('/workspaces', { name: 'Workspace สมมติสอง', slug: 'teams-second' });
+    await addMember(t.owner, 'teams-second', team.leadId, 'member');
+    expect((await team.lead.get(`${ws}/teams`)).body.items).toEqual([expect.objectContaining({ id: teamId, memberCount: 2, capacityMdWeek: 10 })]);
+    expect((await team.lead.get(`${ws}/teams/${teamId}`)).body.members).toHaveLength(2);
   });
 
   it('ตรวจชื่อซ้ำ · สมาชิกต้องเป็นสมาชิก active ที่ไม่ใช่ Guest', async () => {

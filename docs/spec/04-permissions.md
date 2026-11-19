@@ -50,6 +50,7 @@
 | **เปลี่ยน Due โดยไม่ต้องขออนุมัติ** | `issue.change_due_directly` | ✓ | — · **PM เปิดได้** | — |
 | อนุมัติคำขอเลื่อน Due | `due_request.approve` | ✓ | — | — |
 | อัปโหลด / ลบไฟล์ | `file.upload` + `file.delete` | ✓ | ✓ | — |
+| สร้าง / แก้ Diagram และผูกกล่องกับงาน (ลบได้เฉพาะที่ตัวเองสร้าง · Admin ลบได้ทุกอัน) | `diagram.edit` | ✓ | ✓ | — |
 | จัดการ Sprint (Start / Complete) | `sprint.manage` | ✓ | — | — |
 | เชิญสมาชิกเข้าโปรเจกต์ | `project.invite` | ✓ | — | — |
 | แก้ Project Settings | `project.settings` | ✓ | — | — |
@@ -73,6 +74,7 @@
 | `project.views.share` | บันทึก View ให้ทั้งโปรเจกต์เห็น | ✓ | — | — |
 | `project.trash` | ดูและกู้คืนงาน / ไฟล์ในถังขยะ | ✓ | — | — |
 | `project.archive` | Archive / Restore โปรเจกต์ | ✓ | — | — |
+| `diagram.takeover` | แก้ไข Diagram แทนคนที่ถือสิทธิ์แก้อยู่ | ✓ | — | — |
 | `project.owner` | โอนความเป็นเจ้าของ, ลบโปรเจกต์ | Project Owner เท่านั้น | | |
 
 ### 3.3 สิทธิ์ตามความเป็นเจ้าของ

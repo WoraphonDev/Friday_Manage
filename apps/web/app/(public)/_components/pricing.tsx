@@ -186,6 +186,7 @@ function CompareTable({ items, fit, price }: { items: PublicPlan[]; fit?: PlanCo
       [
         { label: "Kanban, Table, Calendar", value: has("kanban") },
         { label: "Gantt, Workload, Sprint", value: has("gantt") },
+        { label: "Diagram", value: flag("diagrams") },
         { label: t("compare.reports"), value: has("reports") },
         { label: t("compare.excel"), value: has("import_excel") },
       ],

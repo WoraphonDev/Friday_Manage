@@ -153,7 +153,7 @@ describe("Workspace / Project shell", () => {
     }
   });
 
-  it("Admin เห็นแท็บหลัก 8 แท็บ และ Drawer เปิดตาม query โดยรักษา filter อื่นตอนปิด", async () => {
+  it("Admin เห็นแท็บหลัก 9 แท็บ (รวม Diagram) และ Drawer เปิดตาม query โดยรักษา filter อื่นตอนปิด", async () => {
     navigation.pathname = "/work/sample/p/DE";
     navigation.search = "issue=DE-1&filter=open";
     const user = userEvent.setup();
@@ -168,6 +168,7 @@ describe("Workspace / Project shell", () => {
       "Calendar",
       "Members",
       "Files",
+      "Diagram",
       "Settings",
     ]);
     // Import / Export อยู่ใต้โปรเจกต์แล้ว (ผู้ใช้ตัดสิน 2026-11-09) · Sidebar ไม่มีลิงก์นำเข้าแผน
@@ -520,6 +521,7 @@ describe("Workspace / Project shell", () => {
       "Calendar",
       "Members",
       "Files",
+      "Diagram",
       "Settings",
     ]);
     menu = await open();

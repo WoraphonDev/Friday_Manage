@@ -381,6 +381,7 @@
   "noDependenciesYet": "No dependencies yet",
   "addDescription": "+ Add description",
   "refs": {
+    "diagrams": "Diagrams",
     "requirement": "Requirement",
     "screen": "Screen",
     "labels": "Labels",

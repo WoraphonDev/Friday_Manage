@@ -23,6 +23,7 @@ export const PERMISSION_ROWS = [
   ["issue.change_due_directly", false, false],
   ["due_request.approve", false, false],
   ["file.upload", true, false],
+  ["diagram.edit", true, false],
   ["sprint.manage", false, false],
   ["project.invite", false, false],
   ["project.settings", false, false],

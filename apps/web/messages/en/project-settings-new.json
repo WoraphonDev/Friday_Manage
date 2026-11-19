@@ -289,6 +289,7 @@
         "issue__change_due_directly": "Change Due without approval",
         "due_request__approve": "Approve Due change requests",
         "file__upload": "Upload / delete files",
+        "diagram__edit": "Create / edit diagrams",
         "sprint__manage": "Manage Sprints (Start / Complete)",
         "project__invite": "Invite members to project",
         "project__settings": "Edit Project Settings"

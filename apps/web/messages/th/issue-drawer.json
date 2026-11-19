@@ -430,7 +430,7 @@
   "afterStart": "หลังเริ่มงาน",
   "parentRange": "ต้องอยู่ในช่วงของ {key}: {start} – {end} (เกินได้ ระบบจะถามก่อนขยาย Task)",
   "checkDoneBy": "ติ๊กโดย {name} · {date}",
-  "checkShowMore": "ดูทั้งหมด",
+  "checkShowMore": "เพิ่มเติม",
   "checkShowLess": "ย่อ",
   "checkShowMoreOf": "ดูข้อความเต็ม {text}",
   "checkShowLessOf": "ย่อข้อความ {text}",

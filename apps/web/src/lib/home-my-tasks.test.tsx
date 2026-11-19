@@ -49,7 +49,7 @@ function tasks(): MyIssues {
     today: "2026-12-02",
     tab: "assigned",
     group: "due",
-    counts: { assigned: 3, reviewer: 1, watching: 0, created: 5 },
+    counts: { assigned: 3, reviewer: 1, analyst: 2, watching: 0, created: 5 },
     total: 3,
     groups: [
       { key: "late", label: "เลยกำหนด", count: 1, items: [task("DE-23")] },
@@ -229,6 +229,7 @@ describe("My Tasks (F / M2)", () => {
     mount(<MyTasksPage ws="sample" />);
     expect(await screen.findByRole("button", { name: /มอบหมายให้ฉัน 3/ })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: /ฉันสร้าง 5/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /ฉันเป็น BA \/ SA 2/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ย่อกลุ่ม เลยกำหนด" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("button", { name: "ขยายกลุ่ม ภายหลัง" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("link", { name: "งานตัวอย่าง DE-23" })).toHaveAttribute("href", "/work/sample/p/DE/board?issue=DE-23");

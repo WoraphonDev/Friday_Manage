@@ -63,7 +63,7 @@ export interface InboxItem {
   createdAt: string;
 }
 
-export type Tab = "assigned" | "reviewer" | "watching" | "created";
+export type Tab = "assigned" | "reviewer" | "analyst" | "watching" | "created";
 export type GroupBy = "due" | "project" | "status";
 export interface TaskItem {
   key: string;

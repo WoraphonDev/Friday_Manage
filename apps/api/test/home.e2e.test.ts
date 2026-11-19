@@ -83,7 +83,7 @@ describe('GET w/my-issues', () => {
     expect(g('next_week').range).toEqual({ from: '2026-12-07', to: '2026-12-13' });
     expect(g('later').range).toEqual({ from: '2026-12-14', to: '' });
     expect(r.body).toMatchObject({ today: '2026-12-02', tab: 'assigned', group: 'due', total: 6 });
-    expect(r.body.counts).toEqual({ assigned: 6, reviewer: 1, watching: 1, created: 7 });
+    expect(r.body.counts).toEqual({ assigned: 6, reviewer: 1, analyst: 0, watching: 1, created: 7 });
     expect(titles(r, 'this_week')).toEqual(['W-สัปดาห์นี้']);
     expect(g('this_week').items.map((i: { myRoles: string[] }) => i.myRoles)).toEqual([['dev']]);
     const late = g('late').items[0];
@@ -171,6 +171,11 @@ describe('GET w/my-issues', () => {
     expect(r.body.counts.reviewer).toBe(1);
     const reviewer = await get('?tab=reviewer', team.dev);
     expect(reviewer.body.groups.flatMap((g: { items: Array<{ title: string }> }) => g.items.map((i) => i.title))).toContain('Q-dev เป็น BA และ QA');
+    // แท็บ "ฉันเป็น BA / SA": งานที่เป็น BA หรือ SA (รวมที่เป็น Dev ด้วย) · งานที่เสร็จนานแล้วไม่โผล่
+    const analyst = await get('?tab=analyst', team.dev);
+    const analystRoles = Object.fromEntries(analyst.body.groups.flatMap((g: { items: Array<{ title: string; myRoles: string[] }> }) => g.items).map((i: { title: string; myRoles: string[] }) => [i.title, i.myRoles]));
+    expect(analystRoles).toEqual({ 'B-dev เป็น BA': ['ba'], 'Q-dev เป็น BA และ QA': ['ba', 'qa'], 'D-dev เป็น Dev และ SA': ['dev', 'sa'] });
+    expect(analyst.body.counts.analyst).toBe(3);
     // ตัวกรอง assignee ยังหมายถึงผู้รับผิดชอบ (Dev) เท่านั้น
     const byDev = await get(`?tab=assigned&assignee=${team.devId}`, team.dev);
     expect(byDev.body.groups.flatMap((g: { items: Array<{ title: string }> }) => g.items.map((i) => i.title))).not.toContain('B-dev เป็น BA');

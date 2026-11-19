@@ -24,7 +24,7 @@ import { IssueDrawer } from "@/features/issue-drawer/IssueDrawer";
 import { withoutDrawerParams } from "@/features/issue-drawer/url";
 import { AttachmentBadge } from "@/features/attachments/attachment-badge";
 
-const TABS: Tab[] = ["assigned", "reviewer", "watching", "created"];
+const TABS: Tab[] = ["assigned", "reviewer", "analyst", "watching", "created"];
 const GROUPS: GroupBy[] = ["due", "project", "status"];
 const GROUP_COLOR: Record<string, string> = { late: "var(--danger)", today: "var(--warning-solid)", this_week: "var(--chart-primary)", next_week: "var(--accent-teal)", later: "var(--chart-neutral)", none: "var(--chart-neutral)", done_today: "var(--success-solid)" };
 const DROPPABLE = new Set(["today", "this_week", "next_week"]);

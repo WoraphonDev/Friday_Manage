@@ -20,7 +20,7 @@ import { canMoveIssue } from '../projects/permissions.js';
 const uuid = z.uuid();
 
 export const MyIssuesQuery = z.object({
-  tab: z.enum(['assigned', 'reviewer', 'watching', 'created']).default('assigned'),
+  tab: z.enum(['assigned', 'reviewer', 'analyst', 'watching', 'created']).default('assigned'),
   group: z.enum(['due', 'project', 'status']).default('due'),
   projectKey: z.string().trim().min(1).max(20).optional(),
   assignee: uuid.optional(),
@@ -257,10 +257,12 @@ export class HomeService {
       );
       const me = (i: Issue, tab: z.infer<typeof MyIssuesQuery>['tab']) =>
         // มอบหมายให้ฉัน = งานที่ฉันเป็นผู้รับผิดชอบ (Dev) จริง ๆ · BA / SA ไม่นับ (ผู้ใช้สั่ง 19 พ.ย. 2026) · QA อยู่แท็บของตัวเอง
-        tab === 'assigned' ? sc.rolesOf(i, auth.userId).includes('dev') : tab === 'reviewer' ? reviewerList(i).includes(auth.userId) : tab === 'watching' ? watched.has(i.id) : i.createdBy === auth.userId;
+        tab === 'assigned' ? sc.rolesOf(i, auth.userId).includes('dev') : tab === 'reviewer' ? reviewerList(i).includes(auth.userId)
+        // งานที่ฉันเป็น BA หรือ SA แยกแท็บ "ฉันเป็น BA / SA" (ผู้ใช้เลือก 19 พ.ย. 2026)
+        : tab === 'analyst' ? sc.rolesOf(i, auth.userId).some((r) => r === 'ba' || r === 'sa') : tab === 'watching' ? watched.has(i.id) : i.createdBy === auth.userId;
       const open = (i: Issue) => !sc.isDone(i);
       // จำนวนบนแต่ละแท็บนับเฉพาะงานที่ยังไม่เสร็จ
-      const counts = Object.fromEntries((['assigned', 'reviewer', 'watching', 'created'] as const).map((t) => [t, sc.issues.filter((i) => open(i) && me(i, t)).length]));
+      const counts = Object.fromEntries((['assigned', 'reviewer', 'analyst', 'watching', 'created'] as const).map((t) => [t, sc.issues.filter((i) => open(i) && me(i, t)).length]));
 
       const wanted = q.projectKey?.toUpperCase();
       const project = wanted ? sc.projects.find((p) => p.key === wanted) : undefined;

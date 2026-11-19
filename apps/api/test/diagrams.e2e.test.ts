@@ -81,7 +81,7 @@ describe('บันทึกและแก้ทีละคน', () => {
     expect(r.body.issues[issueId]).toMatchObject({ key: issueKey, tone: 'overdue', deleted: false });
     revision = r.body.revision;
     const got = await team.dev.get(`${base}/diagrams/${id}`);
-    expect(got.body.content.nodes[0].data.issueId).toBe(issueId);
+    expect(got.body.content.nodes[0].data.issueIds).toEqual([issueId]);
     expect((await team.dev.get(`${base}/diagrams?issue=${issueId}`)).body.items.map((d: { id: string }) => d.id)).toEqual([id]);
   });
 
@@ -162,12 +162,41 @@ describe('ลบและกู้คืน', () => {
   });
 });
 
-describe('ตัวเลือกงาน', () => {
-  it('ค้นด้วยเลขงานหรือชื่อ', async () => {
-    const byKey = await team.lead.get(`${base}/diagram-issue-options?q=${issueKey}`);
-    expect(byKey.body.items[0]).toMatchObject({ id: issueId, key: issueKey, tone: 'overdue' });
-    expect((await team.lead.get(`${base}/diagram-issue-options?q=หลักประกัน`)).body.items[0].id).toBe(issueId);
-    expect((await viewer.get(`${base}/diagram-issue-options?q=1`)).status).toBe(403);
+describe('ค้นงานสำหรับผูก', () => {
+  it('ค้นด้วยเลขงานหรือชื่อ · กรองประเภท · ไม่มีคำค้นก็ได้รายการ · Viewer ใช้ไม่ได้', async () => {
+    const sub = await team.lead.post(`${base}/issues`, { title: 'ตรวจเอกสารซ้ำ', parentKey: issueKey, moduleId: team.project.modules[0].id });
+    expect(sub.status, JSON.stringify(sub.body)).toBe(201);
+    const byKey = await team.lead.get(`${base}/diagram-issues?q=${issueKey}`);
+    expect(byKey.body.items[0]).toMatchObject({ id: issueId, key: issueKey, tone: 'overdue', level: 'task' });
+    expect((await team.lead.get(`${base}/diagram-issues?q=หลักประกัน`)).body.items[0].id).toBe(issueId);
+    const all = await team.lead.get(`${base}/diagram-issues`);
+    expect(all.body.total).toBeGreaterThanOrEqual(2);
+    // Sub-task ตามหลัง Task แม่
+    const keys = all.body.items.map((i: { key: string }) => i.key);
+    expect(keys.indexOf(sub.body.key)).toBe(keys.indexOf(issueKey) + 1);
+    const subs = await team.lead.get(`${base}/diagram-issues?type=subtask`);
+    expect(subs.body.items.map((i: { key: string; parentKey: string }) => [i.key, i.parentKey])).toEqual([[sub.body.key, issueKey]]);
+    expect((await team.lead.get(`${base}/diagram-issues?overdue=true`)).body.items.map((i: { id: string }) => i.id)).toContain(issueId);
+    const filters = await team.lead.get(`${base}/diagram-issue-filters`);
+    expect(filters.body.modules.map((m: { name: string }) => m.name)).toEqual(['Credit Line', 'Drawdown']);
+    expect((await viewer.get(`${base}/diagram-issues?q=1`)).status).toBe(403);
+  });
+
+  it('กล่องเดียวผูกได้หลายงาน (สูงสุด 20) · รูปแบบเดิม issueId แปลงเป็น issueIds ให้เอง', async () => {
+    const d = (await team.lead.post(`${base}/diagrams`, { name: 'หลายงาน' })).body;
+    const sub = (await team.lead.get(`${base}/diagram-issues?type=subtask`)).body.items[0];
+    const r = await team.lead.put(`${base}/diagrams/${d.id}/content`, {
+      revision: d.revision,
+      content: { nodes: [{ id: 'a', type: 'process', position: { x: 0, y: 0 }, data: { label: 'สองงาน', issueIds: [issueId, sub.id] } }, { id: 'b', type: 'pool', position: { x: 0, y: 200 }, data: { label: 'เดิม', issueId, lanes: ['Maker', 'Checker'] } }], edges: [{ id: 'e', source: 'a', target: 'b', path: 'bezier', markerStart: 'one', markerEnd: 'many', color: 'purple', width: 2, bend: { x: 10, y: 20 } }] },
+    });
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
+    expect(Object.keys(r.body.issues).sort()).toEqual([issueId, sub.id].sort());
+    const got = (await team.lead.get(`${base}/diagrams/${d.id}`)).body;
+    expect(got.content.nodes.map((n: { data: { issueIds: string[] } }) => n.data.issueIds)).toEqual([[issueId, sub.id], [issueId]]);
+    expect(got.content.nodes[1].data).not.toHaveProperty('issueId');
+    const many = Array.from({ length: 21 }, (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`);
+    const tooMany = await team.lead.put(`${base}/diagrams/${d.id}/content`, { revision: got.revision, content: { nodes: [{ id: 'a', type: 'process', position: { x: 0, y: 0 }, data: { label: 'x', issueIds: many } }], edges: [] } });
+    expect(tooMany.status).toBe(400);
   });
 });
 

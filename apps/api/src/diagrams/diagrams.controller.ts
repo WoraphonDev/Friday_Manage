@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Put, Query
 import { Auth, type AuthInfo, Tenant, type TenantInfo } from '../common/request.js';
 import { TenantGuard } from '../common/tenant.js';
 import { parse } from '../common/validate.js';
-import { CreateDiagramBody, DiagramsService, IssueOptionsQuery, ListDiagramsQuery, LockBody, PatchDiagramBody, SaveContentBody } from './diagrams.service.js';
+import { CreateDiagramBody, DiagramsService, IssueSearchQuery, ListDiagramsQuery, LockBody, PatchDiagramBody, SaveContentBody } from './diagrams.service.js';
 
 /** แท็บ Diagram · ทุก route อยู่ใต้ `w/:ws/projects/:key` · Guest Viewer → 403 · แพ็กเกจ Free → 402 */
 @Controller('w/:ws/projects/:key')
@@ -20,10 +20,16 @@ export class DiagramsController {
     return this.diagrams.create(auth, tenant, key, parse(CreateDiagramBody, body));
   }
 
-  /** ตัวเลือกช่อง "ผูกกับงาน" */
-  @Get('diagram-issue-options')
-  issueOptions(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Query() query: unknown) {
-    return this.diagrams.issueOptions(auth, tenant, key, parse(IssueOptionsQuery, query));
+  /** หน้าต่างผูกงาน / แท็บ "งาน" */
+  @Get('diagram-issues')
+  searchIssues(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Query() query: unknown) {
+    return this.diagrams.searchIssues(auth, tenant, key, parse(IssueSearchQuery, query));
+  }
+
+  /** ตัวเลือกของตัวกรองในหน้าต่างผูกงาน */
+  @Get('diagram-issue-filters')
+  issueFilters(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string) {
+    return this.diagrams.issueFilters(auth, tenant, key);
   }
 
   @Get('diagrams/:id')

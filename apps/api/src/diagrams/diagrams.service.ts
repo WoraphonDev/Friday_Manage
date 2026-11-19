@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { schema as s, type Tx } from '@friday/db';
-import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, or, type SQL, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
 import { today } from '../common/dates.js';
 import { AppError } from '../common/errors.js';
@@ -9,6 +10,8 @@ import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { parse } from '../common/validate.js';
 import { PlanLimits } from '../core/plan-limits.js';
+import { openStatus } from '../common/status-category.js';
+import { lateSql, loadDueRule } from '../projects/due-stage.js';
 import { requirePerm } from '../projects/permissions.js';
 import { ProjectsService, type ProjectRow } from '../projects/projects.service.js';
 import { Content, type DiagramContent, linkedIssueIds, MAX_CONTENT_BYTES, previewOf, starterContent } from './content.js';
@@ -36,9 +39,27 @@ export const PatchDiagramBody = z
   .refine((v) => Object.keys(v).length > 0, 'ต้องระบุค่าที่จะแก้');
 export const SaveContentBody = z.object({ revision: z.number().int().min(0), content: z.unknown() });
 export const LockBody = z.object({ takeover: z.boolean().default(false) });
-export const IssueOptionsQuery = z.object({ q: z.string().trim().max(100).default('') });
+const csv = <T extends z.ZodType>(item: T) =>
+  z.preprocess((v) => (typeof v === 'string' ? v.split(',').map((x) => x.trim()).filter(Boolean) : v), z.array(item).max(50)).optional();
+/** หน้าต่างผูกงาน / แท็บ "งาน" · ตัวกรองชุดเดียวกับหน้า Table + ประเภท */
+export const IssueSearchQuery = z.object({
+  q: z.string().trim().max(100).default(''),
+  module: csv(z.uuid()),
+  phase: csv(z.uuid()),
+  status: csv(z.enum(['todo', 'in_progress', 'review', 'blocked', 'done', 'cancelled'])),
+  type: csv(z.enum(['task', 'subtask', 'bug'])),
+  assignee: z.union([z.uuid(), z.literal('me')]).optional(),
+  sprint: z.union([z.uuid(), z.literal('current')]).optional(),
+  overdue: z.stringbool().optional(),
+  page: z.coerce.number().int().min(1).max(1000).default(1),
+});
+const SEARCH_PAGE = 50;
 
 type DiagramRow = typeof s.diagrams.$inferSelect;
+
+/** สถานะที่ต้องเห็นก่อนเมื่อกล่องผูกหลายงาน (ภาพย่อในการ์ดใช้สีนี้) */
+const TONE_ORDER = ['overdue', 'blocked', 'in_progress', 'review', 'todo', 'done', 'cancelled', 'deleted'];
+export const worstTone = (tones: (string | undefined)[]) => tones.filter((x): x is string => !!x).sort((a, b) => TONE_ORDER.indexOf(a) - TONE_ORDER.indexOf(b))[0] ?? null;
 
 /**
  * แท็บ Diagram (storyboard ที่ผู้ใช้อนุมัติ 2026-11-19)
@@ -144,7 +165,7 @@ export class DiagramsService {
             deletedAt: r.deletedAt,
             deletedBy: (r.deletedBy && people.get(r.deletedBy)) || null,
             // สถานะงานของภาพย่อ (สีกรอบ) · ไม่ส่งชื่องานในรายการ
-            preview: { ...preview, nodes: preview.nodes.map((n) => ({ ...n, i: undefined, s: n.i ? (issues.get(n.i)?.tone ?? null) : null })) },
+            preview: { ...preview, nodes: preview.nodes.map((n) => ({ ...n, i: undefined, s: worstTone(n.i.map((id) => issues.get(id)?.tone)) })) },
           };
         }),
         permissions: { ...this.perms(access), trash: access.perms.has('project.trash') },
@@ -189,8 +210,10 @@ export class DiagramsService {
    */
   private async issueChips(tx: Tx, project: ProjectRow, ids: string[]) {
     const want = [...new Set(ids)];
-    const out = new Map<string, { id: string; key: string; title: string; status: string; category: string; tone: string; dueDate: string | null; deleted: boolean }>();
+    const out = new Map<string, { id: string; key: string; title: string; status: string; category: string; tone: string; dueDate: string | null; deleted: boolean; assignee: Person | null }>();
     if (!want.length) return out;
+    // เลยกำหนดตามกฎของโปรเจกต์ (แยก Dev / QA ใช้ QA Due) เท่ากับป้ายในหน้าอื่น
+    const late = and(lateSql(await loadDueRule(tx, project), today()), openStatus())!;
     const rows = await tx
       .select({
         id: s.issues.id,
@@ -200,67 +223,130 @@ export class DiagramsService {
         deletedAt: s.issues.deletedAt,
         status: s.workflowStatuses.name,
         category: s.workflowStatuses.category,
+        overdue: sql<boolean>`coalesce((${late}), false)`,
       })
       .from(s.issues)
       .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
       .where(and(inArray(s.issues.id, want), eq(s.issues.projectId, project.id)));
-    const now = today();
+    const assignees = rows.length ? await tx.select({ issueId: s.issueAssignees.issueId, userId: s.issueAssignees.userId }).from(s.issueAssignees).where(inArray(s.issueAssignees.issueId, rows.map((r) => r.id))) : [];
+    const people = await loadPeople(tx, assignees.map((a) => a.userId));
     for (const r of rows) {
-      const open = r.category !== 'done' && r.category !== 'cancelled';
-      const overdue = open && !!r.planEnd && r.planEnd < now;
       out.set(r.id, {
         id: r.id,
         key: `${project.key}-${r.number}`,
         title: r.title,
         status: r.status,
         category: r.category,
-        // สีกรอบกล่อง = สีสถานะเดียวกับป้ายสถานะทุกหน้า · เลยกำหนดชนะสถานะ
-        tone: r.deletedAt ? 'deleted' : overdue ? 'overdue' : r.category,
+        tone: r.deletedAt ? 'deleted' : r.overdue ? 'overdue' : r.category,
         dueDate: r.planEnd,
         deleted: !!r.deletedAt,
+        assignee: people.get(assignees.find((a) => a.issueId === r.id)?.userId ?? '') ?? null,
       });
     }
     return out;
   }
 
-  /** ช่อง "ผูกกับงาน" ค้นด้วยเลขงาน (39, DP-39) หรือชื่อ · เฉพาะงานในโปรเจกต์นี้ที่ยังไม่ลบ */
-  async issueOptions(auth: AuthInfo, tenant: TenantInfo, key: string, q: z.infer<typeof IssueOptionsQuery>) {
+  /**
+   * หน้าต่างผูกงาน / แท็บ "งาน" (storyboard รอบ 2): ค้นเลขงาน ชื่อ FR และ Screen · กรองแบบหน้า Table · แบ่งหน้าทีละ 50
+   * เรียง Module › กลุ่ม › Task › Sub-task ของ Task นั้น ให้หน้าเว็บจัดกลุ่มต่อได้โดยไม่ต้องเรียงใหม่
+   */
+  async searchIssues(auth: AuthInfo, tenant: TenantInfo, key: string, q: z.infer<typeof IssueSearchQuery>) {
     await this.feature(tenant);
     return this.db.run(auth, tenant, async (tx) => {
       const { project } = await this.ctx(tx, auth, tenant, key, 'diagram.edit');
-      const where = [eq(s.issues.projectId, project.id), isNull(s.issues.deletedAt)];
-      const num = /^(?:[a-z][a-z0-9]*-)?(\d{1,9})$/i.exec(q.q)?.[1];
-      if (num) where.push(or(eq(s.issues.number, Number(num)), ilike(s.issues.title, `%${q.q}%`))!);
-      else if (q.q) where.push(ilike(s.issues.title, `%${q.q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`));
-      const rows = await tx
-        .select({ id: s.issues.id, number: s.issues.number, title: s.issues.title, status: s.workflowStatuses.name, category: s.workflowStatuses.category, planEnd: s.issues.planEnd })
+      const parent = alias(s.issues, 'parent');
+      const late = and(lateSql(await loadDueRule(tx, project), today()), openStatus())!;
+      const where: SQL[] = [eq(s.issues.projectId, project.id), isNull(s.issues.deletedAt)];
+      if (q.q) {
+        const text = `%${q.q.replace(/[\\%_]/g, '\\$&')}%`;
+        const num = /^(?:[a-z][a-z0-9]*-)?(\d{1,9})$/i.exec(q.q)?.[1];
+        const byRequirement = sql`exists (select 1 from ${s.issueRequirements} ir join ${s.requirements} r on r.id = ir.requirement_id where ir.issue_id = ${s.issues.id} and r.code ilike ${text})`;
+        const byScreen = sql`exists (select 1 from ${s.issueScreens} isc join ${s.screens} sc on sc.id = isc.screen_id where isc.issue_id = ${s.issues.id} and sc.code ilike ${text})`;
+        where.push(or(ilike(s.issues.title, text), ilike(sql`${project.key} || '-' || ${s.issues.number}`, text), ...(num ? [eq(s.issues.number, Number(num))] : []), byRequirement, byScreen)!);
+      }
+      if (q.module?.length) where.push(inArray(s.issues.moduleId, q.module));
+      if (q.phase?.length) where.push(inArray(s.issues.phaseId, q.phase));
+      if (q.status?.length) where.push(inArray(s.workflowStatuses.category, q.status));
+      if (q.type?.length) {
+        const kinds: SQL[] = [];
+        const bug = sql`${s.issueTypes.name} = 'Bug'`;
+        if (q.type.includes('bug')) kinds.push(bug);
+        if (q.type.includes('task')) kinds.push(sql`(${s.issues.parentId} is null and not ${bug})`);
+        if (q.type.includes('subtask')) kinds.push(sql`(${s.issues.parentId} is not null and not ${bug})`);
+        where.push(or(...kinds)!);
+      }
+      if (q.assignee) {
+        const who = q.assignee === 'me' ? auth.userId : q.assignee;
+        where.push(sql`exists (select 1 from ${s.issueAssignees} ia where ia.issue_id = ${s.issues.id} and ia.user_id = ${who})`);
+      }
+      if (q.sprint === 'current') where.push(sql`${s.issues.sprintId} in (select id from ${s.sprints} where ${s.sprints.projectId} = ${project.id} and ${s.sprints.status} = 'active')`);
+      else if (q.sprint) where.push(eq(s.issues.sprintId, q.sprint));
+      if (q.overdue) where.push(late);
+      const base = tx
+        .select({
+          id: s.issues.id,
+          number: s.issues.number,
+          title: s.issues.title,
+          parentId: s.issues.parentId,
+          parentNumber: parent.number,
+          moduleId: s.issues.moduleId,
+          moduleName: s.modules.name,
+          phaseId: s.issues.phaseId,
+          phaseName: s.phases.name,
+          status: s.workflowStatuses.name,
+          category: s.workflowStatuses.category,
+          typeName: s.issueTypes.name,
+          planEnd: s.issues.planEnd,
+          overdue: sql<boolean>`coalesce((${late}), false)`,
+          total: sql<number>`count(*) over ()::int`,
+        })
         .from(s.issues)
         .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
-        .where(and(...where))
-        .orderBy(num ? sql`${s.issues.number} = ${Number(num)} desc` : desc(s.issues.updatedAt), desc(s.issues.number))
-        .limit(20);
-      const assignees = rows.length
-        ? await tx
-            .select({ issueId: s.issueAssignees.issueId, userId: s.issueAssignees.userId })
-            .from(s.issueAssignees)
-            .where(inArray(s.issueAssignees.issueId, rows.map((r) => r.id)))
-        : [];
+        .innerJoin(s.issueTypes, eq(s.issueTypes.id, s.issues.issueTypeId))
+        .leftJoin(parent, eq(parent.id, s.issues.parentId))
+        .leftJoin(s.modules, eq(s.modules.id, s.issues.moduleId))
+        .leftJoin(s.phases, eq(s.phases.id, s.issues.phaseId))
+        .where(and(...where));
+      const rows = await base
+        .orderBy(sql`${s.modules.sort} nulls last`, sql`${s.modules.name} nulls last`, sql`${s.phases.sort} nulls last`, sql`${s.phases.name} nulls last`, sql`coalesce(${parent.number}, ${s.issues.number})`, sql`${s.issues.parentId} nulls first`, asc(s.issues.number))
+        .limit(SEARCH_PAGE)
+        .offset((q.page - 1) * SEARCH_PAGE);
+      const assignees = rows.length ? await tx.select({ issueId: s.issueAssignees.issueId, userId: s.issueAssignees.userId }).from(s.issueAssignees).where(inArray(s.issueAssignees.issueId, rows.map((r) => r.id))) : [];
       const people = await loadPeople(tx, assignees.map((a) => a.userId));
-      const now = today();
+      const total = rows[0]?.total ?? 0;
       return {
-        items: rows.map((r) => {
-          const open = r.category !== 'done' && r.category !== 'cancelled';
-          return {
-            id: r.id,
-            key: `${project.key}-${r.number}`,
-            title: r.title,
-            status: r.status,
-            category: r.category,
-            tone: open && r.planEnd && r.planEnd < now ? 'overdue' : r.category,
-            assignee: people.get(assignees.find((a) => a.issueId === r.id)?.userId ?? '') ?? null,
-          };
-        }),
+        items: rows.map((r) => ({
+          id: r.id,
+          key: `${project.key}-${r.number}`,
+          title: r.title,
+          parentKey: r.parentNumber ? `${project.key}-${r.parentNumber}` : null,
+          level: r.typeName === 'Bug' ? 'bug' : r.parentId ? 'subtask' : 'task',
+          module: r.moduleId ? { id: r.moduleId, name: r.moduleName } : null,
+          phase: r.phaseId ? { id: r.phaseId, name: r.phaseName } : null,
+          status: r.status,
+          category: r.category,
+          tone: r.overdue ? 'overdue' : r.category,
+          dueDate: r.planEnd,
+          assignee: people.get(assignees.find((a) => a.issueId === r.id)?.userId ?? '') ?? null,
+        })),
+        total,
+        page: q.page,
+        hasMore: q.page * SEARCH_PAGE < total,
       };
+    });
+  }
+
+  /** ตัวเลือกของตัวกรอง: Module, กลุ่ม, Sprint และคนในโปรเจกต์ */
+  async issueFilters(auth: AuthInfo, tenant: TenantInfo, key: string) {
+    await this.feature(tenant);
+    return this.db.run(auth, tenant, async (tx) => {
+      const { project } = await this.ctx(tx, auth, tenant, key, 'diagram.edit');
+      const modules = await tx.select({ id: s.modules.id, name: s.modules.name }).from(s.modules).where(eq(s.modules.projectId, project.id)).orderBy(asc(s.modules.sort), asc(s.modules.name));
+      const phases = await tx.select({ id: s.phases.id, name: s.phases.name, moduleId: s.phases.moduleId }).from(s.phases).where(eq(s.phases.projectId, project.id)).orderBy(asc(s.phases.sort), asc(s.phases.name));
+      const sprints = await tx.select({ id: s.sprints.id, name: s.sprints.name, status: s.sprints.status }).from(s.sprints).where(eq(s.sprints.projectId, project.id)).orderBy(desc(s.sprints.createdAt));
+      const members = await tx.select({ userId: s.projectMembers.userId }).from(s.projectMembers).where(eq(s.projectMembers.projectId, project.id));
+      const people = await loadPeople(tx, [...members.map((m) => m.userId), project.ownerUserId]);
+      return { modules, phases, sprints, people: [...people.values()].sort((a, b) => a.displayName.localeCompare(b.displayName, 'th')) };
     });
   }
 

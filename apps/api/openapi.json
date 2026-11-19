@@ -14852,6 +14852,7 @@
               "enum": [
                 "assigned",
                 "reviewer",
+                "analyst",
                 "watching",
                 "created"
               ]

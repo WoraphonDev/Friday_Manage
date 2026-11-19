@@ -137,6 +137,7 @@
     "tabs": {
       "assigned": "Assigned to me",
       "reviewer": "I'm QA / Reviewer",
+      "analyst": "I'm BA / SA",
       "watching": "Watching",
       "created": "Created by me"
     },

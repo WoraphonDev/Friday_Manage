@@ -10,7 +10,7 @@ import { navigation, router } from "@/test/router";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import hmt from "../../messages/th/home-my-tasks.json";
 import { HomePage } from "../../app/work/[ws]/my-tasks/_components/home-page";
-import { MyTasksPage, dropTarget, weekLoad, weekStartOf } from "../../app/work/[ws]/my-tasks/_components/my-tasks-page";
+import { MyTasksPage, dropTarget, myShareMd, weekLoad, weekStartOf } from "../../app/work/[ws]/my-tasks/_components/my-tasks-page";
 import { ProjectsPage } from "../../app/work/[ws]/projects/_components/projects-page";
 import type { HomeData, MyIssues, TaskItem } from "../../app/work/[ws]/my-tasks/_components/types";
 
@@ -49,7 +49,7 @@ function tasks(): MyIssues {
     today: "2026-12-02",
     tab: "assigned",
     group: "due",
-    counts: { assigned: 3, reviewer: 1, watching: 0, created: 5 },
+    counts: { assigned: 3, reviewer: 1, analyst: 2, watching: 0, created: 5 },
     total: 3,
     groups: [
       { key: "late", label: "เลยกำหนด", count: 1, items: [task("DE-23")] },
@@ -229,6 +229,7 @@ describe("My Tasks (F / M2)", () => {
     mount(<MyTasksPage ws="sample" />);
     expect(await screen.findByRole("button", { name: /มอบหมายให้ฉัน 3/ })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: /ฉันสร้าง 5/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /ฉันเป็น BA \/ SA 2/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ย่อกลุ่ม เลยกำหนด" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("button", { name: "ขยายกลุ่ม ภายหลัง" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("link", { name: "งานตัวอย่าง DE-23" })).toHaveAttribute("href", "/work/sample/p/DE/board?issue=DE-23");
@@ -410,5 +411,9 @@ describe("My Tasks (F / M2)", () => {
     // งานที่ฉันเป็นแค่ QA ไม่นับเป็นภาระ · เป็นทั้ง Dev และ QA นับ
     expect(weekLoad([task("X-2", { planStart: "2026-12-01", planEnd: "2026-12-01", estimateMd: 1, myRoles: ["qa"] })], "2026-11-30")).toEqual([0, 0, 0, 0, 0]);
     expect(weekLoad([task("X-3", { planStart: "2026-12-01", planEnd: "2026-12-01", estimateMd: 1, myRoles: ["dev", "qa"] })], "2026-11-30")).toEqual([0, 1, 0, 0, 0]);
+    // Man-Day ส่วนของฉัน (หัวหน้าและกล่องแยกตามโปรเจกต์ใช้ค่าเดียวกัน): แบ่งตามจำนวน Dev · เป็นแค่ BA / SA = 0
+    expect(myShareMd(task("X-4", { estimateMd: 4, assignees: [person("a", "ก"), person("b", "ข")], myRoles: ["dev"] }))).toBe(2);
+    expect(myShareMd(task("X-5", { estimateMd: 3, myRoles: ["sa"] }))).toBe(0);
+    expect(myShareMd(task("X-6", { estimateMd: 3, myRoles: ["ba", "sa"] }))).toBe(0);
   });
 });

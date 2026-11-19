@@ -137,6 +137,7 @@
     "tabs": {
       "assigned": "มอบหมายให้ฉัน",
       "reviewer": "ฉันเป็น QA / Reviewer",
+      "analyst": "ฉันเป็น BA / SA",
       "watching": "Watching",
       "created": "ฉันสร้าง"
     },

@@ -24,7 +24,7 @@ import { IssueDrawer } from "@/features/issue-drawer/IssueDrawer";
 import { withoutDrawerParams } from "@/features/issue-drawer/url";
 import { AttachmentBadge } from "@/features/attachments/attachment-badge";
 
-const TABS: Tab[] = ["assigned", "reviewer", "watching", "created"];
+const TABS: Tab[] = ["assigned", "reviewer", "analyst", "watching", "created"];
 const GROUPS: GroupBy[] = ["due", "project", "status"];
 const GROUP_COLOR: Record<string, string> = { late: "var(--danger)", today: "var(--warning-solid)", this_week: "var(--chart-primary)", next_week: "var(--accent-teal)", later: "var(--chart-neutral)", none: "var(--chart-neutral)", done_today: "var(--success-solid)" };
 const DROPPABLE = new Set(["today", "this_week", "next_week"]);
@@ -50,6 +50,11 @@ export function dropTarget(group: TaskGroup): string | null {
 /** Man-Day ของงานเป็นของ Dev · งานที่ฉันเป็นแค่ BA / SA / QA จึงไม่นับเป็นภาระของฉัน */
 export function countsMyMd(item: TaskItem) {
   return !item.myRoles?.length || item.myRoles.includes("dev");
+}
+
+/** Man-Day ส่วนของฉัน: แบ่งเท่ากันตามจำนวน Dev · งานที่ไม่ได้เป็น Dev = 0 (ใช้ทั้งหัวหน้าและกล่องแยกตามโปรเจกต์ให้ตรงกัน) */
+export function myShareMd(item: TaskItem) {
+  return countsMyMd(item) ? (item.estimateMd ?? 0) / Math.max(1, item.assignees.length) : 0;
 }
 
 /** Man-Day ต่อวัน (จ.–ศ.) ของสัปดาห์นี้: Man-Day ÷ วันทำงานในช่วงงาน ÷ จำนวนผู้รับผิดชอบ (ไม่หักวันหยุดบริษัท) */
@@ -185,12 +190,12 @@ export function MyTasksPage({ ws }: { ws: string }) {
   if (mobile) return <MobileTasks data={{ ...data, groups: shownGroups }} allItems={data.groups.flatMap((g) => g.items)} filter={filter} setFilter={setFilter} ws={ws} name={me.displayName} year={year} tab={tab} setTab={(k) => { setTab(k); setProject(""); }} busy={busy} onToggle={toggle} onOpen={openIssue} overlays={overlays} />;
   const everything = data.groups.flatMap((g) => g.items);
   const open = everything.filter((i) => !isClosedCategory(i.status.category));
-  const estSum = open.filter(countsMyMd).reduce((n, i) => n + (i.estimateMd ?? 0) / Math.max(1, i.assignees.length), 0);
+  const estSum = open.reduce((n, i) => n + myShareMd(i), 0);
   const count = (k: string) => data.groups.find((g) => g.key === k)?.count ?? 0;
   const byProject = (all.data?.groups ?? [])
     .map((g) => {
       const items = g.items.filter((i) => !isClosedCategory(i.status.category));
-      return { key: g.key, name: g.label, color: g.items[0]?.project.color ?? FALLBACK_PROJECT_COLOR, n: items.length, md: items.reduce((n, i) => n + (i.estimateMd ?? 0), 0) };
+      return { key: g.key, name: g.label, color: g.items[0]?.project.color ?? FALLBACK_PROJECT_COLOR, n: items.length, md: items.reduce((n, i) => n + myShareMd(i), 0) };
     })
     .filter((p) => p.n);
   const maxProject = Math.max(1, ...byProject.map((x) => x.n));

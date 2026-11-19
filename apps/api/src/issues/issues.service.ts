@@ -1309,7 +1309,7 @@ function eventFor(auth: AuthInfo, tenant: TenantInfo, project: ProjectRow, issue
   });
 }
 
-/** บทบาทในงานที่นับเป็น "มอบหมายให้ฉัน" นอกจาก Dev (ตรงกับ rolesOf ของ My Tasks) */
+/** บทบาทในงานนอกจาก Dev ที่แจ้งเตือนเมื่อถูกตั้ง (ไม่นับในแท็บ "มอบหมายให้ฉัน" ซึ่งเป็นเฉพาะ Dev) */
 const ROLE_LISTS = {
   ba: baList,
   sa: (i: Issue) => (i.saId ? [i.saId] : []),

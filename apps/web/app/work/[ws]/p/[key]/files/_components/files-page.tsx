@@ -273,6 +273,8 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
   const data = list.data!;
   const title = inTrash ? t("trash") : q ? t("searchResults", { q }) : VIRTUAL(place) ? t(place.startsWith("k:") ? `typeGroups.${place.slice(2)}` : `places.${place}`) : (folderName ?? t("root"));
   const all = allFiles.data?.items ?? [];
+  // All files / Recent / ตามประเภท รวมไฟล์ทุกโฟลเดอร์ด้วย query แยก · ระหว่างโหลดห้ามขึ้น "ยังไม่มีไฟล์" (เคยกะพริบก่อนไฟล์ในโฟลเดอร์ย่อยขึ้น)
+  const gathering = VIRTUAL(place) && !q && !allFiles.data;
   const trashCount = trash.data?.items.length ?? 0;
 
   return (
@@ -346,7 +348,7 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
 
           <div className={styles.toolbar}>
             <div className={styles.row}>
-              <h2 className={styles.h2}>{title} <span className={styles.muted} style={{ fontWeight: 500 }}>· {t("count", { count: items.length })}</span></h2>
+              <h2 className={styles.h2}>{title} {!gathering && <span className={styles.muted} style={{ fontWeight: 500 }}>· {t("count", { count: items.length })}</span>}</h2>
               {folderId && !q && canUpload && (
                 <>
                   <Button size="small" variant="ghost" onClick={() => setDialog("renameFolder")}>{t("renameFolder")}</Button>
@@ -373,7 +375,11 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
 
           {/* เปลี่ยนหมวด / โฟลเดอร์ หรือสลับ List ↔ Grid: รายการเคลื่อนเข้าแบบเดียวกับการเปลี่ยนหน้า (แถบเครื่องมือด้านบนอยู่นิ่ง) */}
           <MotionSwap key={`${place}:${view}`}>
-          {!items.length ? (
+          {gathering ? (
+            <section className={styles.card}>
+              {allFiles.error ? <ErrorState error={allFiles.error} retry={() => void allFiles.refetch()} /> : <LoadingState />}
+            </section>
+          ) : !items.length ? (
             <section className={styles.card}>
               <EmptyState title={inTrash ? t("emptyTrash") : q || uploader ? t("emptyFiltered") : t("empty")} description={inTrash ? t("emptyTrashHint", { days: 30 }) : canUpload && !q ? t("emptyHint") : t("emptyFilteredHint")} />
             </section>

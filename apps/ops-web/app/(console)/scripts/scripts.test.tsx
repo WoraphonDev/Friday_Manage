@@ -86,4 +86,29 @@ describe("สคริปต์ดูแลข้อมูล", () => {
     await userEvent.click(within(dlg).getByRole("button", { name: "ย้อนกลับ" }));
     await waitFor(() => expect(body).toEqual({ reason: "ลูกค้ายังใช้เครื่องสาขาอยู่" }));
   });
+
+  it("สคริปต์ที่ย้อนไม่ได้: ติดป้าย · ต้องพิมพ์ slug ของ Workspace ก่อนขออนุมัติ", async () => {
+    asRole("engineer");
+    const resend = { key: "resend_failed_invitations", table: "invitations", columns: ["token_hash", "expires_at", "email_status"], undoable: false, fields: [], lastRunAt: null, runs30: 0 };
+    const sent: unknown[] = [];
+    page();
+    server.use(
+      http.get(`${OPS}/scripts`, () => HttpResponse.json({ scripts: [resend], runs30: 0, undone30: 0, todo: [], canApprove: false })),
+      http.post(`${OPS}/scripts/resend_failed_invitations/dry-run`, () => HttpResponse.json({ ...base, id: "d2", scriptKey: "resend_failed_invitations", params: {}, status: "dry_run", reason: null, requestedBy: "วิศวกรตัวอย่าง", approvalRequestId: null, dryResult: { count: 1, ms: 5, sample: [{ id: "i1", label: "new@nordlight.example.com · ส่งไม่ผ่าน 2026-11-19 10:00", before: { email_status: "failed" }, after: { email_status: "ส่งใหม่" } }] } })),
+      http.post(`${OPS}/scripts/runs/d2/request`, async ({ request }) => (sent.push(await request.json()), HttpResponse.json({ id: "d2" }, { status: 202 }))),
+    );
+    const row = (await screen.findByText("ส่งอีเมลคำเชิญที่ส่งไม่ผ่านซ้ำ")).closest("tr")!;
+    expect(within(row).getByText("ไม่ได้")).toBeInTheDocument();
+    await userEvent.click(within(row).getByRole("button", { name: "รัน" }));
+    const drawer = await screen.findByRole("dialog", { name: "ส่งอีเมลคำเชิญที่ส่งไม่ผ่านซ้ำ" });
+    await userEvent.type(within(drawer).getByLabelText("Workspace"), "nord");
+    await userEvent.click(await within(drawer).findByRole("button", { name: "Nordlight · nordlight" }));
+    await userEvent.click(within(drawer).getByRole("button", { name: "ทดลองรัน" }));
+    expect(await within(drawer).findByText("จะเปลี่ยน 1 แถว")).toBeInTheDocument();
+    await userEvent.type(within(drawer).getByLabelText("เหตุผล (คนอนุมัติเห็น)"), "SMTP ล่มเมื่อวาน ลูกค้าไม่ได้รับคำเชิญ");
+    expect(within(drawer).getByRole("button", { name: "ขออนุมัติรันจริง" })).toBeDisabled();
+    await userEvent.type(within(drawer).getByLabelText("พิมพ์ nordlight เพื่อยืนยัน (ย้อนกลับไม่ได้)"), "nordlight");
+    await userEvent.click(within(drawer).getByRole("button", { name: "ขออนุมัติรันจริง" }));
+    await waitFor(() => expect(sent[0]).toEqual({ reason: "SMTP ล่มเมื่อวาน ลูกค้าไม่ได้รับคำเชิญ", confirmSlug: "nordlight" }));
+  });
 });

@@ -8,7 +8,7 @@ import { useState } from "react";
 import { hasAny } from "@/components/access";
 import { ConfirmDialog, useApprovalFlow } from "@/components/dialogs";
 import { Chip, Drawer, Empty, ErrorBlock, Notice, PageHead, Seg, TableSkeleton } from "@/components/kit";
-import { Button, errorToast, InlineError, Input, Textarea, useToast } from "@/components/ui";
+import { Button, buttonClass, errorToast, InlineError, Input, Textarea, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import { useFmt } from "../workspaces/_parts/format";
@@ -440,15 +440,24 @@ interface FailedJob {
   failedAt: string | null;
   workspaceId: string | null;
 }
-/** งานเบื้องหลังที่ล้ม: ลองใหม่ (ทีละงาน / ที่เลือก) · ทิ้งพร้อมเหตุผล */
+interface FailedScript {
+  id: string;
+  scriptKey: string;
+  workspaceName: string | null;
+  error: string | null;
+  changed: number;
+  failedAt: string | null;
+}
+/** งานเบื้องหลังที่ล้ม: ลองใหม่ (ทีละงาน / ที่เลือก) · ทิ้งพร้อมเหตุผล · สคริปต์ดูแลข้อมูล (O56) ที่ล้มแสดงต่อท้าย ลองใหม่จากที่นี่ไม่ได้ */
 function FailedJobs() {
   const t = useTranslations("ss.ops");
+  const ts = useTranslations("scripts");
   const fmt = useFmt();
   const toast = useToast();
   const cache = useQueryClient();
   const q = useQuery({
     queryKey: ["ops", "jobs", "failed"],
-    queryFn: () => api.get<{ configured: boolean; items: FailedJob[] }>("/jobs/failed"),
+    queryFn: () => api.get<{ configured: boolean; items: FailedJob[]; scripts?: FailedScript[] }>("/jobs/failed"),
   });
   const [picked, setPicked] = useState<string[]>([]);
   const [discarding, setDiscarding] = useState<FailedJob | null>(null);
@@ -461,7 +470,7 @@ function FailedJobs() {
     <section className="card" id="jobs">
       <div className="card-head">
         <h2 className="card-title">{t("jobs")}</h2>
-        {q.data?.configured && <span className="pill bad">{q.data.items.length}</span>}
+        {q.data && (q.data.configured || !!q.data.scripts?.length) && <span className="pill bad">{q.data.items.length + (q.data.scripts?.length ?? 0)}</span>}
         <span className="spacer" />
         {picked.length > 0 && (
           <Button size="small" disabled={retry.isPending} onClick={() => retry.mutate(picked)}>
@@ -477,7 +486,7 @@ function FailedJobs() {
       ) : !q.data.configured ? (
         <Notice tone="warn">{t("jobsOff")}</Notice>
       ) : !q.data.items.length ? (
-        <Empty ok title={t("noJobs")} />
+        !q.data.scripts?.length && <Empty ok title={t("noJobs")} />
       ) : (
         <div className="tbl-wrap">
           <table className="tbl">
@@ -520,6 +529,42 @@ function FailedJobs() {
             </tbody>
           </table>
         </div>
+      )}
+      {!!q.data?.scripts?.length && (
+        <>
+          <h3 className="small" style={{ marginTop: 16 }}>{t("scriptsFailed")}</h3>
+          <p className="muted small">{t("scriptsFailedNote")}</p>
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>{t("job")}</th>
+                  <th>{t("ws")}</th>
+                  <th>{t("reason")}</th>
+                  <th className="num">{t("scriptChanged")}</th>
+                  <th>{t("failedAt")}</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {q.data.scripts.map((r) => (
+                  <tr key={r.id}>
+                    <td className="small">{ts(`names.${r.scriptKey}` as "names.revoke_stale_sessions")}</td>
+                    <td className="small">{r.workspaceName ?? "—"}</td>
+                    <td className="small">{r.error ?? "—"}</td>
+                    <td className="num">{fmt.num(r.changed)}</td>
+                    <td className="small">{fmt.ago(r.failedAt)}</td>
+                    <td>
+                      <Link className={buttonClass("secondary", "small")} href="/scripts?tab=runs">
+                        {t("openScripts")}
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
       {discarding && (
         <ConfirmDialog

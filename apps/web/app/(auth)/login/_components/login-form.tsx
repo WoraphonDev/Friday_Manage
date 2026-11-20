@@ -298,8 +298,8 @@ export function LoginForm() {
         </SubmitButton>
       </form>
       <div className={styles.or}>{t("common.or")}</div>
-      <OAuthLink provider="google" label={t("login.google")} next={returnTo ?? undefined} remember={remember} />
-      <OAuthLink provider="microsoft" label={t("login.microsoft")} next={returnTo ?? undefined} remember={remember} />
+      <OAuthLink provider="google" label={t("login.google")} next={returnTo ?? "/work"} remember={remember} />
+      <OAuthLink provider="microsoft" label={t("login.microsoft")} next={returnTo ?? "/work"} remember={remember} />
       {/* SSO / SAML ยังไม่วางเป็นงาน (docs/tasks/README.md) จึงแสดงตาม Canvas แต่ปิดไว้ · มือถือไม่แสดงตามต้นแบบ */}
       {!mobile && (
         <>

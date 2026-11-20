@@ -266,7 +266,7 @@ function SignupFlow() {
       />
       {!mobile && (
         <>
-          <OAuthLink provider="google" label={t("signup.google")} next={returnTo ?? "/onboarding"} />
+          <OAuthLink provider="google" label={t("signup.google")} next={returnTo ?? "/work"} />
           <div className={styles.or}>{t("signup.orEmail")}</div>
         </>
       )}
@@ -344,7 +344,7 @@ function SignupFlow() {
       {mobile && (
         <>
           <div className={styles.or}>{t("common.or")}</div>
-          <OAuthLink provider="google" label={t("signup.google")} next={returnTo ?? "/onboarding"} />
+          <OAuthLink provider="google" label={t("signup.google")} next={returnTo ?? "/work"} />
           <div className={cn(styles.muted, styles.center)}>
             {t("signup.hasAccount")}{" "}
             <Link href={loginHref} style={{ fontWeight: 600 }}>

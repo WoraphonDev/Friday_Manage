@@ -75,6 +75,8 @@ export interface DiscountLine {
   cyclesLeft: number | null;
   /** ได้ต่อจากรอบก่อน (ไม่ต้องใส่โค้ดอีก) */
   carried: boolean;
+  /** ส่วนลดเฉพาะรายที่ทีม Friday ตั้งให้ (C3) · หน้าเว็บแสดงเป็น "ส่วนลดพิเศษ" แทนโค้ดที่ลูกค้าไม่เคยเห็น */
+  special: boolean;
 }
 export interface DiscountResult {
   discount: number;
@@ -110,7 +112,8 @@ export async function resolveDiscount(sys: Db, tx: Tx, input: { workspaceId: str
 
   if (input.code) {
     const [c] = await sys.select().from(s.coupons).where(eq(s.coupons.code, input.code));
-    if (!c) throw bad('coupon_not_found', 'ไม่พบโค้ดส่วนลดนี้ · ตรวจตัวสะกดอีกครั้ง');
+    // คูปองเฉพาะรายของ Workspace อื่นตอบเหมือนไม่มีโค้ดนี้ (ไม่บอกว่ามีอยู่)
+    if (!c || (c.workspaceId && c.workspaceId !== input.workspaceId)) throw bad('coupon_not_found', 'ไม่พบโค้ดส่วนลดนี้ · ตรวจตัวสะกดอีกครั้ง');
     const own = redemptions.find((r) => r.couponId === c.id);
     if (own?.status === 'ended') throw bad('coupon_already_used', `Workspace นี้ใช้โค้ด ${c.code} ครบแล้ว`);
     if (!c.planCodes.includes(input.plan))
@@ -148,8 +151,11 @@ export async function resolveDiscount(sys: Db, tx: Tx, input: { workspaceId: str
         if (n >= c.maxRedemptions) throw bad('coupon_exhausted', `สิทธิ์ของโค้ด ${c.code} ถูกใช้ครบแล้ว`);
       }
       const others = picks.map((p) => p.coupon);
-      if (others.length && (!c.stackable || others.some((o) => !o.stackable)))
-        throw bad('coupon_not_stackable', `ใช้โค้ด ${c.code} ร่วมกับส่วนลดที่ใช้อยู่ (${others.map((o) => o.code).join(', ')}) ไม่ได้`, { active: others.map((o) => o.code) });
+      if (others.length && (!c.stackable || others.some((o) => !o.stackable))) {
+        // ส่วนลดเฉพาะรายไม่บอกโค้ดภายใน
+        const names = others.map((o) => (o.workspaceId ? 'ส่วนลดพิเศษ' : o.code));
+        throw bad('coupon_not_stackable', `ใช้โค้ด ${c.code} ร่วมกับส่วนลดที่ใช้อยู่ (${names.join(', ')}) ไม่ได้`, { active: names });
+      }
       picks.push({ coupon: c, redemptionId: own?.id ?? null, cyclesTotal: cyclesOf(c), carried: false, usedCycles: 0 });
       accepted = c.code;
     }
@@ -169,6 +175,7 @@ export async function resolveDiscount(sys: Db, tx: Tx, input: { workspaceId: str
       amount: lines[i].amount,
       cyclesLeft: p.cyclesTotal === null ? null : Math.max(0, p.cyclesTotal - p.usedCycles - 1),
       carried: p.carried,
+      special: !!p.coupon.workspaceId,
     })),
     apply: picks.map((p, i) => ({ couponId: p.coupon.id, redemptionId: p.redemptionId, cyclesTotal: p.cyclesTotal, amount: lines[i].amount })),
   };

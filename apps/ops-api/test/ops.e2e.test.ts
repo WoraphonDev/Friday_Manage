@@ -406,8 +406,22 @@ describe('แพ็กเกจและสถานะ Workspace', () => {
 
     expect((await support.agent.post(`/ops/workspaces/${c.id}:discount`).send({ percent: 10, reason: 'ลูกค้าเก่า' })).status).toBe(403);
     const d = await finance.agent.post(`/ops/workspaces/${c.id}:discount`).send({ percent: 15, months: 6, reason: 'โปรโมชันปีแรก' });
-    expect(d.body.discount).toMatchObject({ percent: 15, months: 6, setBy: finance.id });
-    expect((await t.owner.query(`SELECT discount FROM subscriptions WHERE id = $1`, [c.sub])).rows[0].discount.percent).toBe(15);
+    expect(d.body.discount).toMatchObject({ percent: 15, months: 6, code: expect.stringMatching(/^SP-[0-9A-F]{8}$/) });
+    // ส่วนลดเฉพาะราย = คูปองเฉพาะ Workspace ที่ checkout ของลูกค้าหักเอง (ไม่ใช่ subscriptions.discount ที่ไม่มีใครอ่าน)
+    const own = `SELECT c.code, c.value, c.status, c.max_redemptions, c.plan_codes, r.status AS r_status, r.cycles_total FROM coupons c JOIN coupon_redemptions r ON r.coupon_id = c.id WHERE c.workspace_id = $1 ORDER BY c.created_at`;
+    expect((await t.owner.query(own, [c.id])).rows).toEqual([
+      { code: d.body.discount.code, value: 15, status: 'active', max_redemptions: 1, plan_codes: ['team_s', 'team_m', 'team_l', 'enterprise'], r_status: 'active', cycles_total: 6 },
+    ]);
+    expect((await finance.agent.get(`/ops/workspaces/${c.id}`)).body.subscription.discount).toMatchObject({ percent: 15, months: 6, cyclesLeft: 6, reason: 'โปรโมชันปีแรก' });
+    // ตั้งใหม่แทนของเดิม · หน้าโปรโมชันไม่แสดงคูปองเฉพาะราย และแก้ / ให้ Workspace อื่นไม่ได้
+    const d2 = await finance.agent.post(`/ops/workspaces/${c.id}:discount`).send({ percent: 10, months: 3, reason: 'ปรับตามสัญญาใหม่' });
+    expect(d2.status, JSON.stringify(d2.body)).toBe(200);
+    expect((await t.owner.query(own, [c.id])).rows.map((r) => [r.value, r.status, r.r_status])).toEqual([[15, 'disabled', 'ended'], [10, 'active', 'active']]);
+    const promo = await finance.agent.get('/ops/promotions');
+    expect(promo.body.coupons.map((x: { code: string }) => x.code)).not.toContain(d2.body.discount.code);
+    const privId = (await t.owner.query(`SELECT id FROM coupons WHERE code = $1`, [d2.body.discount.code])).rows[0].id;
+    expect((await finance.agent.get(`/ops/promotions/coupons/${privId}/redemptions`)).status).toBe(404);
+    expect((await finance.agent.post('/ops/promotions/coupons').send({ code: 'sp-mine', kind: 'percent', value: 10, duration: 'once', planCodes: ['team_s'], newCustomersOnly: false, stackable: false })).status).toBe(400);
     expect((await finance.agent.post(`/ops/workspaces/${c.id}:discount`).send({ percent: 120, reason: 'เกิน' })).status).toBe(400);
 
     const cp = await finance.agent.post(`/ops/workspaces/${c.id}:change-plan`).send({ plan: 'enterprise', reason: 'ตามสัญญา ENT-2026-01' });
@@ -437,7 +451,8 @@ describe('แพ็กเกจและสถานะ Workspace', () => {
     expect((await admin.agent.get(`/ops/workspaces?status=suspended`)).body.items.map((x: { slug: string }) => x.slug)).toContain('plan-ops');
     expect((await admin.agent.post(`/ops/workspaces/${c.id}:resume`).send({ reason: 'แก้ปัญหาแล้ว' })).body.status).toBe('active');
     expect((await t.owner.query(sql, [c.id])).rows[0]).toEqual({ mode: null, message: null, autoResume: false });
-    for (const a of ['ops.discount_set', 'ops.plan_changed', 'ops.workspace_suspended', 'ops.workspace_resumed']) expect((await audit(c.id, a)).length, a).toBe(1);
+    expect((await audit(c.id, 'ops.discount_set')).length).toBe(2);
+    for (const a of ['ops.plan_changed', 'ops.workspace_suspended', 'ops.workspace_resumed']) expect((await audit(c.id, a)).length, a).toBe(1);
     await t.owner.query(`UPDATE workspaces SET status = 'pending_delete', deleted_at = now() WHERE id = $1`, [c.id]);
     expect((await admin.agent.post(`/ops/workspaces/${c.id}:suspend`).send({ reason: 'ลบไปแล้ว' })).body.error.code).toBe('workspace_deleted');
   });

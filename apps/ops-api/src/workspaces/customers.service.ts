@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { type Db, schema } from '@friday/db';
+import { type Db, privateDiscounts, schema } from '@friday/db';
 import { and, desc, eq, inArray, lt, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { BulkFilter, FEATURES, FILTER_FIELDS, type Filters as BulkFilters } from './bulk-filter.js';
@@ -79,7 +79,7 @@ export class CustomersService {
       select w.id, w.slug, w.name, w.status, w.suspension_mode as "suspensionMode", w.data_region as "dataRegion", w.created_at as "createdAt",
         p.code as plan, p.seat_limit as "seatLimit", p.storage_gb_per_member as "storageGbPerMember",
         p.price_monthly_satang::float8 as "priceMonthlySatang", p.price_yearly_satang::float8 as "priceYearlySatang",
-        sub.status as "subStatus", sub.cycle, sub.trial_ends_at as "trialEndsAt", sub.current_period_end as "periodEnd", sub.discount, sub.payment_method as "paymentMethod",
+        sub.status as "subStatus", sub.cycle, sub.trial_ends_at as "trialEndsAt", sub.current_period_end as "periodEnd", sub.payment_method as "paymentMethod",
         (select count(*)::int from workspace_members m where m.workspace_id = w.id and m.status = 'active' and m.role <> 'guest') as seats,
         (select count(*)::int from workspace_members m where m.workspace_id = w.id and m.status = 'active' and m.role = 'guest') as guests,
         (select count(*)::int from workspace_members m where m.workspace_id = w.id and m.status = 'active' and m.role <> 'guest' and m.joined_at < now() - interval '30 days') as "seats30dAgo",
@@ -93,6 +93,7 @@ export class CustomersService {
         exists(select 1 from api_tokens x where x.workspace_id = w.id and x.revoked_at is null) as "apiToken",
         exists(select 1 from automation_rules x where x.workspace_id = w.id and x.enabled) as automation,
         exists(select 1 from import_jobs x where x.workspace_id = w.id) as "import",
+        (select c.value from coupon_redemptions r join coupons c on c.id = r.coupon_id where r.workspace_id = w.id and r.status = 'active' and c.workspace_id is not null limit 1) as "discountPct",
         (select c.mrr_after_satang::float8 from subscription_changes c where c.workspace_id = w.id order by c.effective_at desc, c.created_at desc limit 1) as "lastMrr",
         (select count(*)::int from invoices i where i.workspace_id = w.id and i.status in ('open', 'pending_review') and i.due_date < current_date) as overdue,
         (select count(*)::int from invoices i where i.workspace_id = w.id and i.status = 'paid') as "paidTotal",
@@ -114,7 +115,7 @@ export class CustomersService {
     const n = (k: string) => Number(r[k] ?? 0);
     const health = healthScore({ seats: n('seats'), active30: n('active30'), overdueInvoices: n('overdue'), paidOnTime: n('paidOnTime'), paidTotal: n('paidTotal'), openTickets: n('openTickets'), membersNow: n('seats'), members30dAgo: n('seats30dAgo') });
     const mrr = mrrOf(
-      r.subStatus ? { status: r.subStatus as string, cycle: r.cycle as string, discount: r.discount } : null,
+      r.subStatus ? { status: r.subStatus as string, cycle: r.cycle as string, discountPct: (r.discountPct as number | null) ?? null } : null,
       r.plan ? { priceMonthlySatang: (r.priceMonthlySatang as number | null) ?? null, priceYearlySatang: (r.priceYearlySatang as number | null) ?? null } : null,
       r.lastMrr == null ? null : Number(r.lastMrr),
     );
@@ -374,6 +375,7 @@ export class CustomersService {
       .orderBy(desc(s.staffAuditLogs.createdAt))
       .limit(20);
     const money = seesMoney(staff);
+    const discount = (await privateDiscounts(this.db, [id])).get(id) ?? null;
     const signals = upgradeSignals({
       plan: x.plan, cycle: x.cycle, subStatus: x.subStatus, seats: x.seats, seatLimit: x.seatLimit, guests: Number(raw.guests ?? 0), storageBytes: x.storageBytes,
       storageGbPerMember: (raw.storageGbPerMember as number | null) ?? null, limitHits14d: hits, paidOnTimeMonths: Number(raw.paidOnTime ?? 0),
@@ -390,7 +392,7 @@ export class CustomersService {
       legalName: profile?.companyName ?? null,
       subscription: sub
         ? {
-            plan: x.plan, status: sub.status, cycle: sub.cycle, trialEndsAt: sub.trialEndsAt, currentPeriodEnd: sub.currentPeriodEnd, paymentMethod: sub.paymentMethod, discount: money ? sub.discount : sub.discount ? { active: true } : null, seatLimit: x.seatLimit,
+            plan: x.plan, status: sub.status, cycle: sub.cycle, trialEndsAt: sub.trialEndsAt, currentPeriodEnd: sub.currentPeriodEnd, paymentMethod: sub.paymentMethod, discount: discount ? (money ? discount : { active: true }) : null, seatLimit: x.seatLimit,
             /** ลดแพ็กเกจที่ตั้งไว้ (C4) มีผลเมื่อจบรอบ */
             pending: sub.pendingPlanId ? { plan: (await this.db.select({ code: s.plans.code }).from(s.plans).where(eq(s.plans.id, sub.pendingPlanId)))[0]?.code ?? null, cycle: sub.pendingCycle ?? sub.cycle, at: sub.currentPeriodEnd } : null,
           }

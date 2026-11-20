@@ -68,6 +68,8 @@ export interface QuoteDiscount {
   amount: number;
   cyclesLeft: number | null;
   carried: boolean;
+  /** ส่วนลดเฉพาะรายที่ทีม Friday ตั้งให้ · แสดง "ส่วนลดพิเศษ" แทนโค้ด */
+  special?: boolean;
 }
 
 /** `GET w/billing/invoices` · `invoices/:id` */

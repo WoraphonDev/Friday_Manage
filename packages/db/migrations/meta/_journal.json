@@ -442,6 +442,13 @@
       "when": 1795154505147,
       "tag": "0062_issue_key_aliases",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1795185109666,
+      "tag": "0063_private_coupons",
+      "breakpoints": true
     }
   ]
 }

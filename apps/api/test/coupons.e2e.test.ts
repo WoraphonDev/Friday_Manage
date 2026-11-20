@@ -63,7 +63,7 @@ describe('คูปองตอนชำระเงิน', () => {
     const q = await w.lead.get(`${w.ws}/billing/quote?plan=team_m&cycle=monthly&coupon=%20team20%20`);
     expect(q.status, JSON.stringify(q.body)).toBe(200);
     expect(q.body).toMatchObject({ listPrice: 300_000, discount: 60_000, subtotal: 240_000, vat: 16_800, total: 256_800, amountDue: 256_800, coupon: 'TEAM20', freeMonths: null, grandfathered: false });
-    expect(q.body.discounts).toEqual([{ code: 'TEAM20', kind: 'percent', value: 20, amount: 60_000, cyclesLeft: 1, carried: false }]);
+    expect(q.body.discounts).toEqual([{ code: 'TEAM20', kind: 'percent', value: 20, amount: 60_000, cyclesLeft: 1, carried: false, special: false }]);
     expect(q.body.internal).toBeUndefined();
 
     const first = await checkout(w, { plan: 'team_m', cycle: 'monthly', method: 'card', coupon: 'team20' });
@@ -171,6 +171,61 @@ describe('คูปองตอนชำระเงิน', () => {
     expect(replay.body).toMatchObject({ replayed: true, free: true, invoice: { id: r.body.invoice.id } });
     // หมดช่วงฟรีแล้วจ่ายราคาปกติ
     expect((await w.lead.get(`${w.ws}/billing/quote?plan=team_m&cycle=monthly`)).body).toMatchObject({ discount: 0, amountDue: 321_000 });
+  });
+});
+
+describe('ส่วนลดเฉพาะรายจากทีม Friday (C3)', () => {
+  // ops-api สร้างด้วย grantPrivateDiscount · ที่นี่จำลองแถวเดียวกันด้วย SQL
+  async function privateDiscount(wsId: string, code: string, percent: number, cycles: number | null) {
+    const id = (
+      await t.owner.query(
+        `INSERT INTO coupons (code, description, kind, value, duration, duration_cycles, plan_codes, max_redemptions, workspace_id, status, created_by, activated_at, activated_by)
+         VALUES ($1, 'ลูกค้าเทียบราคา (สมมติ)', 'percent', $2, $3, $4, '{team_s,team_m,team_l,enterprise}', 1, $5, 'active', $6, now(), $6) RETURNING id`,
+        [code, percent, cycles === null ? 'forever' : 'repeating', cycles, wsId, staffId],
+      )
+    ).rows[0].id as string;
+    await t.owner.query(`INSERT INTO coupon_redemptions (workspace_id, coupon_id, status, cycles_total, activated_at) VALUES ($1, $2, 'active', $3, now())`, [wsId, id, cycles]);
+    return id;
+  }
+
+  it('checkout หักส่วนลดเฉพาะรายเอง · แสดงเป็นส่วนลดพิเศษ · Workspace อื่นใช้โค้ดไม่ได้ · ใช้คู่คูปองที่ไม่ซ้อนไม่ได้โดยไม่บอกโค้ด', async () => {
+    const w = await workspace('cp-private');
+    await privateDiscount(w.wsId, 'SP-0A1B2C3D', 25, 3);
+    const q = await w.lead.get(`${w.ws}/billing/quote?plan=team_m&cycle=monthly`);
+    expect(q.status, JSON.stringify(q.body)).toBe(200);
+    expect(q.body).toMatchObject({ listPrice: 300_000, discount: 75_000, subtotal: 225_000, coupon: null });
+    expect(q.body.discounts).toEqual([{ code: 'SP-0A1B2C3D', kind: 'percent', value: 25, amount: 75_000, cyclesLeft: 2, carried: true, special: true }]);
+
+    const other = await workspace('cp-private-other');
+    const stolen = await other.lead.get(`${other.ws}/billing/quote?plan=team_m&cycle=monthly&coupon=SP-0A1B2C3D`);
+    expect(stolen.status).toBe(422);
+    expect(stolen.body.error.code).toBe('coupon_not_found');
+
+    await coupon('PLUS10');
+    const both = await w.lead.get(`${w.ws}/billing/quote?plan=team_m&cycle=monthly&coupon=PLUS10`);
+    expect(both.status).toBe(422);
+    expect(both.body.error).toMatchObject({ code: 'coupon_not_stackable', details: { active: ['ส่วนลดพิเศษ'] } });
+    expect(both.body.error.message).not.toContain('SP-');
+
+    const first = await checkout(w, { plan: 'team_m', cycle: 'monthly', method: 'card' });
+    expect(first.body.invoice).toMatchObject({ subtotal: 225_000, discount: 75_000 });
+    expect(gateway.calls.at(-1)!.request.amount).toBe(240_750);
+  });
+
+  it('ทีมเปลี่ยนส่วนลดระหว่างมีใบค้างชำระ: จ่ายใบเก่าแล้วส่วนลดเดิมไม่กลับมา', async () => {
+    const w = await workspace('cp-private-replace');
+    const oldId = await privateDiscount(w.wsId, 'SP-11111111', 30, null);
+    const pending = await checkout(w, { plan: 'team_s', cycle: 'monthly', method: 'card' });
+    expect(pending.body.invoice.discount).toBe(45_000);
+    // ตั้งใหม่ = ปิดของเดิม (endPrivateDiscounts) แล้วให้ใหม่
+    await t.owner.query(`UPDATE coupons SET status = 'disabled', disabled_at = now() WHERE id = $1`, [oldId]);
+    await t.owner.query(`UPDATE coupon_redemptions SET status = 'ended', ended_at = now() WHERE coupon_id = $1`, [oldId]);
+    await privateDiscount(w.wsId, 'SP-22222222', 10, 1);
+    await paid(pending.ref!, pending.body.invoice.id);
+    expect(await redemption(w.wsId, 'SP-11111111')).toMatchObject({ status: 'ended' });
+    const q = await w.lead.get(`${w.ws}/billing/quote?plan=team_s&cycle=monthly`);
+    expect(q.body.discounts.map((d: { code: string }) => d.code)).toEqual(['SP-22222222']);
+    expect(q.body.discount).toBe(15_000);
   });
 });
 

@@ -1,6 +1,7 @@
 // ราคาแบบมีเวอร์ชันและคูปอง (O20) · ใช้ร่วมกันระหว่าง apps/api (คิดยอด checkout, รับเงินผ่าน Gateway) และ apps/ops-api (แก้ราคา, ยืนยันสลิป)
 // เงินเป็นสตางค์ · ส่วนลดหักจากราคาแพ็กเกจก่อน VAT ใน billing core ของ Friday เอง ผู้ให้บริการรับชำระจึงตัดแค่ยอดสุทธิ
-import { and, count, eq, gt, inArray, or, sql } from 'drizzle-orm';
+import { randomBytes } from 'node:crypto';
+import { and, count, eq, gt, inArray, isNotNull, ne, or, sql } from 'drizzle-orm';
 import type { Db, Tx } from './client.ts';
 import { invoices } from './schema/billing.ts';
 import { couponRedemptions, coupons, couponUses } from './schema/promotions.ts';
@@ -67,9 +68,11 @@ export async function commitCouponUses(tx: Tx, invoiceId: string, now = new Date
   const used = new Map(counts.map((c) => [c.id, c.n]));
   for (const r of await tx.select().from(couponRedemptions).where(inArray(couponRedemptions.id, ids))) {
     const done = r.cyclesTotal !== null && (used.get(r.id) ?? 0) >= r.cyclesTotal;
+    // จบแล้วคงจบ: ส่วนลดเฉพาะรายที่ถูกแทน (endPrivateDiscounts) ต้องไม่กลับมาใช้ได้เมื่อมีคนจ่ายใบเก่าที่ออกไว้ก่อน
+    const ended = done || r.status === 'ended';
     await tx
       .update(couponRedemptions)
-      .set({ status: done ? 'ended' : 'active', activatedAt: r.activatedAt ?? now, endedAt: done ? (r.endedAt ?? now) : null })
+      .set({ status: ended ? 'ended' : 'active', activatedAt: r.activatedAt ?? now, endedAt: ended ? (r.endedAt ?? now) : null })
       .where(eq(couponRedemptions.id, r.id));
   }
   return ids.length;
@@ -100,7 +103,8 @@ type CouponRow = typeof coupons.$inferSelect;
  */
 export async function couponGrantBlockers(db: Db | Tx, c: CouponRow, rows: { workspaceId: string; plan: string | null }[], todayIso: string) {
   let global: GrantBlock | null = null;
-  if (c.status !== 'active') global = { code: 'coupon_inactive', message: `คูปอง ${c.code} ยังไม่เปิดใช้หรือถูกปิดแล้ว` };
+  if (c.workspaceId) global = { code: 'coupon_private', message: `คูปอง ${c.code} เป็นส่วนลดเฉพาะราย ให้ Workspace อื่นไม่ได้` };
+  else if (c.status !== 'active') global = { code: 'coupon_inactive', message: `คูปอง ${c.code} ยังไม่เปิดใช้หรือถูกปิดแล้ว` };
   else if (c.expiresOn && c.expiresOn < todayIso) global = { code: 'coupon_expired', message: `คูปอง ${c.code} หมดอายุแล้ว` };
   const perWorkspace = new Map<string, GrantBlock>();
   const ids = rows.map((r) => r.workspaceId);
@@ -147,4 +151,81 @@ export async function grantCoupon(tx: Tx, c: CouponRow, workspaceId: string, now
     .values({ workspaceId, couponId: c.id, status: 'active', cyclesTotal: cyclesOf(c), activatedAt: now, createdBy: null })
     .returning({ id: couponRedemptions.id });
   return row.id;
+}
+
+/**
+ * ส่วนลดเฉพาะราย (C3) = คูปองเฉพาะ Workspace (`coupons.workspace_id`) · ให้ checkout ของลูกค้าหักผ่าน resolveDiscount เหมือนคูปองทั่วไป
+ * (เดิมเก็บใน `subscriptions.discount` ซึ่ง checkout ไม่ได้อ่าน ลูกค้าจึงไม่ได้ส่วนลดจริง)
+ * ตั้งใหม่ = แทนของเดิม · ใช้ได้ทุกแพ็กเกจที่มีค่าบริการ · ใช้ร่วมกับคูปองอื่นไม่ได้ · ต้องเรียกในธุรกรรมที่ข้าม RLS
+ */
+export const PRIVATE_DISCOUNT_PREFIX = 'SP-';
+const PAID_PLANS = Object.keys(PLAN_DEFAULT_MONTHLY_SATANG).filter((p) => p !== 'free');
+
+/** ปิดส่วนลดเฉพาะรายที่ใช้อยู่ · ใบแจ้งหนี้ที่ออกไปแล้วยังได้ส่วนลดตามเดิม (บันทึกใน coupon_uses ของใบนั้นแล้ว) */
+export async function endPrivateDiscounts(tx: Tx, workspaceId: string, staffId: string, reason: string, now = new Date()) {
+  const old = await tx.select({ id: coupons.id }).from(coupons).where(and(eq(coupons.workspaceId, workspaceId), eq(coupons.status, 'active')));
+  if (!old.length) return 0;
+  const ids = old.map((o) => o.id);
+  await tx.update(coupons).set({ status: 'disabled', disabledAt: now, disabledBy: staffId, disableReason: reason, updatedAt: now }).where(inArray(coupons.id, ids));
+  await tx.update(couponRedemptions).set({ status: 'ended', endedAt: now, updatedAt: now }).where(and(inArray(couponRedemptions.couponId, ids), ne(couponRedemptions.status, 'ended')));
+  return ids.length;
+}
+
+/** ตั้งส่วนลดเฉพาะราย: % ต่อรอบบิล · `cycles` = จำนวนรอบบิล (null = ตลอดไป) · มีผลตั้งแต่ใบแจ้งหนี้ถัดไป */
+export async function grantPrivateDiscount(tx: Tx, input: { workspaceId: string; percent: number; cycles: number | null; reason: string; staffId: string }, now = new Date()) {
+  await endPrivateDiscounts(tx, input.workspaceId, input.staffId, 'แทนด้วยส่วนลดเฉพาะรายใหม่', now);
+  const [c] = await tx
+    .insert(coupons)
+    .values({
+      code: `${PRIVATE_DISCOUNT_PREFIX}${randomBytes(4).toString('hex').toUpperCase()}`,
+      description: input.reason,
+      kind: 'percent',
+      value: input.percent,
+      duration: input.cycles === null ? 'forever' : 'repeating',
+      durationCycles: input.cycles,
+      planCodes: PAID_PLANS,
+      maxRedemptions: 1,
+      workspaceId: input.workspaceId,
+      status: 'active',
+      createdBy: input.staffId,
+      activatedAt: now,
+      activatedBy: input.staffId,
+    })
+    .returning();
+  const redemptionId = await grantCoupon(tx, c, input.workspaceId, now);
+  return { coupon: c, redemptionId };
+}
+
+export interface PrivateDiscount {
+  code: string;
+  percent: number;
+  /** จำนวนรอบที่ให้ · null = ตลอดไป (ชื่อ months ตามหน้า C3 เดิม) */
+  months: number | null;
+  /** รอบที่ยังเหลือ (ยังไม่ชำระ) · null = ตลอดไป */
+  cyclesLeft: number | null;
+  reason: string;
+  setAt: Date | null;
+}
+
+/** ส่วนลดเฉพาะรายที่ยังใช้อยู่ของแต่ละ Workspace (ครบรอบแล้ว = ไม่มี) */
+export async function privateDiscounts(db: Db | Tx, workspaceIds: string[]) {
+  const out = new Map<string, PrivateDiscount>();
+  if (!workspaceIds.length) return out;
+  const rows = await db
+    .select({ r: couponRedemptions, c: coupons })
+    .from(couponRedemptions)
+    .innerJoin(coupons, eq(coupons.id, couponRedemptions.couponId))
+    .where(and(inArray(couponRedemptions.workspaceId, workspaceIds), eq(couponRedemptions.status, 'active'), isNotNull(coupons.workspaceId)));
+  const used = await paidCycles(db, rows.map((x) => x.r.id));
+  for (const { r, c } of rows) {
+    out.set(r.workspaceId, {
+      code: c.code,
+      percent: c.value,
+      months: r.cyclesTotal,
+      cyclesLeft: r.cyclesTotal === null ? null : Math.max(0, r.cyclesTotal - (used.get(r.id) ?? 0)),
+      reason: c.description ?? '',
+      setAt: r.activatedAt,
+    });
+  }
+  return out;
 }

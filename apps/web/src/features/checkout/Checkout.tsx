@@ -448,7 +448,7 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
                     discountLines.map((d) => (
                       <div key={d.code} className={cn(styles.sr, styles.minus)}>
                         <span>
-                          {t("coupon.line", { code: d.code })}
+                          {d.special ? t("coupon.special", { value: d.value }) : t("coupon.line", { code: d.code })}
                           {d.kind !== "free_months" && (d.cyclesLeft === null ? ` · ${t("coupon.forever")}` : d.cyclesLeft > 0 ? ` · ${t("coupon.cyclesLeft", { n: d.cyclesLeft })}` : "")}
                         </span>
                         <span>−฿{baht(d.amount)}</span>

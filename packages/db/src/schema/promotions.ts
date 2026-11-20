@@ -7,6 +7,7 @@ import { users } from './identity.ts';
 import { approvalRequests, staffUsers } from './ops.ts';
 import { workspaceId } from './project.ts';
 import { tenantFk, tenantKey } from './saas-common.ts';
+import { workspaces } from './workspace.ts';
 
 /**
  * เวอร์ชันราคาและการแสดงผลของแพ็กเกจ (P1) · แก้ / ลบไม่ได้ · ราคา null = ใช้ค่าตั้งต้นในโค้ด (billing/catalog.ts)
@@ -31,6 +32,7 @@ export const planPriceVersions = pgTable('plan_price_versions', {
  * คูปอง / โค้ดส่วนลด (P4) · โค้ดเก็บเป็นตัวพิมพ์ใหญ่ · ร่าง → เปิด → ปิด (ปิดแล้วคนที่ใช้อยู่ยังได้ส่วนลดครบรอบ)
  * `kind`: percent (value = %) · amount (value = สตางค์ต่อรอบบิล) · free_months (value = จำนวนเดือน · ครั้งเดียวเสมอ)
  * `duration`: once · repeating (`duration_cycles` รอบบิลแรก) · forever
+ * `workspace_id` = คูปองเฉพาะราย (ส่วนลดที่ทีมตั้งให้ Workspace เดียวใน C3) · ไม่แสดงในหน้าโปรโมชัน ใช้ได้เฉพาะ Workspace นี้
  */
 export const coupons = pgTable('coupons', {
   id: pk(), code: text().notNull().unique(), description: text(),
@@ -43,6 +45,7 @@ export const coupons = pgTable('coupons', {
   /** ใช้โค้ดได้ถึงสิ้นวันนี้ (เวลาไทย) · null = ไม่หมดอายุ */
   expiresOn: date(),
   newCustomersOnly: boolean().notNull().default(false), stackable: boolean().notNull().default(false),
+  workspaceId: uuid().references(() => workspaces.id, { onDelete: 'cascade' }),
   status: text().notNull().default('draft'),
   createdBy: uuid().notNull().references(() => staffUsers.id),
   activatedAt: tstz(), activatedBy: uuid().references(() => staffUsers.id),
@@ -55,7 +58,9 @@ export const coupons = pgTable('coupons', {
   check('coupons_free_months_once', sql`${t.kind} <> 'free_months' OR (${t.duration} = 'once' AND NOT ${t.stackable})`),
   check('coupons_plans_present', sql`cardinality(${t.planCodes}) > 0`),
   check('coupons_max_positive', sql`${t.maxRedemptions} IS NULL OR ${t.maxRedemptions} > 0`),
-  check('coupons_status_valid', sql`${t.status} IN ('draft', 'active', 'disabled')`)]);
+  check('coupons_status_valid', sql`${t.status} IN ('draft', 'active', 'disabled')`),
+  check('coupons_private_single', sql`${t.workspaceId} IS NULL OR ${t.maxRedemptions} = 1`),
+  index('coupons_workspace_idx').on(t.workspaceId).where(sql`${t.workspaceId} IS NOT NULL`)]);
 
 /**
  * Workspace ที่ใช้คูปอง (1 คูปองต่อ 1 Workspace) · pending = ใส่โค้ดแล้วแต่ยังไม่ชำระ · active = ได้ส่วนลดอยู่ · ended = ครบรอบแล้ว

@@ -264,7 +264,10 @@ function LeadSettingsPanel() {
       <Input label={t("trialSeats")} type="number" min={1} value={cur.trialSeats} onChange={(e) => setV({ ...cur, trialSeats: e.target.value })} />
       {/* สัญญาณสนใจแพ็กเกจใหญ่จากการใช้งานในแอป (เว็บลูกค้าส่ง pricing.viewed / ปุ่มติดต่อฝ่ายขาย Enterprise) */}
       <Input label={t("pricingDays")} hint={t("pricingDaysHint")} type="number" min={0} max={14} value={cur.pricingDays} onChange={(e) => setV({ ...cur, pricingDays: e.target.value })} />
-      <Switch checked={cur.enterpriseClick} label={t("enterpriseClick")} onChange={(enterpriseClick) => setV({ ...cur, enterpriseClick })} />
+      <div className="row" style={{ gap: 12 }}>
+        <Switch checked={cur.enterpriseClick} label={t("enterpriseClick")} onChange={(enterpriseClick) => setV({ ...cur, enterpriseClick })} />
+        <b className="small">{t("enterpriseClick")}</b>
+      </div>
       <InlineError error={m.error} />
       <div className="dialog-actions">
         <Button type="submit" variant="primary" disabled={!v || !valid || m.isPending}>

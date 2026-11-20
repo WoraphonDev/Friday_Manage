@@ -349,17 +349,17 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
                     const needWht = needWhtFor(inv);
                     return (
                       <tr key={inv.id}>
-                        <td className={styles.mono}>{inv.number}</td>
-                        <td>
+                        <td className={cn(styles.mono, styles.cellNo)}>{inv.number}</td>
+                        <td className={styles.cellPeriod}>
                           {t("period", { from: formatDate(inv.periodStart, "BE", true), to: formatDate(inv.periodEnd, "BE", true) })}
                           {inv.method && <span className={styles.sub}>{t(`methods.${inv.method}`)}</span>}
                           {needWht && inv.whtDueBy && <span className={cn(styles.sub, styles.warn)}>{whtText(inv)}</span>}
                         </td>
-                        <td className={cn(styles.num, styles.amount)}>฿{baht(inv.amountDue)}</td>
-                        <td>
+                        <td className={cn(styles.num, styles.amount, styles.cellAmount)}>฿{baht(inv.amountDue)}</td>
+                        <td className={styles.cellStatus}>
                           <Badge tone={INVOICE_TONE[inv.status]}>{t(`invoiceStatus.${inv.status}`)}</Badge>
                         </td>
-                        <td className={styles.num}>
+                        <td className={cn(styles.num, styles.cellDocs)}>
                           <span className={styles.docs}>
                             <a className={buttonVariants({ size: "small" })} href={inv.pdfUrl} target="_blank" rel="noreferrer">
                               {t("invoicePdf")}

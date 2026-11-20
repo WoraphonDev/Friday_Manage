@@ -124,6 +124,8 @@
 
 @media (max-width: 1100px) {
   .plan { grid-template-columns:1fr; gap:16px; }
+  /* minmax(0) กันการ์ดใบแจ้งหนี้ยืดตามตาราง (ตารางเลื่อนใน .table-scroll แทนทั้งหน้า) */
+  .split > * { min-width:0; }
   .planActions { flex-direction:row; flex-wrap:wrap; }
   .split { grid-template-columns:1fr; }
 }
@@ -147,6 +149,32 @@
   .card { border-radius: 16px; box-shadow: var(--shadow-card); }
   .section { padding: 14px; }
   .panel { border-radius: 14px; }
+}
+
+/*
+ * มือถือ: ใบแจ้งหนี้เป็นรายการทีละใบตามต้นแบบ (bill.overview: เลขที่ · ยอด / รอบบิล / ป้ายสถานะ) แทนตาราง 5 คอลัมน์
+ * ที่ดันหน้าให้กว้างเกินจอ (ผู้ใช้แจ้ง 2026-11-20) · ปุ่มเอกสารขึ้นบรรทัดล่างและตัดบรรทัดได้ · desktop ไม่เปลี่ยน
+ */
+@media (max-width: 760px) {
+  .invTable, .invTable tbody { display:block; }
+  .invTable thead { display:none; }
+  .invTable tbody tr {
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) auto;
+    grid-template-areas: "no status" "period amount" "docs docs";
+    gap:4px 12px;
+    padding:12px 14px;
+    border-bottom:1px solid var(--border);
+  }
+  .invTable tbody tr:last-child { border-bottom:0; }
+  .invTable tbody tr:hover { background:transparent; }
+  .invTable td { display:block; padding:0; border-bottom:0; min-width:0; }
+  .cellNo { grid-area:no; font-size:13px; font-weight:600; overflow-wrap:anywhere; }
+  .cellStatus { grid-area:status; justify-self:end; }
+  .cellPeriod { grid-area:period; color:var(--muted); }
+  .cellAmount { grid-area:amount; justify-self:end; font-size:14px; }
+  .cellDocs { grid-area:docs; text-align:left; padding-top:6px !important; }
+  .cellDocs .docs { display:flex; flex-wrap:wrap; justify-content:flex-start; }
 }
 
 /* O41 · R4 เครดิตคงเหลือ */

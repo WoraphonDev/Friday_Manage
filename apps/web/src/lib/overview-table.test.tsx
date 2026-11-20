@@ -374,6 +374,17 @@ describe("Table (2)", () => {
     await waitFor(() => expect(bulks.at(-1)).toEqual({ keys: ["DE-1", "DE-2", "DE-3"], delete: true, confirmText: "ลบ 3 งาน" }));
   });
 
+  it("เลือกหลายแถว → ย้ายโปรเจกต์ เปิดหน้าต่างย้ายงานพร้อมงานที่เลือก", async () => {
+    const user = userEvent.setup();
+    server.use(http.get("*/api/v1/w/:ws/projects", () => HttpResponse.json({ items: [{ key: "DE", name: "ร้านกาแฟ", joined: true }, { key: "WEB", name: "เว็บไซต์", joined: true }] })));
+    mount(<TableView ws="sample" projectKey="DE" />);
+    await user.click(await screen.findByLabelText("เลือก DE-1"));
+    await user.click(screen.getByLabelText("เลือก DE-3"));
+    await user.click(within(screen.getByRole("region", { name: "2 รายการที่เลือก" })).getByRole("button", { name: "ย้ายโปรเจกต์" }));
+    const dialog = await screen.findByRole("dialog", { name: "ย้าย 2 งานไปโปรเจกต์อื่น" });
+    await waitFor(() => expect(within(within(dialog).getByLabelText("โปรเจกต์ปลายทาง")).getAllByRole("option").map((o) => o.textContent)).toEqual(["เลือกโปรเจกต์", "WEB · เว็บไซต์"]));
+  });
+
   it("ลบหลายงานไม่สำเร็จ: กล่องยืนยันแสดง error แทนการเงียบ · ลบได้บางงานแจ้งจำนวนและเลือกงานที่ค้างไว้", async () => {
     const user = userEvent.setup();
     let fail = true;

@@ -2,6 +2,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { NextIntlClientProvider, useLocale, useMessages } from 'next-intl';
 import drawerMessages from '../../../messages/th/issue-drawer.json';
+import moveMessages from '../../../messages/th/issue-move.json';
+import moveMessagesEn from '../../../messages/en/issue-move.json';
 import { ErrorState, Forbidden, LoadingState, NotFound } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { queryKeys } from '@/lib/query';
@@ -18,7 +20,7 @@ import styles from './issue-drawer.module.css';
 export function IssueInline(props: { ws: string; projectKey: string; meId: string; yearFormat: 'BE' | 'CE'; issueKey: string; onNavigate: (key: string) => void; onClose: () => void; onCreateSubtask: (parentKey: string) => void }) {
   const messages = useMessages();
   const locale = useLocale();
-  return <NextIntlClientProvider locale={locale} messages={{ ...messages, 'issue-drawer': messages['issue-drawer'] ?? drawerMessages }}><Inline {...props} /></NextIntlClientProvider>;
+  return <NextIntlClientProvider locale={locale} messages={{ ...messages, 'issue-drawer': messages['issue-drawer'] ?? drawerMessages, 'issue-move': messages['issue-move'] ?? (locale === 'en' ? moveMessagesEn : moveMessages) }}><Inline {...props} /></NextIntlClientProvider>;
 }
 
 function Inline({ ws, projectKey, meId, yearFormat, issueKey, onNavigate, onClose, onCreateSubtask }: Parameters<typeof IssueInline>[0]) {

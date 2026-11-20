@@ -249,6 +249,8 @@
     "selectAll": "เลือกทั้งหมดที่แสดง",
     "selected": "{count} รายการที่เลือก",
     "bulkModule": "ย้าย Module",
+    "bulkMove": "ย้ายโปรเจกต์",
+    "bulkMoved": "ย้ายแล้ว {count} งานไป {project}",
     "bulkDue": "Due date",
     "bulkAssignee": "Assignee",
     "apply": "ใช้",

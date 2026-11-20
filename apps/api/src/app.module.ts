@@ -19,6 +19,7 @@ import { ChannelsModule } from './channels/channels.module.js';
 import { CommentsModule } from './comments/comments.module.js';
 import { DiagramsModule } from './diagrams/diagrams.module.js';
 import { DueRequestsModule } from './due-requests/due-requests.module.js';
+import { IssueMoveModule } from './issue-move/issue-move.module.js';
 import { FilesModule } from './files/files.module.js';
 import { GanttModule } from './gantt/gantt.module.js';
 import { GitModule } from './git/git.module.js';
@@ -69,6 +70,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
     CommentsModule,
     DiagramsModule,
     DueRequestsModule,
+    IssueMoveModule,
     FilesModule,
     GanttModule,
     GitModule,

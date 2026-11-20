@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import * as Popover from '@radix-ui/react-popover';
-import { Check, ChevronLeft, ChevronRight, Link2, MoreHorizontal, RotateCcw, Trash2, X } from 'lucide-react';
+import { ArrowUpRight, Check, ChevronLeft, ChevronRight, Link2, MoreHorizontal, RotateCcw, Trash2, X } from 'lucide-react';
 import { Avatar, AvatarStack, Badge, Button, Combobox, DatePicker, Dialog, DrawerClose, Input, Select, useToast, LoadingState, ErrorState } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/format';
@@ -28,6 +28,7 @@ import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
 import { statusColorStyle, statusTone, useStatusColors, type StatusTone } from '@/lib/status';
 import { IssueDiagrams } from '@/features/diagrams/issue-diagrams';
 import { SprintBadge, SprintSelect } from '@/features/sprints/sprint-ui';
+import { MoveIssuesDialog } from '@/features/issue-move/move-dialog';
 import { useSprints } from '@/features/sprints/sprints';
 
 /** ชื่อ Sprint ของงาน (ดูอย่างเดียว / Sub-task ที่ตามแม่) */
@@ -79,6 +80,8 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted, onClose }: 
   const [planReason, setPlanReason] = useState('');
   const [confirmStatus, setConfirmStatus] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
+  const tm = useTranslations('issue-move');
   const [keepChildren, setKeepChildren] = useState(false);
   const [allProps, setAllProps] = useState(false);
   const [cancelDue, setCancelDue] = useState(false);
@@ -219,6 +222,8 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted, onClose }: 
           <Popover.Trigger asChild><Button size="icon" variant="ghost" aria-label={t('moreActions')}><MoreHorizontal size={16} /></Button></Popover.Trigger>
           <Popover.Portal><Popover.Content className="popover project-menu" sideOffset={6} align="end">
             {canEdit && issue.planEnd && !scope.access.permissions.includes('issue.change_due_directly') && !pending && <Popover.Close asChild><button className="menu-item" disabled={disabled} onClick={() => setDue('')}>{t('requestDue')}</button></Popover.Close>}
+            {/* ย้ายข้ามโปรเจกต์: Sub-task ย้ายพร้อมแม่เท่านั้น */}
+            {canEdit && !issue.parentKey && !!scope.openMoved && <Popover.Close asChild><button className="menu-item" disabled={disabled} onClick={() => setMoveOpen(true)}><ArrowUpRight size={15} />{tm('menu')}</button></Popover.Close>}
             {canDelete && <Popover.Close asChild><button className="menu-item" style={{ color: 'var(--danger-text)' }} aria-label={t('deleteIssue')} disabled={disabled} onClick={() => setDeleteOpen(true)}><Trash2 size={15} />{t('deleteIssue')}</button></Popover.Close>}
           </Popover.Content></Popover.Portal>
         </Popover.Root>}
@@ -383,6 +388,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted, onClose }: 
     {due !== null && <DueRequest key={`${issue.key}-${due}`} scope={scope} issue={issue} initialDue={due} onClose={() => { setDue(null); setError(null); }} />}
     <Dialog open={!!reasonIntent} title={t('planReasonTitle')} description={t('planReasonDescription')} onOpenChange={(open) => { if (!open && !busy) setReasonIntent(null); }}><form className={styles.stack} onSubmit={(event) => { event.preventDefault(); if (reasonIntent) void patch(reasonIntent, true); }}><Input label={t('planReason')} required value={planReason} maxLength={1000} onChange={(event) => setPlanReason(event.target.value)} /><Button type="submit" variant="primary" disabled={busy || !planReason.trim()}>{t('save')}</Button>{!!error && <Failure error={error} />}</form></Dialog>
     <Dialog open={!!confirmStatus} title={t('incompleteTitle')} description={t('incompleteDescription')} onOpenChange={(open) => { if (!open && !busy) { setConfirmStatus(null); setError(null); } }}><div className={styles.dialogActions}><Button disabled={busy} onClick={() => { setConfirmStatus(null); setError(null); }}>{t('cancel')}</Button><Button variant="primary" disabled={busy} onClick={() => { if (confirmStatus) void move(confirmStatus, true); }}>{t('confirmMove')}</Button></div></Dialog>
+    {moveOpen && <MoveIssuesDialog ws={scope.ws} sourceKey={scope.projectKey} keys={[issue.key]} open={moveOpen} onOpenChange={setMoveOpen} onMoved={(r) => { toast({ message: tm('moved', { from: issue.key, to: r.key, count: r.moved.length }) }); scope.openMoved?.(r.key); }} />}
     <Dialog open={deleteOpen} title={t('deleteIssueQuestion', { key: issue.key, title: issue.title })} description={`${issue.parentKey ? t('subtask') : t(`types.${issue.type}`)}${mod ? ` · ${mod.name}` : ''}`} onOpenChange={(open) => { if (!open && !busy) setDeleteOpen(false); }}>
       {/* P3 ระดับ 2: บอกผลกระทบเป็นตัวเลข ให้เลือกวิธีจัดการ Sub-task และปุ่มยืนยันบอกผล */}
       {impact.isLoading && <LoadingState />}{impact.error && <ErrorState error={impact.error} retry={() => void impact.refetch()} />}

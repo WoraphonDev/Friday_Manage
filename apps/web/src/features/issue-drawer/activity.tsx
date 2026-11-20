@@ -85,6 +85,17 @@ export function ActivityPanel({ scope, issueKey, mode = 'comments', showFeed = t
     return null;
   }
   function activityText(item: Activity) {
+    // ย้ายข้ามโปรเจกต์: บอกที่มา Key เดิม และสิ่งที่ตามมาไม่ได้
+    if (item.verb === 'moved') {
+      const from = (item.old ?? {}) as { key?: string; projectName?: string };
+      const to = (item.new ?? {}) as { key?: string; withSubtasks?: number; dropped?: Record<string, string[]> };
+      const lost = Object.values(to.dropped ?? {}).flat();
+      return [
+        t('movedLog', { project: from.projectName ?? '', oldKey: from.key ?? '', newKey: to.key ?? '' }),
+        to.withSubtasks ? t('movedSubtasks', { count: to.withSubtasks }) : '',
+        lost.length ? t('movedLost', { items: lost.join(', ') }) : '',
+      ].filter(Boolean).join(' · ');
+    }
     const verb = t.has(`verbs.${item.verb}`) ? t(`verbs.${item.verb}`) : t('updated');
     if (!item.field) return verb;
     if (item.field === 'checklist') { const text = checklistText(item.old, item.new); if (text) return text; }

@@ -101,7 +101,13 @@ export class SearchService {
       // งาน / Sub-task / Bug -------------------------------------------------------------------
       if (ids.length && (want('task') || want('sub') || want('bug'))) {
         const textMatch = or(ilike(s.issues.title, pat), ilike(s.issues.description, pat));
-        const keyCond = keyMatch ? and(eq(s.projects.key, keyMatch[1]!.toUpperCase()), eq(s.issues.number, Number(keyMatch[2]))) : undefined;
+        // Key เดิมของงานที่ย้ายข้ามโปรเจกต์ (DE-12 → WEB-46) ค้นเจองานใหม่เป็นผลตรงตัว
+        const moved = keyMatch
+          ? (await tx.select({ id: s.issueKeyAliases.issueId }).from(s.issueKeyAliases).innerJoin(s.projects, eq(s.projects.id, s.issueKeyAliases.projectId))
+              .where(and(eq(s.projects.key, keyMatch[1]!.toUpperCase()), eq(s.issueKeyAliases.number, Number(keyMatch[2]))))).map((r) => r.id)
+          : [];
+        const exactKey = keyMatch ? and(eq(s.projects.key, keyMatch[1]!.toUpperCase()), eq(s.issues.number, Number(keyMatch[2]))) : undefined;
+        const keyCond = moved.length ? or(exactKey, inArray(s.issues.id, moved)) : exactKey;
         const rows = await tx
           .select({ i: s.issues, type: s.issueTypes.name, status: s.workflowStatuses })
           .from(s.issues)
@@ -125,7 +131,7 @@ export class SearchService {
           const kind: SearchType = bug ? 'bug' : i.parentId ? 'sub' : 'task';
           if (!want(kind)) continue;
           const key = `${byId.get(i.projectId)!.key}-${i.number}`;
-          const exact = keyMatch && key.toLowerCase() === `${keyMatch[1]}-${keyMatch[2]}`.toLowerCase();
+          const exact = keyMatch && (key.toLowerCase() === `${keyMatch[1]}-${keyMatch[2]}`.toLowerCase() || moved.includes(i.id));
           const title = i.title.toLowerCase();
           const matchedIn = title.includes(lower) ? 'title' : 'description';
           counts[kind]++;

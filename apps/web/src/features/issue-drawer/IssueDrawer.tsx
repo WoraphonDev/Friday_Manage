@@ -5,6 +5,8 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { NextIntlClientProvider, useLocale, useMessages, useTranslations } from 'next-intl';
 import drawerMessages from '../../../messages/th/issue-drawer.json';
 import sprintMessages from '../../../messages/th/sprints.json';
+import moveMessages from '../../../messages/th/issue-move.json';
+import moveMessagesEn from '../../../messages/en/issue-move.json';
 import { useWorkspace } from '@/components/shell/workspace-shell';
 import { Button, Dialog, Drawer, ErrorState, Forbidden, LoadingState, NotFound } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
@@ -34,7 +36,7 @@ export function IssueDrawerHost({ ws, projectKey, meId, yearFormat = 'BE', issue
   // ทุก state รวม draft/Undo ผูกกับผู้ใช้และโปรเจกต์ผ่าน key ของ wrapper
   const messages = useMessages();
   const locale = useLocale();
-  return <NextIntlClientProvider locale={locale} messages={{ ...messages, 'issue-drawer': messages['issue-drawer'] ?? drawerMessages, sprints: messages['sprints'] ?? sprintMessages }}><ScopedDrawer key={`${ws}/${projectKey}/${meId}`} {...{ ws, projectKey, meId, yearFormat, issueKey, onClose }} /></NextIntlClientProvider>;
+  return <NextIntlClientProvider locale={locale} messages={{ ...messages, 'issue-drawer': messages['issue-drawer'] ?? drawerMessages, sprints: messages['sprints'] ?? sprintMessages, 'issue-move': messages['issue-move'] ?? (locale === 'en' ? moveMessagesEn : moveMessages) }}><ScopedDrawer key={`${ws}/${projectKey}/${meId}`} {...{ ws, projectKey, meId, yearFormat, issueKey, onClose }} /></NextIntlClientProvider>;
 }
 function ScopedDrawer({ ws, projectKey, meId, yearFormat, issueKey, onClose }: {
   ws: string; projectKey: string; meId: string; yearFormat: 'BE' | 'CE'; issueKey?: string; onClose: () => void;
@@ -72,12 +74,22 @@ function ScopedDrawer({ ws, projectKey, meId, yearFormat, issueKey, onClose }: {
     router.replace(`${pathname}${next.size ? `?${next}` : ''}`, { scroll: false });
   }
   const navigate = (key: string) => { setActiveKey(key); setNewParentKey(null); replace(key); };
+  // งานย้ายข้ามโปรเจกต์: Key ใหม่อยู่โปรเจกต์อื่นก็เปิดแท็บเดียวกันของโปรเจกต์นั้น
+  const openMoved = useCallback((key: string) => {
+    void cache.invalidateQueries();
+    const target = key.split('-')[0];
+    if (target === projectKey) { setActiveKey(key); replace(key); return; }
+    const next = withoutDrawerParams(search, pathname);
+    next.set('issue', key);
+    router.replace(`${pathname.replace(`/p/${encodeURIComponent(projectKey)}`, `/p/${encodeURIComponent(target)}`)}?${next}`, { scroll: false });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cache, pathname, projectKey, router, search]);
   const createSubtask = (value: Issue) => { setNewParentKey(value.key); setActiveKey(value.key); replace(undefined, value.key); };
   const closeNew = useCallback(() => {
     if (newParentKey) { setNewParentKey(null); setActiveKey(newParentKey); const next = new URLSearchParams(search); next.delete('new'); next.delete('parent'); next.set('issue', newParentKey); router.replace(`${pathname}?${next}`, { scroll: false }); }
     else onClose();
   }, [newParentKey, onClose, pathname, router, search]);
-  const scope: Scope = { ws, projectKey, meId, yearFormat, access: permissions.data ?? { role: null, guestViewer: false, permissions: [] }, project: project.data, people, navigate, createSubtask };
+  const scope: Scope = { ws, projectKey, meId, yearFormat, access: permissions.data ?? { role: null, guestViewer: false, permissions: [] }, project: project.data, people, navigate, createSubtask, openMoved };
   const nested = !!issue.data?.parentKey && !!parent.data && !creating;
   const rootIssue = (newParentKey || issue.data?.parentKey) && !parent.error ? parent.data : issue.data;
   if (rootIssue) rootName.current = rootIssue.key;
@@ -101,7 +113,11 @@ function ScopedDrawer({ ws, projectKey, meId, yearFormat, issueKey, onClose }: {
   const createLayout = 'drawer' as 'drawer' | 'modal';
   const loading = permissions.isPending || (!guest && project.isPending) || (!!activeKey && issue.isPending) || (!!parentKey && parent.isPending);
   const error = permissions.error ?? (!guest ? project.error : null) ?? issue.error;
+  // Key เดิมของงานที่ย้ายแล้ว (API ตอบ 404 code issue_moved) → เปิดที่ Key ใหม่
+  const movedTo = issue.error instanceof ApiError && issue.error.code === 'issue_moved' ? String(issue.error.details.key ?? '') : '';
+  useEffect(() => { if (movedTo) openMoved(movedTo); }, [movedTo, openMoved]);
   function content() {
+    if (movedTo) return <LoadingState />;
     if (error instanceof ApiError && error.status === 403) return <Forbidden />;
     if (error instanceof ApiError && error.status === 404) return <NotFound />;
     if (error instanceof ApiError && error.status === 410 && activeKey) return <DeletedIssue scope={scope} issueKey={activeKey} error={error} />;

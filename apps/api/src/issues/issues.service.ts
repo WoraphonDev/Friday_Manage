@@ -945,8 +945,24 @@ export class IssuesService {
       .select()
       .from(s.issues)
       .where(and(eq(s.issues.projectId, project.id), eq(s.issues.number, Number(m[2]))));
+    if (!issue) await this.throwIfMoved(tx, project, Number(m[2]));
     if (!issue || (issue.deletedAt && !opts.includeDeleted)) throw notFound('งาน');
     return issue;
+  }
+
+  /**
+   * Key เดิมของงานที่ย้ายข้ามโปรเจกต์ (issue_key_aliases) ตอบ 404 code issue_moved พร้อม Key ใหม่ ให้หน้าเว็บพาไปงานที่ย้ายแล้ว
+   * ไม่ใช้ 301 เพราะ fetch / proxy บางตัวจัดการ 3xx เอง (ไม่มี Location) และ 301 ถูกแคชได้ · ผู้เรียกที่ไม่รู้จัก code นี้เห็นเป็น "ไม่พบงาน" ตามปกติ
+   * อ่านงานปลายทางผ่าน RLS: คนที่เข้าโปรเจกต์ปลายทางไม่ได้ได้ 404 เหมือน Key ที่ไม่มีอยู่
+   */
+  private async throwIfMoved(tx: Tx, project: ProjectRow, number: number) {
+    const [moved] = await tx
+      .select({ key: sql<string>`${s.projects.key} || '-' || ${s.issues.number}` })
+      .from(s.issueKeyAliases)
+      .innerJoin(s.issues, eq(s.issues.id, s.issueKeyAliases.issueId))
+      .innerJoin(s.projects, eq(s.projects.id, s.issues.projectId))
+      .where(and(eq(s.issueKeyAliases.projectId, project.id), eq(s.issueKeyAliases.number, number), isNull(s.issues.deletedAt)));
+    if (moved) throw new AppError(404, 'issue_moved', `งานนี้ย้ายไปเป็น ${moved.key} แล้ว`, { key: moved.key, oldKey: `${project.key}-${number}` });
   }
 
   private async nextNumber(tx: Tx, projectId: string) {

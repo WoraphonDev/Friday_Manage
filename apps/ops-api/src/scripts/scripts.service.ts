@@ -6,11 +6,13 @@ import { ApprovalsService, type ApprovalContext } from '../approvals/approvals.s
 import { audit, staffAudit } from '../audit.js';
 import type { Staff, StaffRole } from '../auth/auth.guard.js';
 import { limitsOf } from '../auth/roles.js';
+import { config } from '../config.js';
 import { OPS_DB } from '../db.js';
 import { AppError } from '../errors.js';
+import { Mailer } from '../mail.js';
 import { PageQuery } from '../paging.js';
 import { sqlRows } from '../sql-rows.js';
-import { type MaintenanceScript, scriptOf, SCRIPTS, type Target } from './registry.js';
+import { type AfterCommit, type MaintenanceScript, scriptOf, SCRIPTS, type Target } from './registry.js';
 
 const s = schema;
 const BATCH = 500;
@@ -47,6 +49,7 @@ export class ScriptsService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @Inject(OPS_DB) private readonly db: Db,
     private readonly approvals: ApprovalsService,
+    private readonly mail: Mailer,
   ) {}
 
   onModuleInit() {
@@ -147,6 +150,7 @@ export class ScriptsService implements OnModuleInit, OnModuleDestroy {
     const sc = this.script(key);
     const parsed = sc.params.safeParse(input.params);
     if (!parsed.success) throw new AppError(400, 'invalid_params', parsed.error.issues[0]?.message ?? 'ค่าไม่ถูกต้อง', { issues: parsed.error.issues });
+    if (sc.sendsMail && !this.mail.enabled) throw new AppError(409, 'mail_disabled', 'ยังไม่ได้ตั้ง SMTP ของ Ops · สคริปต์นี้ส่งอีเมลไม่ได้');
     await this.assertWorkspace(input.workspaceId);
     const started = Date.now();
     const rows = await this.targets(sc, input.workspaceId, parsed.data);
@@ -208,16 +212,46 @@ export class ScriptsService implements OnModuleInit, OnModuleDestroy {
         await this.finish(r, 'stopped', changed);
         return;
       }
+      const after: AfterCommit[] = [];
       await this.db.transaction(async (tx) => {
+        let n = 0;
         for (const t of rows.slice(i, i + BATCH)) {
-          await tx.execute(sql`update ${sql.raw(sc.table)} set ${setCols(sc.columns, t.after)} where id = ${t.id}`);
+          if (sc.apply) {
+            const next = await sc.apply({ tx, workspaceId: r.workspaceId!, appUrl: config.appUrl }, t);
+            // แถวที่เปลี่ยนไปแล้วระหว่างทดลองกับรันจริง (เช่น มีคนตอบรับคำเชิญ) ไม่นับ
+            if (next === undefined) continue;
+            after.push(next);
+          } else {
+            await tx.execute(sql`update ${sql.raw(sc.table)} set ${setCols(sc.columns, t.after)} where id = ${t.id}`);
+          }
           await tx.insert(s.scriptRunChanges).values({ runId: id, tableName: sc.table, rowId: t.id, workspaceId: r.workspaceId, before: t.before, after: t.after });
+          n++;
         }
-        changed += Math.min(BATCH, rows.length - i);
-        await tx.update(s.scriptRuns).set({ progress: changed, changed }).where(eq(s.scriptRuns.id, id));
+        changed += n;
+        await tx.update(s.scriptRuns).set({ progress: Math.min(i + BATCH, rows.length), changed }).where(eq(s.scriptRuns.id, id));
       });
+      await this.afterCommit(after);
     }
     await this.finish(r, 'done', changed);
+  }
+
+  /** ส่งอีเมลหลัง commit ทีละรายการ · ส่งไม่ผ่านไม่ทำให้ทั้งการรันล้ม แต่บันทึกผลลงแถว (เช่น invitations.email_status) ให้รันซ้ำได้ */
+  private async afterCommit(items: AfterCommit[]) {
+    for (const a of items) {
+      let status: 'sent' | 'failed' | 'disabled' = 'sent';
+      let error: string | null = null;
+      if (a.mail && !this.mail.enabled) status = 'disabled';
+      else if (a.mail) {
+        try {
+          await this.mail.send(a.mail);
+        } catch (e) {
+          status = 'failed';
+          error = String((e as Error).message ?? e).slice(0, 500);
+          this.log.warn(`ส่งอีเมลจากสคริปต์ถึง ${a.mail.to} ไม่สำเร็จ: ${error}`);
+        }
+      }
+      if (a.record) await this.db.execute(a.record(status, error));
+    }
   }
 
   private async finish(r: RunRow, status: 'done' | 'stopped', changed: number) {

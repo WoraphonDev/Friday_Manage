@@ -11,6 +11,7 @@ import { OPS_DB } from '../db.js';
 import { AppError } from '../errors.js';
 import { Mailer } from '../mail.js';
 import { PushService } from '../push/push.service.js';
+import { sqlRows } from '../sql-rows.js';
 import { AlertsService } from './alerts.service.js';
 import { JobQueue } from './job-queue.js';
 
@@ -340,12 +341,25 @@ export class SystemService implements OnModuleInit, OnModuleDestroy {
   // ---------------------------------------------------------------- งานเบื้องหลังที่ล้ม
 
   async failedJobs() {
-    if (!this.jobs.configured) return { configured: false, items: [] };
+    const scripts = await this.failedScripts();
+    if (!this.jobs.configured) return { configured: false, items: [], scripts };
     const items = await this.jobs.failed();
     return {
       configured: true,
       items: items.map((j) => ({ ...j, workspaceId: typeof j.data.workspaceId === 'string' ? j.data.workspaceId : null, data: undefined })),
+      scripts,
     };
+  }
+
+  /**
+   * สคริปต์ดูแลข้อมูล (O56) ที่ล้มใน 7 วัน · รันในโปรเซสของ ops-api ไม่ได้อยู่ในคิว จึงลองใหม่ / ทิ้งจากที่นี่ไม่ได้
+   * ชุดที่เสร็จก่อนล้มยังอยู่และย้อนได้ → ให้ไปดูที่หน้าสคริปต์แล้วทดลองรันใหม่
+   */
+  private failedScripts() {
+    return sqlRows<{ id: string; scriptKey: string; workspaceName: string | null; error: string | null; changed: number; failedAt: string | null }>(this.db, sql`
+      select r.id, r.script_key as "scriptKey", w.name as "workspaceName", r.error, r.changed, r.finished_at as "failedAt"
+      from script_runs r left join workspaces w on w.id = r.workspace_id
+      where r.status = 'failed' and r.finished_at > now() - interval '7 days' order by r.finished_at desc limit 50`);
   }
 
   private async jobOrThrow(id: string) {

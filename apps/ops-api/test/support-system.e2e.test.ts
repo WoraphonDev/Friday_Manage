@@ -276,7 +276,7 @@ describe('คิวงานที่ยังไม่เชื่อม', () =
   it('ไม่ได้ตั้ง VALKEY_URL → แสดงว่ายังไม่เชื่อมคิว', async () => {
     delete process.env.VALKEY_URL;
     try {
-      expect((await engineer.agent.get('/ops/jobs/failed')).body).toEqual({ configured: false, items: [] });
+      expect((await engineer.agent.get('/ops/jobs/failed')).body).toEqual({ configured: false, items: [], scripts: [] });
       expect((await engineer.agent.post('/ops/jobs/1/retry').send({})).body.error.code).toBe('queue_not_configured');
     } finally {
       if (VALKEY) process.env.VALKEY_URL = VALKEY;

@@ -201,4 +201,20 @@ describe("เหตุขัดข้องและปิดปรับปร�
       }),
     );
   });
+
+  it("สคริปต์ดูแลข้อมูลที่ล้มแสดงแม้ยังไม่เชื่อมคิว · ลิงก์ไปหน้าสคริปต์ ไม่มีปุ่มลองใหม่", async () => {
+    asRole("engineer");
+    page();
+    server.use(
+      http.get(`${OPS}/jobs/failed`, () =>
+        HttpResponse.json({ configured: false, items: [], scripts: [{ id: "r1", scriptKey: "shift_off_holidays", workspaceName: "Co nordlight", error: "deadlock detected", changed: 500, failedAt: new Date().toISOString() }] }),
+      ),
+    );
+    expect(await screen.findByText("deadlock detected")).toBeInTheDocument();
+    expect(screen.getByText("ยังไม่เชื่อมคิวงาน (ตั้ง VALKEY_URL ให้ ops-api)")).toBeInTheDocument();
+    const row = screen.getByText("เลื่อนวันแผนที่ตกวันหยุด").closest("tr")!;
+    expect(within(row).getByText("Co nordlight")).toBeInTheDocument();
+    expect(within(row).getByRole("link", { name: "เปิดหน้าสคริปต์" })).toHaveAttribute("href", "/scripts?tab=runs");
+    expect(within(row).queryByRole("button", { name: "ลองใหม่" })).not.toBeInTheDocument();
+  });
 });

@@ -1,14 +1,15 @@
-import { Injectable } from '@nestjs/common';
-import { schema, type Tx } from '@friday/db';
+import { Inject, Injectable } from '@nestjs/common';
+import { type Db, schema, type Tx } from '@friday/db';
 import { and, asc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { AppError } from '../common/errors.js';
 import { today } from '../common/dates.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
+import { SYSTEM_DB } from '../db/db.module.js';
 import { type DomainEvent, EventBus } from '../core/events.js';
 import { PLAIN_RANK, rankAfter } from '../issues/rank.js';
-import { requirePerm } from '../projects/permissions.js';
+import { type ProjectAccess, requirePerm } from '../projects/permissions.js';
 import { type ProjectRow, ProjectsService } from '../projects/projects.service.js';
 
 const s = schema;
@@ -35,6 +36,12 @@ export const MoveBody = PreviewMoveBody.extend({
 }).strict();
 
 type Issue = typeof s.issues.$inferSelect;
+/**
+ * ผู้ย้าย: ผู้ใช้ผ่าน RLS ตามปกติ · หรือทีม Friday จากสคริปต์ Ops (คนที่สองอนุมัติแล้วที่ฝั่ง Ops) ผ่าน SYSTEM_DB
+ * โหมดทีม Friday ข้าม RLS จึงหาโปรเจกต์ด้วย workspace_id ของงานเสมอ · ทุก query ต่อจากนั้นอิง id ของโปรเจกต์ / งานใน Workspace นั้น
+ */
+type Actor = { kind: 'user'; auth: AuthInfo; tenant: TenantInfo } | { kind: 'friday_staff'; workspaceId: string; staffName: string };
+const STAFF_PERMS = new Set(['issue.edit', 'issue.create', 'project.invite']);
 type Status = { id: string; name: string; category: string; workflowId: string };
 type TypeRow = { id: string; name: string; workflowId: string };
 
@@ -55,38 +62,71 @@ export class IssueMoveService {
     private readonly db: TenantDb,
     private readonly projects: ProjectsService,
     private readonly events: EventBus,
+    @Inject(SYSTEM_DB) private readonly system: Db,
   ) {}
 
   /** ดูก่อนย้าย: เลขใหม่ การจับคู่ และสิ่งที่ตามไปไม่ได้ · ไม่เขียนข้อมูล */
   async preview(auth: AuthInfo, tenant: TenantInfo, input: z.infer<typeof PreviewMoveBody>) {
     return this.db.run(auth, tenant, async (tx) => {
-      const plan = await this.plan(tx, auth, tenant, { ...input, statusMap: {}, moduleId: null, addMembers: true });
+      const plan = await this.plan(tx, { kind: 'user', auth, tenant }, { ...input, statusMap: {}, moduleId: null, addMembers: true });
       return this.describe(plan);
     });
   }
 
   async move(auth: AuthInfo, tenant: TenantInfo, input: z.infer<typeof MoveBody>) {
     const events: DomainEvent[] = [];
-    const result = await this.db.run(auth, tenant, async (tx) => {
-      const plan = await this.plan(tx, auth, tenant, input);
-      const missing = [...plan.typeRows.filter((r) => !r.to), ...plan.statusRows.filter((r) => !r.to)];
-      if (missing.length) throw new AppError(422, 'mapping_required', 'เลือกประเภทงานและสถานะในโปรเจกต์ปลายทางให้ครบก่อนย้าย', this.describe(plan));
-      return this.apply(tx, auth, tenant, plan, input, events);
+    const result = await this.db.run(auth, tenant, (tx) => this.execute(tx, { kind: 'user', auth, tenant }, input, events));
+    await this.events.publish(events);
+    return result;
+  }
+
+  /**
+   * สคริปต์ Ops (Story 3) ผ่านคิวงาน: ทีม Friday ดูก่อน / ย้ายแทนลูกค้า · สิทธิ์ตรวจที่ Ops แล้ว (คนที่สองอนุมัติ)
+   * ย้ายจริงใช้การจับคู่ตามชื่อ / ค่าแนะนำในหมวดเดียวกัน และเพิ่มคนที่ไม่ได้เป็นสมาชิก (เหมือนค่าเริ่มต้นของหน้าเว็บ)
+   */
+  forStaff(workspaceId: string, staffName: string, mode: 'preview', input: z.infer<typeof PreviewMoveBody>): Promise<ReturnType<IssueMoveService['describe']>>;
+  forStaff(workspaceId: string, staffName: string, mode: 'move', input: z.infer<typeof PreviewMoveBody>): Promise<Awaited<ReturnType<IssueMoveService['apply']>>>;
+  forStaff(workspaceId: string, staffName: string, mode: 'preview' | 'move', input: z.infer<typeof PreviewMoveBody>): Promise<unknown>;
+  async forStaff(workspaceId: string, staffName: string, mode: 'preview' | 'move', input: z.infer<typeof PreviewMoveBody>) {
+    const actor: Actor = { kind: 'friday_staff', workspaceId, staffName };
+    if (mode === 'preview') return this.system.transaction(async (tx) => this.describe(await this.plan(tx, actor, { ...input, statusMap: {}, moduleId: null, addMembers: true })));
+    const events: DomainEvent[] = [];
+    const result = await this.system.transaction(async (tx) => {
+      const plan = await this.plan(tx, actor, { ...input, statusMap: {}, moduleId: null, addMembers: true });
+      const statusMap = Object.fromEntries(plan.statusRows.map((r) => [r.key, (r.to ?? r.suggested)?.id]).filter(([, v]) => v)) as Record<string, string>;
+      return this.execute(tx, actor, { ...input, statusMap, moduleId: null, addMembers: true }, events);
     });
     await this.events.publish(events);
     return result;
   }
 
+  private async execute(tx: Tx, actor: Actor, input: z.infer<typeof MoveBody>, events: DomainEvent[]) {
+    const plan = await this.plan(tx, actor, input);
+    const missing = [...plan.typeRows.filter((r) => !r.to), ...plan.statusRows.filter((r) => !r.to)];
+    if (missing.length) throw new AppError(422, 'mapping_required', 'เลือกประเภทงานและสถานะในโปรเจกต์ปลายทางให้ครบก่อนย้าย', this.describe(plan));
+    return this.apply(tx, actor, plan, input, events);
+  }
+
+  /** หาโปรเจกต์ + สิทธิ์ · ทีม Friday หาด้วย workspace_id (ข้าม RLS) และได้สิทธิ์ย้ายเต็ม */
+  private async project(tx: Tx, actor: Actor, key: string) {
+    if (actor.kind === 'user') return this.projects.load(tx, actor.auth, actor.tenant, key);
+    const [project] = await tx.select().from(s.projects).where(and(eq(s.projects.workspaceId, actor.workspaceId), eq(s.projects.key, key.toUpperCase()), isNull(s.projects.deletedAt)));
+    if (!project) throw new AppError(404, 'project_not_found', `ไม่พบโปรเจกต์ ${key.toUpperCase()}`);
+    if (project.archivedAt) throw new AppError(403, 'project_archived', `โปรเจกต์ ${project.key} ถูก Archive แล้ว`);
+    const access: ProjectAccess = { userId: '', role: 'admin', isOwner: false, guestViewer: false, perms: STAFF_PERMS, archived: false };
+    return { project, access };
+  }
+
   // ---------------------------------------------------------------------------
   // วางแผน (ใช้ทั้งดูก่อนและย้ายจริง)
   // ---------------------------------------------------------------------------
-  private async plan(tx: Tx, auth: AuthInfo, tenant: TenantInfo, input: z.infer<typeof MoveBody>) {
+  private async plan(tx: Tx, actor: Actor, input: z.infer<typeof MoveBody>) {
     const keys = [...new Set(input.keys.map((k) => k.toUpperCase()))];
     const prefixes = new Set(keys.map((k) => KEY.exec(k)![1]));
     if (prefixes.size > 1) throw new AppError(400, 'invalid_reference', 'ย้ายได้ครั้งละโปรเจกต์เดียว · งานทั้งหมดต้องอยู่ในโปรเจกต์เดียวกัน');
-    const { project: source, access: sourceAccess } = await this.projects.load(tx, auth, tenant, [...prefixes][0]);
+    const { project: source, access: sourceAccess } = await this.project(tx, actor, [...prefixes][0]);
     requirePerm(sourceAccess, 'issue.edit');
-    const { project: target, access: targetAccess } = await this.projects.load(tx, auth, tenant, input.targetProjectKey);
+    const { project: target, access: targetAccess } = await this.project(tx, actor, input.targetProjectKey);
     if (target.id === source.id) throw new AppError(400, 'same_project', 'งานอยู่ในโปรเจกต์นี้อยู่แล้ว');
     requirePerm(targetAccess, 'issue.create');
     if (targetAccess.guestViewer || sourceAccess.guestViewer) throw new AppError(403, 'forbidden', 'Guest ย้ายงานไม่ได้');
@@ -247,9 +287,13 @@ export class IssueMoveService {
   // ---------------------------------------------------------------------------
   // ย้ายจริง
   // ---------------------------------------------------------------------------
-  private async apply(tx: Tx, auth: AuthInfo, tenant: TenantInfo, p: Awaited<ReturnType<IssueMoveService['plan']>>, input: z.infer<typeof MoveBody>, events: DomainEvent[]) {
+  private async apply(tx: Tx, actor: Actor, p: Awaited<ReturnType<IssueMoveService['plan']>>, input: z.infer<typeof MoveBody>, events: DomainEvent[]) {
     const { source, target } = p;
-    const ws = tenant.workspaceId;
+    const ws = actor.kind === 'user' ? actor.tenant.workspaceId : actor.workspaceId;
+    // ทีม Friday: ไม่มีผู้ใช้ใน Workspace เป็นผู้ทำ · ประวัติ / Audit ติดป้าย friday_staff พร้อมชื่อพนักงาน
+    const actorId = actor.kind === 'user' ? actor.auth.userId : null;
+    const actorKind = actor.kind === 'user' ? ('user' as const) : ('friday_staff' as const);
+    const by = actor.kind === 'friday_staff' ? `[Friday · ${actor.staffName}] ` : '';
     const typeTo = new Map(p.typeRows.map((r) => [r.from.id, r.to!]));
     const statusTo = new Map(p.statusRows.map((r) => [r.key, r.to!]));
     const statusCat = new Map(p.statusRows.map((r) => [r.key, r.from.category]));
@@ -261,7 +305,7 @@ export class IssueMoveService {
     if (p.outsiders.length) {
       if (addMembers) {
         await tx.insert(s.projectMembers).values(p.outsiders.map((u) => ({ workspaceId: ws, projectId: target.id, userId: u.id, role: 'member' as const }))).onConflictDoNothing();
-        events.push(...p.outsiders.map((u) => ({ type: 'member.joined' as const, workspaceId: ws, projectId: target.id, actorId: auth.userId, data: { projectKey: target.key, userId: u.id, role: 'member' }, at: new Date() })));
+        events.push(...p.outsiders.map((u) => ({ type: 'member.joined' as const, workspaceId: ws, projectId: target.id, actorId, data: { projectKey: target.key, userId: u.id, role: 'member' }, at: new Date() })));
       } else p.outsiders.forEach((u) => removed.add(u.id));
     }
 
@@ -355,17 +399,17 @@ export class IssueMoveService {
         dependencies: dropped.dependencies.filter((d) => d.issue === oldKey).map((d) => d.other),
       };
       await tx.insert(s.activities).values({
-        workspaceId: ws, projectId: target.id, issueId: i.id, actorId: auth.userId, verb: 'moved', field: 'projectId',
+        workspaceId: ws, projectId: target.id, issueId: i.id, actorId, actorKind, verb: 'moved', field: 'projectId',
         oldValue: { key: oldKey, projectKey: source.key, projectName: source.name },
         newValue: { key: newKeys.get(i.id), projectKey: target.key, projectName: target.name, withSubtasks: !i.parentId ? p.issues.filter((x) => x.parentId === i.id).length : 0, dropped: lost },
       });
-      events.push({ type: 'issue.moved', workspaceId: ws, projectId: target.id, issueId: i.id, actorId: auth.userId, at: new Date(),
+      events.push({ type: 'issue.moved', workspaceId: ws, projectId: target.id, issueId: i.id, actorId, at: new Date(),
         data: { issueKey: newKeys.get(i.id), oldKey, title: i.title, fromProjectId: source.id, fromProjectKey: source.key, parentId: i.parentId } });
     }
     const roots = p.issues.filter((i) => !i.parentId);
     await tx.insert(s.auditLogs).values(roots.map((i) => ({
-      workspaceId: ws, actorId: auth.userId, actorKind: 'user' as const, category: 'data' as const, action: 'issue.moved', targetType: 'issue', targetId: i.id,
-      summary: `ย้าย ${source.key}-${i.number} → ${newKeys.get(i.id)}${p.issues.some((x) => x.parentId === i.id) ? ` พร้อม Sub-task ${p.issues.filter((x) => x.parentId === i.id).length} งาน` : ''}`,
+      workspaceId: ws, actorId, actorKind, category: 'data' as const, action: 'issue.moved', targetType: 'issue', targetId: i.id,
+      summary: `${by}ย้าย ${source.key}-${i.number} → ${newKeys.get(i.id)}${p.issues.some((x) => x.parentId === i.id) ? ` พร้อม Sub-task ${p.issues.filter((x) => x.parentId === i.id).length} งาน` : ''}`,
     })));
     return {
       moved: p.issues.map((i) => ({ from: `${source.key}-${i.number}`, to: newKeys.get(i.id)! })),

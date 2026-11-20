@@ -426,6 +426,22 @@ describe('แพ็กเกจและสถานะ Workspace', () => {
     const privId = (await t.owner.query(`SELECT id FROM coupons WHERE code = $1`, [d2.body.discount.code])).rows[0].id;
     expect((await finance.agent.get(`/ops/promotions/coupons/${privId}/redemptions`)).status).toBe(404);
     expect((await finance.agent.post('/ops/promotions/coupons').send({ code: 'sp-mine', kind: 'percent', value: 10, duration: 'once', planCodes: ['team_s'], newCustomersOnly: false, stackable: false })).status).toBe(400);
+
+    // ยกเลิกส่วนลดเฉพาะราย: การเงินทำได้ไม่ต้องอนุมัติ · ต้องมีเหตุผล · ใบถัดไปคิดราคาเต็ม · ไม่มีส่วนลดแล้วยกเลิกซ้ำไม่ได้
+    expect((await finance.agent.get(`/ops/workspaces/${c.id}`)).body.subscription.discount).toMatchObject({ percent: 10, cyclesLeft: 3, setByName: finance.name });
+    expect((await support.agent.post(`/ops/workspaces/${c.id}/discount/remove`).send({ reason: 'ลองกด' })).status).toBe(403);
+    expect((await finance.agent.post(`/ops/workspaces/${c.id}/discount/remove`).send({ reason: 'x' })).status).toBe(400);
+    const rm = await finance.agent.post(`/ops/workspaces/${c.id}:remove-discount`).send({ reason: 'เปลี่ยนเป็นสัญญารายปี' });
+    expect(rm.status, JSON.stringify(rm.body)).toBe(200);
+    expect(rm.body).toEqual({ removed: { percent: 10, cyclesLeft: 3 } });
+    expect((await t.owner.query(own, [c.id])).rows.map((r) => [r.value, r.status, r.r_status])).toEqual([[15, 'disabled', 'ended'], [10, 'disabled', 'ended']]);
+    expect((await finance.agent.get(`/ops/workspaces/${c.id}`)).body.subscription.discount).toBeNull();
+    const again = await finance.agent.post(`/ops/workspaces/${c.id}/discount/remove`).send({ reason: 'กดซ้ำ' });
+    expect(again.status).toBe(409);
+    expect(again.body.error.code).toBe('no_discount');
+    const [removed] = await audit(c.id, 'ops.discount_removed');
+    expect(removed.summary).toContain('ยกเลิกส่วนลด 10% (เหลือ 3 รอบ)');
+    expect(removed.summary).toContain('เปลี่ยนเป็นสัญญารายปี');
     expect((await finance.agent.post(`/ops/workspaces/${c.id}:discount`).send({ percent: 120, reason: 'เกิน' })).status).toBe(400);
 
     const cp = await finance.agent.post(`/ops/workspaces/${c.id}:change-plan`).send({ plan: 'enterprise', reason: 'ตามสัญญา ENT-2026-01' });

@@ -1,5 +1,5 @@
 import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
-import { creditBalance, type Db, grantPrivateDiscount, periodDays, privateDiscounts, schema } from '@friday/db';
+import { creditBalance, type Db, endPrivateDiscounts, grantPrivateDiscount, periodDays, privateDiscounts, schema } from '@friday/db';
 import { and, eq, inArray, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { ApprovalsService, type ApprovalContext } from '../approvals/approvals.service.js';
@@ -26,6 +26,7 @@ export const DiscountBody = z
     reason: z.string().trim().min(3).max(300),
   })
   .strict();
+export const RemoveDiscountBody = z.object({ reason: z.string().trim().min(3, 'ระบุเหตุผลอย่างน้อย 3 ตัวอักษร').max(300) }).strict();
 export const ChangePlanBody = z
   .object({
     plan: z.enum(PLAN_CODES),
@@ -169,6 +170,22 @@ export class WorkspacesService implements OnModuleInit {
   }
 
   /** ส่วนลดเฉพาะราย = คูปองเฉพาะ Workspace นี้ ให้ checkout ของลูกค้าหักจริงตั้งแต่ใบแจ้งหนี้ถัดไป · ตั้งใหม่แทนของเดิม */
+  /**
+   * ยกเลิกส่วนลดเฉพาะราย: ใบแจ้งหนี้ถัดไปคิดราคาเต็ม · ใบที่ออกแล้วยังได้ส่วนลดตามเดิม (coupon_uses ของใบนั้น)
+   * ไม่ต้องอนุมัติเพราะลูกค้าจ่ายเพิ่ม · ไม่แจ้งลูกค้าทางอีเมล (ตอนให้ส่วนลดก็ไม่แจ้ง · ผู้ใช้เลือก 20 พ.ย. 2569)
+   */
+  async removeDiscount(staff: Staff, id: string, input: z.infer<typeof RemoveDiscountBody>) {
+    this.byId(id);
+    const current = (await privateDiscounts(this.db, [id])).get(id);
+    if (!current) throw new AppError(409, 'no_discount', 'Workspace นี้ไม่มีส่วนลดเฉพาะรายที่ใช้อยู่');
+    const left = current.cyclesLeft === null ? 'ตลอดไป' : `เหลือ ${current.cyclesLeft} รอบ`;
+    await this.db.transaction(async (tx) => {
+      await endPrivateDiscounts(tx, id, staff.id, input.reason);
+      await audit(tx, staff, id, 'plan', 'ops.discount_removed', `ยกเลิกส่วนลด ${current.percent}% (${left}) (${current.code}) ใบแจ้งหนี้ถัดไปคิดราคาเต็ม · ${input.reason}`, { type: 'workspace', id });
+    });
+    return { removed: { percent: current.percent, cyclesLeft: current.cyclesLeft } };
+  }
+
   async applyDiscount(staff: Staff, id: string, input: z.infer<typeof DiscountBody>, ctx?: ApprovalContext) {
     const { sub } = await this.sub(id);
     if (!sub) throw new AppError(409, 'no_subscription', 'Workspace นี้ยังไม่มีแพ็กเกจ');

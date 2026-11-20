@@ -243,6 +243,35 @@ describe("รายละเอียดลูกค้า", () => {
     expect(screen.getByText("ส่วนลดเกิน 30% หรือเกิน 12 รอบ")).toBeInTheDocument();
   });
 
+  it("ยกเลิกส่วนลดเฉพาะราย (C3): ปุ่มในแถวส่วนลด · สรุปส่วนลดเดิม · ต้องมีเหตุผล · ไม่ต้องอนุมัติ", async () => {
+    asRole("finance");
+    const sub = overview().subscription!;
+    detail(overview({ subscription: { ...sub, discount: { percent: 20, months: 3, cyclesLeft: 2, reason: "ลูกค้าเทียบราคากับเจ้าอื่น", setAt: "2026-11-20T03:00:00.000Z", setByName: "Fin Finance" } } }));
+    let body: Record<string, unknown> | null = null;
+    server.use(http.post(`${OPS}/workspaces/${WS}/discount/remove`, async ({ request }) => ((body = (await request.json()) as Record<string, unknown>), HttpResponse.json({ removed: { percent: 20, cyclesLeft: 2 } }))));
+    shell(<CustomerDetail id={WS} />, `/workspaces/${WS}`);
+    expect(await screen.findByText("20% · เหลือ 2 รอบ")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "ยกเลิกส่วนลด 20%" }));
+    const dlg = await screen.findByRole("dialog", { name: "ยกเลิกส่วนลดของ สยามเดโม" });
+    expect(within(dlg).getByText("ลูกค้าเทียบราคากับเจ้าอื่น")).toBeInTheDocument();
+    expect(within(dlg).getByText(/Fin Finance/)).toBeInTheDocument();
+    expect(within(dlg).getByText("ใบที่ออกไปแล้วและรอชำระ ยังได้ส่วนลดตามเดิม")).toBeInTheDocument();
+    const submit = within(dlg).getByRole("button", { name: "ยกเลิกส่วนลด" });
+    expect(submit).toBeDisabled();
+    await userEvent.type(within(dlg).getByLabelText("เหตุผล"), "เปลี่ยนเป็นสัญญารายปี");
+    await userEvent.click(submit);
+    await waitFor(() => expect(body).toEqual({ reason: "เปลี่ยนเป็นสัญญารายปี" }));
+    expect(await screen.findByText("ยกเลิกส่วนลด 20% แล้ว · ใบถัดไปคิดราคาเต็ม")).toBeInTheDocument();
+  });
+
+  it("ยกเลิกส่วนลด: Support เห็นแถวส่วนลดแต่ไม่มีปุ่ม · ไม่มีส่วนลดก็ไม่มีปุ่ม", async () => {
+    asRole("support");
+    detail();
+    shell(<CustomerDetail id={WS} />, `/workspaces/${WS}`);
+    expect(await screen.findByText("20% · เหลือ 4 รอบ")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /ยกเลิกส่วนลด/ })).not.toBeInTheDocument();
+  });
+
   it("เปลี่ยนแพ็กเกจ (C4): ตัวอย่างยอด · ที่นั่งเกินเลือกไม่ได้", async () => {
     asRole("finance");
     detail();

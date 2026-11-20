@@ -1,4 +1,5 @@
-import { useFormatter } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
+import type { Overview } from "./types";
 
 /** ตัวช่วยแสดงผลที่หน้าลูกค้าใช้ร่วมกัน · เงินเป็นสตางค์ */
 export function useFmt() {
@@ -16,3 +17,12 @@ export function useFmt() {
 export const PLAN_LABEL: Record<string, string> = { free: "Free", team_s: "Team S", team_m: "Team M", team_l: "Team L", enterprise: "Enterprise" };
 export const planLabel = (p: string | null | undefined) => (p ? (PLAN_LABEL[p] ?? p) : "—");
 export const healthTone = (n: number) => (n >= 70 ? "ok" : n >= 40 ? "warn" : "bad");
+
+/** "เหลือ N รอบ" จากรอบที่ยังไม่ชำระ (cyclesLeft) · ข้อมูลเก่าที่ไม่มี cyclesLeft ใช้จำนวนรอบที่ให้ */
+export function useDiscountLeft() {
+  const t = useTranslations("customers");
+  return (d: NonNullable<NonNullable<Overview["subscription"]>["discount"]>) => {
+    const n = d.cyclesLeft !== undefined ? d.cyclesLeft : d.months;
+    return n == null ? t("overview.forever") : t("overview.cyclesLeft", { n });
+  };
+}

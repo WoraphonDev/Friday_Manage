@@ -12,13 +12,13 @@ import { MotionSwap } from "@/components/shell/page-enter";
 import { Button, LoadingState, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
-import { DiscountDialog, EnterDialog, PlanDialog, RequestAccessDialog, SuspendDialog, TransferDialog, TrialDialog } from "../_parts/Actions";
+import { DiscountDialog, EnterDialog, PlanDialog, RemoveDiscountDialog, RequestAccessDialog, SuspendDialog, TransferDialog, TrialDialog } from "../_parts/Actions";
 import { healthTone, planLabel, useFmt } from "../_parts/format";
 import { AuditPanel, BillingPanel, IntegrationsPanel, MembersPanel, OverviewPanel, ProjectsPanel, SecurityPanel, SupportPanel, UsagePanel, useMembers } from "../_parts/Panels";
 import type { Overview } from "../_parts/types";
 
 type Tab = "overview" | "usage" | "projects" | "users" | "integrations" | "security" | "billing" | "support" | "audit";
-type Dialog = "enter" | "request" | "discount" | "plan" | "trial" | "suspend" | "resume" | "transfer" | null;
+type Dialog = "enter" | "request" | "discount" | "removeDiscount" | "plan" | "trial" | "suspend" | "resume" | "transfer" | null;
 
 /** หน้า 3 · รายละเอียดลูกค้า 9 แท็บ (CustomerDetail.dc.html) */
 export function CustomerDetail({ id }: { id: string }) {
@@ -129,7 +129,7 @@ export function CustomerDetail({ id }: { id: string }) {
       <div role="tabpanel" aria-label={t(`detail.tabs.${tab}` as "detail.tabs.overview", { n: "" })}>
         {/* เปลี่ยนแท็บ: เนื้อหาแท็บเคลื่อนเข้าแบบเปลี่ยนหน้า */}
         <MotionSwap key={tab}>
-          {tab === "overview" && <OverviewPanel ws={ws} />}
+          {tab === "overview" && <OverviewPanel ws={ws} onRemoveDiscount={can.finance && sub?.discount?.percent != null ? () => setDialog("removeDiscount") : undefined} />}
           {tab === "usage" && <UsagePanel id={id} />}
           {tab === "projects" && <ProjectsPanel id={id} />}
           {tab === "users" && <MembersPanel id={id} guests={ws.usage.guests} onTransfer={can.transfer ? () => setDialog("transfer") : undefined} />}
@@ -151,6 +151,7 @@ export function CustomerDetail({ id }: { id: string }) {
           submit={(body) => api.post(`/workspaces/${id}/discount`, body).then(after(t("c3.done", { pct: body.percent })))}
         />
       )}
+      {dialog === "removeDiscount" && <RemoveDiscountDialog ws={ws} onOpenChange={close} onDone={(pct) => after(t("c3remove.done", { pct }))(null)} />}
       {dialog === "plan" && (
         <PlanDialog
           ws={ws}

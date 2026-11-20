@@ -8,17 +8,17 @@ import { Modal, Notice, Seg } from "@/components/kit";
 import { Button, InlineError, Input, Textarea } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
-import { planLabel, useFmt } from "./format";
+import { planLabel, useDiscountLeft, useFmt } from "./format";
 import type { Member, Overview } from "./types";
 
 /** ส่วนท้ายของ Modal: ยกเลิก / ยืนยัน + error */
-function Actions({ busy, disabled, label, error, onCancel, danger }: { busy: boolean; disabled?: boolean; label: string; error: unknown; onCancel: () => void; danger?: boolean }) {
+function Actions({ busy, disabled, label, error, onCancel, danger, cancelLabel }: { busy: boolean; disabled?: boolean; label: string; error: unknown; onCancel: () => void; danger?: boolean; cancelLabel?: string }) {
   const tc = useTranslations("common.dialog");
   return (
     <>
       <InlineError error={error} />
       <div className="dialog-actions">
-        <Button onClick={onCancel}>{tc("cancel")}</Button>
+        <Button onClick={onCancel}>{cancelLabel ?? tc("cancel")}</Button>
         <Button type="submit" variant={danger ? "danger" : "primary"} disabled={busy || disabled}>
           {busy ? tc("saving") : label}
         </Button>
@@ -150,6 +150,52 @@ export function DiscountDialog({ names, context, onOpenChange, submit }: { names
         <Reason label={t("reason")} value={reason} onChange={setReason} />
         {limits && <p className="muted small">{t("limit", { pct: limits.discountPct, cycles: limits.discountCycles })}</p>}
         <Actions busy={m.isPending} disabled={!ok} label={t("submit")} error={m.error} onCancel={() => onOpenChange(false)} />
+      </form>
+    </Modal>
+  );
+}
+
+/** C3 · ยกเลิกส่วนลดเฉพาะราย: ใบถัดไปคิดราคาเต็ม ใบที่ออกแล้วได้ส่วนลดตามเดิม · ไม่ต้องอนุมัติ */
+export function RemoveDiscountDialog({ ws, onOpenChange, onDone }: { ws: Overview; onOpenChange: (o: boolean) => void; onDone: (percent: number) => void }) {
+  const t = useTranslations("customers.c3remove");
+  const fmt = useFmt();
+  const left = useDiscountLeft();
+  const d = ws.subscription?.discount;
+  const [reason, setReason] = useState("");
+  const m = useMutation({
+    mutationFn: () => api.post<{ removed: { percent: number } }>(`/workspaces/${ws.id}/discount/remove`, { reason: reason.trim() }),
+    onSuccess: (r) => onDone(r.removed.percent),
+  });
+  if (d?.percent == null) return null;
+  const ok = reason.trim().length >= 3;
+  return (
+    <Modal open onOpenChange={onOpenChange} title={t("title", { name: ws.name })}>
+      <form className="dialog-body" onSubmit={(e) => (e.preventDefault(), ok && m.mutate())}>
+        <div>
+          <div className="kv">
+            <span className="muted">{t("discount")}</span>
+            <span>{t("value", { pct: d.percent, left: left(d) })}</span>
+          </div>
+          {d.setAt && (
+            <div className="kv">
+              <span className="muted">{t("setAt")}</span>
+              <span>{d.setByName ? t("setBy", { date: fmt.date(d.setAt), name: d.setByName }) : fmt.date(d.setAt)}</span>
+            </div>
+          )}
+          {d.reason && (
+            <div className="kv">
+              <span className="muted">{t("oldReason")}</span>
+              <span>{d.reason}</span>
+            </div>
+          )}
+        </div>
+        <ul className="muted small" style={{ margin: 0, paddingLeft: 18 }}>
+          <li>{t("effectNext")}</li>
+          <li>{t("effectIssued")}</li>
+          <li>{t("effectAgain")}</li>
+        </ul>
+        <Reason label={t("reason")} value={reason} onChange={setReason} />
+        <Actions busy={m.isPending} disabled={!ok} label={t("submit")} error={m.error} onCancel={() => onOpenChange(false)} danger cancelLabel={t("keep")} />
       </form>
     </Modal>
   );

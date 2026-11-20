@@ -13,10 +13,12 @@ import { useIssueFilters } from "./link-dialog";
 import type { FlowNode } from "./ops";
 import { Progress, SHAPE_DEFS, SHAPE_GROUPS, sortChips } from "./shapes";
 import { Swatches } from "./toolbars";
-import { chipOf, MARKERS, MAX_ISSUES_PER_NODE, type Column, type IssueChip, type IssueSearch, type Marker, type NodeData, type Shape } from "./types";
+import { chipOf, COLUMN_TYPE_GROUPS, isKnownType, MARKERS, MAX_ISSUES_PER_NODE, takesLength, type Column, type IssueChip, type IssueSearch, type Marker, type NodeData, type Shape } from "./types";
 import styles from "./diagrams.module.css";
 
 type PanelTab = "format" | "tasks";
+/** ตัวเลือก "พิมพ์เอง" ในรายการชนิดข้อมูล */
+const CUSTOM = "__custom";
 
 export function NodePanel({
   node, tab, setTab, issues, onSnapshot, onPatch, onType, onLink, onUnlink, onCreateTask, canCreateTask, onDelete, iconFocus,
@@ -39,6 +41,8 @@ export function NodePanel({
   const statusText = (c: IssueChip) => (c.deleted ? t("tag.deleted") : c.tone === "overdue" ? tStatus("overdue") : c.status);
   const columns = data.columns ?? [];
   const setColumns = (next: Column[]) => onPatch({ columns: next });
+  /** แถวที่เพิ่งเลือก "พิมพ์เอง" และยังไม่ได้พิมพ์ */
+  const [customRow, setCustomRow] = useState<number | null>(null);
   return (
     <div className={styles.panelInner}>
       <div className={styles.panelTabs} role="tablist">
@@ -110,20 +114,55 @@ export function NodePanel({
             <div className={styles.field}>
               <span>{def.kind === "enum" ? t("panel.values") : t("panel.columns")}</span>
               <div className={styles.columns}>
-                {columns.map((c, i) => (
-                  <div key={i} className={cn(styles.columnRow, def.kind === "enum" && styles.columnRowEnum)}>
-                    <input className={styles.mini} aria-label={t("panel.columnName")} placeholder={t("panel.columnName")} value={c.name} maxLength={80} onFocus={() => (typed.current = false)} onChange={(e) => { once(); setColumns(columns.map((x, j) => (j === i ? { ...x, name: e.target.value } : x))); }} />
-                    {def.kind === "table" && (
-                      <>
-                        <input className={styles.mini} aria-label={t("panel.columnType")} placeholder={t("panel.columnType")} value={c.type} maxLength={40} onFocus={() => (typed.current = false)} onChange={(e) => { once(); setColumns(columns.map((x, j) => (j === i ? { ...x, type: e.target.value } : x))); }} />
-                        <select className={styles.mini} aria-label={t("panel.columnKey")} value={c.key ?? ""} onChange={(e) => { onSnapshot(); setColumns(columns.map((x, j) => (j === i ? { ...x, key: (e.target.value || null) as Column["key"] } : x))); }}>
+                {columns.map((c, i) => {
+                  const edit = (patch: Partial<Column>) => setColumns(columns.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+                  const remove = <button type="button" className={styles.iconBtn} aria-label={t("panel.removeColumn")} onClick={() => { onSnapshot(); setCustomRow(null); setColumns(columns.filter((_, j) => j !== i)); }}><X size={14} /></button>;
+                  const name = <input className={styles.mini} aria-label={t("panel.columnName")} placeholder={t("panel.columnName")} value={c.name} maxLength={80} onFocus={() => (typed.current = false)} onChange={(e) => { once(); edit({ name: e.target.value }); }} />;
+                  if (def.kind === "enum") return <div key={i} className={cn(styles.columnRow, styles.columnRowEnum)}>{name}{remove}</div>;
+                  const custom = customRow === i || (!!c.type && !isKnownType(c.type));
+                  const lengthOn = takesLength(c.type);
+                  return (
+                    <div key={i} className={styles.columnCard}>
+                      <div className={styles.columnLine}>
+                        {name}
+                        {custom ? (
+                          <input className={styles.mini} autoFocus={customRow === i} aria-label={t("panel.columnType")} placeholder={t("panel.columnTypeCustom")} value={c.type} maxLength={40} onFocus={() => (typed.current = false)} onChange={(e) => { once(); edit({ type: e.target.value }); }} onBlur={() => { if (customRow === i) setCustomRow(null); }} />
+                        ) : (
+                          <select className={styles.mini} aria-label={t("panel.columnType")} value={c.type} onChange={(e) => {
+                            if (e.target.value === CUSTOM) { setCustomRow(i); return; }
+                            onSnapshot();
+                            // ชนิดที่ไม่รับความยาว (int, uuid ฯลฯ) ล้างความยาวเดิมทิ้ง ไม่ให้ค้างเป็น int(20)
+                            edit({ type: e.target.value, ...(takesLength(e.target.value) ? {} : { length: undefined }) });
+                          }}>
+                            <option value="">—</option>
+                            {COLUMN_TYPE_GROUPS.map((g) => (
+                              <optgroup key={g.key} label={t(`panel.typeGroup.${g.key}`)}>
+                                {g.types.map((x) => <option key={x} value={x}>{x}</option>)}
+                              </optgroup>
+                            ))}
+                            <option value={CUSTOM}>{t("panel.columnTypeOther")}</option>
+                          </select>
+                        )}
+                        <input className={styles.mini} aria-label={t("panel.columnLength")} placeholder={t("panel.columnLength")} title={t("panel.columnLengthHint")} value={lengthOn ? (c.length ?? "") : ""} disabled={!lengthOn} maxLength={20} onFocus={() => (typed.current = false)} onChange={(e) => { once(); edit({ length: e.target.value || undefined }); }} />
+                      </div>
+                      <div className={styles.columnLine2}>
+                        <select className={styles.mini} aria-label={t("panel.columnKey")} value={c.key ?? ""} onChange={(e) => {
+                          onSnapshot();
+                          const key = (e.target.value || null) as Column["key"];
+                          // Primary Key เป็น NULL ไม่ได้
+                          edit(key === "pk" ? { key, nullable: undefined } : { key });
+                        }}>
                           <option value="">—</option><option value="pk">PK</option><option value="fk">FK</option>
                         </select>
-                      </>
-                    )}
-                    <button type="button" className={styles.iconBtn} aria-label={t("panel.removeColumn")} onClick={() => { onSnapshot(); setColumns(columns.filter((_, j) => j !== i)); }}><X size={14} /></button>
-                  </div>
-                ))}
+                        <label className={styles.check}>
+                          <input type="checkbox" checked={!!c.nullable && c.key !== "pk"} disabled={c.key === "pk"} onChange={(e) => { onSnapshot(); edit({ nullable: e.target.checked || undefined }); }} />
+                          NULL
+                        </label>
+                        {remove}
+                      </div>
+                    </div>
+                  );
+                })}
                 <Button size="small" disabled={columns.length >= 80} onClick={() => { onSnapshot(); onPatch({ columns: [...columns, { name: "", type: "", key: null }] }, { height: Math.max(node.height ?? 0, 60 + (columns.length + 1) * 22) }); }}>
                   <Plus size={14} /> {def.kind === "enum" ? t("panel.addValue") : t("panel.addColumn")}
                 </Button>

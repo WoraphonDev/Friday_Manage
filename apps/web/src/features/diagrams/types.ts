@@ -26,6 +26,10 @@ export interface Column {
   name: string;
   type: string;
   key: "pk" | "fk" | null;
+  /** เช่น 20, 10,2, max · ตรงกับ API (สูงสุด 20 ตัวอักษร) */
+  length?: string;
+  /** ไม่มีค่า = NOT NULL */
+  nullable?: boolean;
 }
 export interface NodeData extends Record<string, unknown> {
   label: string;
@@ -174,3 +178,20 @@ export interface IssueFilters {
   people: Person[];
 }
 export const chipOf = (o: IssueOption): IssueChip => ({ id: o.id, key: o.key, title: o.title, status: o.status, category: o.category, tone: o.tone, dueDate: o.dueDate, deleted: false, assignee: o.assignee });
+
+/** ชนิดข้อมูลให้เลือกในตาราง ER · รวมชื่อที่ใช้บ่อยของ SQL Server / PostgreSQL / MySQL · ค่าที่ไม่อยู่ในรายการยังเก็บและแสดงได้ */
+export const COLUMN_TYPE_GROUPS = [
+  { key: "number", types: ["int", "bigint", "smallint", "tinyint", "decimal", "numeric", "float", "real", "money", "serial", "bigserial"] },
+  { key: "text", types: ["char", "varchar", "nchar", "nvarchar", "text", "ntext"] },
+  { key: "datetime", types: ["date", "time", "datetime", "datetime2", "timestamp", "timestamptz", "interval"] },
+  { key: "other", types: ["boolean", "bit", "uuid", "uniqueidentifier", "json", "jsonb", "xml", "binary", "varbinary", "bytea", "blob", "enum"] },
+] as const;
+/** ชนิดที่รับความยาว/ความละเอียดได้ · ชนิดอื่นปิดช่องความยาว */
+export const LENGTH_TYPES = new Set(["decimal", "numeric", "float", "char", "varchar", "nchar", "nvarchar", "time", "datetime2", "timestamp", "timestamptz", "binary", "varbinary", "bit"]);
+const KNOWN_TYPES = new Set<string>(COLUMN_TYPE_GROUPS.flatMap((g) => g.types));
+/** ชนิดที่พิมพ์เอง (ไม่อยู่ในรายการ) ให้กรอกความยาวได้เสมอ */
+export const takesLength = (type: string) => !!type && (LENGTH_TYPES.has(type.toLowerCase()) || !KNOWN_TYPES.has(type.toLowerCase()));
+/** ตรงตัวพิมพ์ เพราะ <select> เลือกค่าแบบตรงตัว · "UUID" ที่พิมพ์ไว้เดิมจึงแสดงเป็นช่องพิมพ์เอง */
+export const isKnownType = (type: string) => KNOWN_TYPES.has(type);
+/** nvarchar + 20 → nvarchar(20) */
+export const columnTypeText = (c: Pick<Column, "type" | "length">) => (c.type && c.length ? `${c.type}(${c.length})` : c.type);

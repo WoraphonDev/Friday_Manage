@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DiagramIcon } from "./icons";
-import type { IssueChip, NodeColor, NodeData, Shape, Tone } from "./types";
+import { columnTypeText, type IssueChip, type NodeColor, type NodeData, type Shape, type Tone } from "./types";
 import styles from "./diagrams.module.css";
 
 export type GroupKey = "flowchart" | "swimlane" | "uml" | "architecture" | "er" | "whiteboard";
@@ -389,7 +389,10 @@ function NodeView({ id, type, data, selected }: NodeProps<DiagramNode>) {
               <div key={i} className={styles.tableRow}>
                 <span className={styles.colKey}>{c.key ? c.key.toUpperCase() : ""}</span>
                 <span className={styles.colName}>{c.name}</span>
-                <span className={styles.colType}>{c.type}</span>
+                <span className={styles.colType}>
+                  {columnTypeText(c)}
+                  {c.nullable && c.key !== "pk" && <span className={styles.colNull}>NULL</span>}
+                </span>
               </div>
             ))}
           </div>

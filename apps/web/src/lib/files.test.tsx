@@ -322,11 +322,28 @@ describe("Files (8)", () => {
     expect(urls.every((u) => u.searchParams.get("trashed") !== "true")).toBe(true);
   });
 
-  it("ว่าง · Error มี requestId · Guest / 403", async () => {
+  it("All files รอรวมไฟล์ทุกโฟลเดอร์ก่อน ไม่ขึ้นว่าง · ว่างจริง · Error มี requestId · Guest / 403", async () => {
+    // รากว่างแต่โฟลเดอร์ย่อยมีไฟล์: ห้ามขึ้น "ยังไม่มีไฟล์" ระหว่างรอ แล้วแสดงไฟล์ในโฟลเดอร์
     root = [];
+    let release!: () => void;
+    const hold = new Promise<void>((resolve) => { release = resolve; });
+    server.use(http.get("*/api/v1/w/:ws/projects/:key/files", async ({ request }) => {
+      if (new URL(request.url).searchParams.get("folder") !== D1) return undefined;
+      await hold;
+      return HttpResponse.json({ items: [file("00000000-0000-4000-8000-0000000000f3", "สัญญาฉบับจริง.pdf", { folderId: D1 })], breadcrumb: [{ id: D1, name: "เอกสารสัญญา" }], totalBytes: 3_250_000 });
+    }));
     const a = mount();
-    expect(await screen.findByRole("heading", { name: "ยังไม่มีไฟล์ในที่นี้" })).toBeInTheDocument();
+    await waitFor(() => expect(urls.some((u) => u.searchParams.get("folder") === D2)).toBe(true));
+    expect(screen.queryByRole("heading", { name: "ยังไม่มีไฟล์ในที่นี้" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("status").length).toBeGreaterThan(0);
+    release();
+    expect((await screen.findAllByText("สัญญาฉบับจริง.pdf")).length).toBeGreaterThan(0);
     a.unmount();
+    // ทุกที่ว่างจริง
+    server.use(http.get("*/api/v1/w/:ws/projects/:key/folders", () => HttpResponse.json({ rootFileCount: 0, items: [] })));
+    const e = mount();
+    expect(await screen.findByRole("heading", { name: "ยังไม่มีไฟล์ในที่นี้" })).toBeInTheDocument();
+    e.unmount();
     server.use(http.get("*/api/v1/w/:ws/projects/:key/files", () => errorBody(500)));
     const b = mount();
     expect(await screen.findByText(/req_w11_001/)).toBeInTheDocument();

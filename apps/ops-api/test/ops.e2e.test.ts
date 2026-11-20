@@ -151,7 +151,10 @@ describe('ล็อกอินด้วยรหัสผ่าน + แอป 
     expect((await agent.post('/ops/auth/password/verify').send({ setupToken: setup.body.setupToken, password: 'correct-horse-battery', code: code(setup.body.secret) })).status).toBe(400);
     expect((await agent.post('/ops/auth/password/verify').send({ setupToken: setup.body.setupToken, password: 'Correct-horse-battery', code: code(setup.body.secret) })).status).toBe(400);
     expect((await agent.post('/ops/auth/password/verify').send({ setupToken: setup.body.setupToken, password: PW, code: '000000' })).status).toBe(422);
-    const ok = await agent.post('/ops/auth/password/verify').send({ setupToken: setup.body.setupToken, password: PW, code: code(setup.body.secret) });
+    // จำรอบ 30 วินาทีที่ใช้ตอนตั้งค่า แล้วทดสอบใช้ซ้ำด้วยรหัสเดิมจริง ๆ · เดิมคำนวณใหม่จากเวลาปัจจุบัน ถ้า CI ช้าจนข้ามรอบ
+    // จะได้รหัสของรอบถัดไปที่ยังไม่เคยใช้ เซิร์ฟเวอร์ตอบ 200 แทน 401 (เทสต์ล้มสลับ)
+    const usedStep = Math.floor(Date.now() / 1000 / 30);
+    const ok = await agent.post('/ops/auth/password/verify').send({ setupToken: setup.body.setupToken, password: PW, code: totpAt(setup.body.secret, usedStep) });
     expect(ok.status, JSON.stringify(ok.body)).toBe(200);
     expect(ok.body.status).toBe('active');
     const stored = (await t.owner.query(`SELECT password_hash, totp_secret_enc FROM staff_users WHERE id = $1`, [id])).rows[0];
@@ -167,9 +170,10 @@ describe('ล็อกอินด้วยรหัสผ่าน + แอป 
     expect(step1.headers['set-cookie']).toBeUndefined(); // ยังไม่ได้ session จนกว่าใส่รหัส 6 หลัก
     expect((await other.get('/ops/auth/me')).status).toBe(401);
     // รหัสที่ใช้ตอนตั้งค่าแล้วใช้ซ้ำไม่ได้ · รหัสของ step ถัดไปใช้ได้
-    expect((await other.post('/ops/auth/login/totp').send({ mfaToken: step1.body.mfaToken, code: code(setup.body.secret) })).status).toBe(401);
+    expect((await other.post('/ops/auth/login/totp').send({ mfaToken: step1.body.mfaToken, code: totpAt(setup.body.secret, usedStep) })).status).toBe(401);
     expect((await other.post('/ops/auth/login/totp').send({ mfaToken: 'bad.token.value', code: '123456' })).status).toBe(400);
-    const step2 = await other.post('/ops/auth/login/totp').send({ mfaToken: step1.body.mfaToken, code: code(setup.body.secret, 1) });
+    // รอบถัดจากที่ใช้ไป: เซิร์ฟเวอร์รับ ±1 รอบ จึงผ่านแม้เวลาจริงจะเลยไปอีก 1 รอบแล้ว
+    const step2 = await other.post('/ops/auth/login/totp').send({ mfaToken: step1.body.mfaToken, code: totpAt(setup.body.secret, usedStep + 1) });
     expect(step2.status, JSON.stringify(step2.body)).toBe(200);
     expect(step2.body.staff).toMatchObject({ email: 'pw@friday.example.com' });
     const me = await other.get('/ops/auth/me');

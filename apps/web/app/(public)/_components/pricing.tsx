@@ -13,7 +13,7 @@ import styles from "./public.module.css";
 
 export type Cyc = "monthly" | "yearly";
 /** ปุ่มของแต่ละแพ็กเกจ · ไม่มี href = แสดงเป็นป้ายเฉย ๆ (เช่น แพ็กเกจปัจจุบัน) */
-export type PlanCta = { label: string; href?: string };
+export type PlanCta = { label: string; href?: string; onClick?: () => void };
 // ช่องทางติดต่อฝ่ายขายตั้งตอน deploy · ไม่ตั้ง = ไปหน้าสมัครพร้อมแพ็กเกจ Enterprise ให้ทีมติดต่อกลับ
 const SALES_URL = process.env.NEXT_PUBLIC_SALES_URL ?? "/contact-sales";
 
@@ -122,7 +122,7 @@ function Plans({ data, cycle, team, setTeam, ctaFor }: { data: PublicPlans; cycl
               </div>
               <span className={cn(styles.muted, styles.sub)}>{pr.sub}</span>
               {c.href ? (
-                <Link className={cn(buttonVariants({ variant: hot ? "primary" : "secondary" }), styles.btn)} href={c.href}>
+                <Link className={cn(buttonVariants({ variant: hot ? "primary" : "secondary" }), styles.btn)} href={c.href} onClick={c.onClick}>
                   {c.label}
                 </Link>
               ) : (

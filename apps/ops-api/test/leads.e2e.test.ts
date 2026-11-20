@@ -38,7 +38,37 @@ describe('Lead และดีล', () => {
     expect(trial).toEqual([{ company: 'Co riverbank', seats: 22, source: 'trial', workspace_id: riverbank.id }]);
     expect((await sam.agent.get('/ops/leads/summary')).status).toBe(403);
     await boss.agent.put('/ops/leads/settings').send({ trialSeats: 1 }).expect(200);
+    expect((await boss.agent.get('/ops/leads/settings')).body).toEqual({ trialSeats: 1, pricingDays: 2, enterpriseClick: true });
     expect((await svc.daily(today)).created).toBe(1);
+  });
+
+  it('งานรายวัน: ลูกค้าทดลองที่ดูตารางราคาในแอปถึงเกณฑ์ หรือกดติดต่อฝ่ายขาย Enterprise เป็น Lead แม้ที่นั่งยังไม่ถึง · บันทึกเหตุผลใน Lead', async () => {
+    const svc = t.app.get(LeadsService);
+    await boss.agent.put('/ops/leads/settings').send({ trialSeats: 500 }).expect(200);
+    const viewer = await customer(t, 'pricing-viewer', { status: 'trialing' });
+    const clicker = await customer(t, 'sales-clicker', { status: 'trialing' });
+    const once = await customer(t, 'one-look', { status: 'trialing' });
+    // ดูตารางราคา 2 วัน (เกณฑ์ค่าเริ่ม 2) · อีกที่ดูวันเดียว · อีกที่กดติดต่อฝ่ายขาย Enterprise · เหตุการณ์เก่ากว่า 14 วันไม่นับ
+    await t.owner.query(
+      `INSERT INTO product_events (workspace_id, user_id, name, props, occurred_at) VALUES
+        ($1, $2, 'pricing.viewed', '{"placement":"billing_plans"}', now() - interval '3 days'),
+        ($1, $2, 'pricing.viewed', '{"placement":"billing_dialog"}', now() - interval '1 day'),
+        ($3, $4, 'upgrade.prompt_clicked', '{"placement":"pricing","planTo":"enterprise"}', now()),
+        ($5, $6, 'pricing.viewed', '{"placement":"billing_plans"}', now()),
+        ($5, $6, 'pricing.viewed', '{"placement":"billing_plans"}', now() - interval '20 days')`,
+      [viewer.id, viewer.owner, clicker.id, clicker.owner, once.id, once.owner],
+    );
+    expect((await svc.daily(today)).created).toBe(2);
+    const notes = (await t.owner.query(`SELECT l.company, n.body FROM leads l JOIN lead_notes n ON n.lead_id = l.id WHERE l.workspace_id = ANY($1) AND n.kind = 'system' ORDER BY l.company`, [[viewer.id, clicker.id, once.id]])).rows;
+    expect(notes).toEqual([
+      { company: 'Co pricing-viewer', body: 'เปิดดูตารางราคาในแอป 2 วันใน 14 วัน (เกณฑ์ 2 วัน)' },
+      { company: 'Co sales-clicker', body: 'กด "ติดต่อฝ่ายขาย" ของ Enterprise ในแอป 1 ครั้งใน 14 วัน' },
+    ]);
+    // ปิดเกณฑ์ราคา (0) และปุ่ม Enterprise: ไม่สร้างจากสัญญาณเหล่านี้
+    await boss.agent.put('/ops/leads/settings').send({ pricingDays: 0, enterpriseClick: false }).expect(200);
+    await t.owner.query(`DELETE FROM leads WHERE workspace_id = ANY($1)`, [[viewer.id, clicker.id]]);
+    expect((await svc.daily(today)).created).toBe(0);
+    await boss.agent.put('/ops/leads/settings').send({ trialSeats: 20, pricingDays: 2, enterpriseClick: true }).expect(200);
   });
 
   it('ต้องทำตอนนี้: Lead ใหม่ที่ยังไม่ติดต่อ (เกิน 1 วันทำการ = เลยเกณฑ์) · ตัวเลขต่อขั้น', async () => {

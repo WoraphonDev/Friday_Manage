@@ -85,4 +85,22 @@ describe("Lead และดีล", () => {
     await userEvent.click(within(dlg).getByRole("button", { name: "แพ้ (ใส่เหตุผล)" }));
     await waitFor(() => expect(sent[1]).toEqual({ stage: "lost", lostReason: "competitor" }));
   });
+
+  it("เกณฑ์ Lead จากลูกค้าทดลอง: ที่นั่ง · ดูตารางราคากี่วัน (0 = ไม่ใช้) · กดติดต่อฝ่ายขาย Enterprise", async () => {
+    asRole("admin");
+    let sent: unknown = null;
+    page();
+    server.use(
+      http.get(`${OPS}/leads/settings`, () => HttpResponse.json({ trialSeats: 20, pricingDays: 2, enterpriseClick: true })),
+      http.put(`${OPS}/leads/settings`, async ({ request }) => ((sent = await request.json()), HttpResponse.json(sent))),
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "เกณฑ์ Lead จากลูกค้าทดลอง" }));
+    const days = await screen.findByLabelText("เปิดดูตารางราคาในแอปตั้งแต่ (วัน)");
+    expect(days).toHaveValue(2);
+    await userEvent.clear(days);
+    await userEvent.type(days, "0");
+    await userEvent.click(screen.getByRole("switch", { name: 'กด "ติดต่อฝ่ายขาย" ของ Enterprise ในแอป' }));
+    await userEvent.click(screen.getByRole("button", { name: "บันทึก" }));
+    await waitFor(() => expect(sent).toEqual({ trialSeats: 20, pricingDays: 0, enterpriseClick: false }));
+  });
 });

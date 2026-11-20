@@ -20,9 +20,14 @@ const LOST_KEEP_DAYS = 730;
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const NEEDS = ['sso', 'annual_contract', 'tax_invoice', 'onboarding', 'api', 'security_review', 'other'] as const;
 
-export const LeadSettings = z.object({ trialSeats: z.number().int().min(1).max(10_000) }).strict();
+/**
+ * เกณฑ์ Lead จากลูกค้าทดลอง (ปุ่มเฟือง) · เข้าข้อใดข้อหนึ่งก็สร้าง
+ * pricingDays: สมาชิกเปิดดูตารางราคาในแอป (รวม Enterprise) อย่างน้อยกี่วันใน 14 วัน · 0 = ไม่ใช้
+ * enterpriseClick: กด "ติดต่อฝ่ายขาย" ของ Enterprise ในแอปภายใน 14 วัน
+ */
+export const LeadSettings = z.object({ trialSeats: z.number().int().min(1).max(10_000), pricingDays: z.number().int().min(0).max(14), enterpriseClick: z.boolean() }).strict();
 export type LeadSettings = z.infer<typeof LeadSettings>;
-const DEFAULTS: LeadSettings = { trialSeats: 20 };
+const DEFAULTS: LeadSettings = { trialSeats: 20, pricingDays: 2, enterpriseClick: true };
 
 export const LeadsQuery = PageQuery.extend({
   stage: z.enum(LEAD_STAGES).optional(),
@@ -110,32 +115,44 @@ export class LeadsService implements OnModuleInit, OnModuleDestroy {
     const ok = LeadSettings.safeParse({ ...DEFAULTS, ...((r?.value ?? {}) as object) });
     return ok.success ? ok.data : DEFAULTS;
   }
-  async saveSettings(staff: Staff, input: LeadSettings) {
+  async saveSettings(staff: Staff, patch: Partial<LeadSettings>) {
+    const input: LeadSettings = { ...(await this.settings()), ...patch };
     await this.db.insert(s.opsSettings).values({ key: KEY, value: input, updatedBy: staff.id }).onConflictDoUpdate({ target: s.opsSettings.key, set: { value: input, updatedBy: staff.id, updatedAt: new Date() } });
-    await staffAudit(this.db, staff, 'leads.settings_updated', `Lead จากลูกค้าทดลองเมื่อที่นั่งใช้งานจริง ≥ ${input.trialSeats}`);
+    await staffAudit(this.db, staff, 'leads.settings_updated', `Lead จากลูกค้าทดลองเมื่อที่นั่งใช้งานจริง ≥ ${input.trialSeats} · ดูราคา ≥ ${input.pricingDays || 'ไม่ใช้'} วัน · กดติดต่อฝ่ายขาย Enterprise ${input.enterpriseClick ? 'ใช้' : 'ไม่ใช้'}`);
     return input;
   }
 
   /** งานรายวัน: Lead จากลูกค้าทดลองที่เข้าเกณฑ์ (ไม่สร้างซ้ำ) · ลบ Lead ที่แพ้เกิน 2 ปี */
   async daily(today = todayBkk()) {
-    const { trialSeats } = await this.settings();
-    const found = await this.rows<{ id: string; name: string; seats: number; email: string | null }>(sql`
+    const { trialSeats, pricingDays, enterpriseClick } = await this.settings();
+    const found = await this.rows<{ id: string; name: string; seats: number; email: string | null; pricingDays: number; enterpriseClicks: number }>(sql`
       select w.id, w.name,
         (select count(*)::int from workspace_members m where m.workspace_id = w.id and m.status = 'active' and m.role <> 'guest' and m.last_active_at > now() - interval '14 days') as seats,
+        -- สัญญาณสนใจแพ็กเกจใหญ่ (เว็บส่งเข้า product_events · นับครั้งแรกของวันต่อคนอยู่แล้ว)
+        (select count(distinct (e.occurred_at at time zone 'Asia/Bangkok')::date)::int from product_events e
+          where e.workspace_id = w.id and e.name = 'pricing.viewed' and e.occurred_at > now() - interval '14 days') as "pricingDays",
+        (select count(*)::int from product_events e
+          where e.workspace_id = w.id and e.name = 'upgrade.prompt_clicked' and e.props->>'planTo' = 'enterprise' and e.occurred_at > now() - interval '14 days') as "enterpriseClicks",
         (select u.email from workspace_members m join users u on u.id = m.user_id where m.workspace_id = w.id and m.role = 'owner' order by m.joined_at limit 1) as email
       from workspaces w join subscriptions sub on sub.workspace_id = w.id
       where w.deleted_at is null and sub.status = 'trialing'
         and not exists (select 1 from leads l where l.workspace_id = w.id)
         and not exists (select 1 from ops_workspace_flags f where f.workspace_id = w.id and f.test_flag = 'test')`);
     let created = 0;
-    for (const w of found.filter((x) => x.seats >= trialSeats)) {
+    for (const w of found) {
+      const why = [
+        w.seats >= trialSeats ? `ลูกค้าทดลองใช้งานจริง ${w.seats} ที่นั่ง (เกณฑ์ ${trialSeats})` : '',
+        pricingDays > 0 && w.pricingDays >= pricingDays ? `เปิดดูตารางราคาในแอป ${w.pricingDays} วันใน 14 วัน (เกณฑ์ ${pricingDays} วัน)` : '',
+        enterpriseClick && w.enterpriseClicks > 0 ? `กด "ติดต่อฝ่ายขาย" ของ Enterprise ในแอป ${w.enterpriseClicks} ครั้งใน 14 วัน` : '',
+      ].filter(Boolean);
+      if (!why.length) continue;
       const [lead] = await this.db
         .insert(s.leads)
         .values({ company: w.name, email: w.email, seats: w.seats, teamSize: w.seats, source: 'trial', workspaceId: w.id })
         .onConflictDoNothing()
         .returning({ id: s.leads.id });
       if (!lead) continue;
-      await this.db.insert(s.leadNotes).values({ leadId: lead.id, kind: 'system', body: `ลูกค้าทดลองใช้งานจริง ${w.seats} ที่นั่ง (เกณฑ์ ${trialSeats})` });
+      await this.db.insert(s.leadNotes).values({ leadId: lead.id, kind: 'system', body: why.join(' · ') });
       created++;
     }
     const purged = await this.db.delete(s.leads).where(and(eq(s.leads.stage, 'lost'), sql`${s.leads.closedAt} < ${today}::date - ${LOST_KEEP_DAYS}::int`)).returning({ id: s.leads.id });

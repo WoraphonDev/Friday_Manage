@@ -9195,6 +9195,36 @@
                           "properties": {
                             "name": {
                               "type": "string",
+                              "const": "pricing.viewed"
+                            },
+                            "props": {
+                              "type": "object",
+                              "properties": {
+                                "placement": {
+                                  "type": "string",
+                                  "enum": [
+                                    "billing_plans",
+                                    "billing_dialog"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "placement"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "props"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
                               "enum": [
                                 "checkout.started",
                                 "checkout.method_selected"

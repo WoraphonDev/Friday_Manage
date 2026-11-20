@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { useDeferredValue, useEffect, useState } from "react";
 import { hasAny, rolesOf } from "@/components/access";
 import { ActiveFilters, FilterButton, type FilterDef, filterKeys, filterQuery } from "@/components/filters";
-import { Empty, ErrorBlock, ListBar, Modal, NoAccess, PageHead, Pager, SettingsButton, TableSkeleton, Tabs, TodoCard } from "@/components/kit";
+import { Empty, ErrorBlock, ListBar, Modal, NoAccess, PageHead, Pager, SettingsButton, Switch, TableSkeleton, Tabs, TodoCard } from "@/components/kit";
 import { Button, InlineError, Input, Pill, useToast } from "@/components/ui";
 import { api, OPS_BASE } from "@/lib/api";
 import { useMe } from "@/lib/query";
@@ -252,16 +252,22 @@ function AddLead({ onClose, onAdded }: { onClose: () => void; onAdded: (id: stri
 function LeadSettingsPanel() {
   const t = useTranslations("leads.settings");
   const toast = useToast();
-  const q = useQuery({ queryKey: [...LEADS_KEY, "settings"], queryFn: () => api.get<{ trialSeats: number }>("/leads/settings") });
-  const [v, setV] = useState<string | null>(null);
-  const m = useMutation({ mutationFn: () => api.put("/leads/settings", { trialSeats: Number(v) }), onSuccess: () => toast(t("saved")) });
-  if (!q.data) return <TableSkeleton rows={1} cols={2} />;
+  type Settings = { trialSeats: number; pricingDays: number; enterpriseClick: boolean };
+  const q = useQuery({ queryKey: [...LEADS_KEY, "settings"], queryFn: () => api.get<Settings>("/leads/settings") });
+  const [v, setV] = useState<{ trialSeats: string; pricingDays: string; enterpriseClick: boolean } | null>(null);
+  const cur = v ?? (q.data ? { trialSeats: String(q.data.trialSeats), pricingDays: String(q.data.pricingDays), enterpriseClick: q.data.enterpriseClick } : null);
+  const valid = !!cur && Number(cur.trialSeats) >= 1 && cur.pricingDays !== "" && Number(cur.pricingDays) >= 0 && Number(cur.pricingDays) <= 14;
+  const m = useMutation({ mutationFn: () => api.put("/leads/settings", { trialSeats: Number(cur!.trialSeats), pricingDays: Number(cur!.pricingDays), enterpriseClick: cur!.enterpriseClick }), onSuccess: () => toast(t("saved")) });
+  if (!q.data || !cur) return <TableSkeleton rows={1} cols={2} />;
   return (
-    <form className="stack" onSubmit={(e) => (e.preventDefault(), v && Number(v) >= 1 && m.mutate())}>
-      <Input label={t("trialSeats")} type="number" min={1} value={v ?? String(q.data.trialSeats)} onChange={(e) => setV(e.target.value)} />
+    <form className="stack" onSubmit={(e) => (e.preventDefault(), valid && m.mutate())}>
+      <Input label={t("trialSeats")} type="number" min={1} value={cur.trialSeats} onChange={(e) => setV({ ...cur, trialSeats: e.target.value })} />
+      {/* สัญญาณสนใจแพ็กเกจใหญ่จากการใช้งานในแอป (เว็บลูกค้าส่ง pricing.viewed / ปุ่มติดต่อฝ่ายขาย Enterprise) */}
+      <Input label={t("pricingDays")} hint={t("pricingDaysHint")} type="number" min={0} max={14} value={cur.pricingDays} onChange={(e) => setV({ ...cur, pricingDays: e.target.value })} />
+      <Switch checked={cur.enterpriseClick} label={t("enterpriseClick")} onChange={(enterpriseClick) => setV({ ...cur, enterpriseClick })} />
       <InlineError error={m.error} />
       <div className="dialog-actions">
-        <Button type="submit" variant="primary" disabled={!v || m.isPending}>
+        <Button type="submit" variant="primary" disabled={!v || !valid || m.isPending}>
           {t("save")}
         </Button>
       </div>

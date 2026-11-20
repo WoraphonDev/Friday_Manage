@@ -390,7 +390,7 @@ function NodeView({ id, type, data, selected }: NodeProps<DiagramNode>) {
                 <span className={styles.colKey}>{c.key ? c.key.toUpperCase() : ""}</span>
                 <span className={styles.colName}>{c.name}</span>
                 <span className={styles.colType}>
-                  {columnTypeText(c)}
+                  <span>{columnTypeText(c)}</span>
                   {c.defaultValue && <span className={styles.colDefault} title={`DEFAULT ${c.defaultValue}`}>= {c.defaultValue}</span>}
                   {c.nullable && c.key !== "pk" && <span className={styles.colNull}>NULL</span>}
                 </span>

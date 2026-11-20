@@ -236,14 +236,21 @@ a.card:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
 .tableHead .label { font-weight:600; text-align:center; }
 .stereo { font-size:10px; color:var(--muted); font-weight:500; }
 .tableRows { overflow:hidden; padding:4px 0; }
-.tableRow { display:grid; grid-template-columns:24px minmax(0, 1fr) auto; gap:6px; padding:1px 10px; font-size:11.5px; line-height:20px; }
+/* ชื่อคอลัมน์ได้ที่ก่อน (สูงสุด 60%) ชนิด/Default/NULL ใช้ที่เหลือแล้วตัดด้วย … */
+.tableRow { display:flex; gap:6px; padding:1px 10px; font-size:11.5px; line-height:20px; }
+.tableRow .colKey { flex:none; width:24px; }
+.tableRow .colName { flex:0 1 auto; max-width:60%; }
+/* ในช่องชนิด ตัดเฉพาะค่า Default ชนิดกับ NULL เห็นครบเสมอ */
+.tableRow .colType { flex:1 1 0; min-width:0; overflow:hidden; display:flex; justify-content:flex-end; align-items:baseline; }
+.tableRow .colType > * { flex:none; }
+.tableRow .colType > .colDefault { flex:0 1 auto; min-width:0; }
 .enumRow { padding:1px 10px; font-size:11.5px; line-height:20px; font-family:ui-monospace, monospace; }
 .colKey { font-size:10px; font-weight:700; color:var(--primary-text); }
 .colName { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .colType { color:var(--muted); white-space:nowrap; }
 .colNull { margin-left:6px; font-size:10px; font-weight:600; }
 /* ค่า Default ยาวตัดด้วย … (ชี้ดูค่าเต็มได้) ไม่ให้กล่องกว้างเกิน */
-.colDefault { margin-left:6px; color:var(--primary-text); font-family:ui-monospace, monospace; font-size:10.5px; display:inline-block; max-width:120px; overflow:hidden; text-overflow:ellipsis; vertical-align:bottom; }
+.colDefault { margin-left:6px; color:var(--primary-text); font-family:ui-monospace, monospace; font-size:10.5px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .classSection { padding:4px 10px; font-size:11.5px; line-height:18px; white-space:pre-wrap; font-family:ui-monospace, monospace; border-bottom:1px solid var(--node-border, var(--border-strong)); text-align:left; }
 .classSection:last-child { border-bottom:0; flex:1; }
 .kind_lifeline { background:transparent; border-color:transparent; justify-content:flex-start; padding:0; gap:0; }

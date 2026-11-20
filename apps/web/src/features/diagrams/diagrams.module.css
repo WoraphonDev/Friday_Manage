@@ -240,8 +240,10 @@ a.card:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
 .enumRow { padding:1px 10px; font-size:11.5px; line-height:20px; font-family:ui-monospace, monospace; }
 .colKey { font-size:10px; font-weight:700; color:var(--primary-text); }
 .colName { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.colType { color:var(--muted); }
+.colType { color:var(--muted); white-space:nowrap; }
 .colNull { margin-left:6px; font-size:10px; font-weight:600; }
+/* ค่า Default ยาวตัดด้วย … (ชี้ดูค่าเต็มได้) ไม่ให้กล่องกว้างเกิน */
+.colDefault { margin-left:6px; color:var(--primary-text); font-family:ui-monospace, monospace; font-size:10.5px; display:inline-block; max-width:120px; overflow:hidden; text-overflow:ellipsis; vertical-align:bottom; }
 .classSection { padding:4px 10px; font-size:11.5px; line-height:18px; white-space:pre-wrap; font-family:ui-monospace, monospace; border-bottom:1px solid var(--node-border, var(--border-strong)); text-align:left; }
 .classSection:last-child { border-bottom:0; flex:1; }
 .kind_lifeline { background:transparent; border-color:transparent; justify-content:flex-start; padding:0; gap:0; }
@@ -355,7 +357,8 @@ a.card:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
 /* ตาราง ER: 2 บรรทัดต่อคอลัมน์ (ชื่อ ชนิด ความยาว / คีย์ NULL ลบ) เพราะแผงกว้างแค่ 272px */
 .columnCard { display:flex; flex-direction:column; gap:4px; padding:5px; border:1px solid var(--border); border-radius:8px; background:var(--surface-2); }
 .columnLine { display:grid; grid-template-columns:minmax(0, 1fr) 84px 44px; gap:4px; }
-.columnLine2 { display:grid; grid-template-columns:56px minmax(0, 1fr) 28px; gap:6px; align-items:center; }
+.columnLine2 { display:grid; grid-template-columns:56px minmax(0, 1fr) auto 28px; gap:4px; align-items:center; }
+.monoInput { font-family:ui-monospace, monospace; font-size:11px; }
 .columnLine2 .check { font-size:12px; }
 .mini:disabled { background:var(--subtle); color:var(--faint); cursor:not-allowed; }
 .mini { min-width:0; min-height:28px; border:1px solid var(--border-strong); border-radius:6px; background:var(--card); color:var(--foreground); font:inherit; font-size:11.5px; font-weight:400; padding:0 6px; }

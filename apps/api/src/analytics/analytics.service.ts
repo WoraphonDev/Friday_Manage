@@ -22,6 +22,8 @@ const EventItem = z.discriminatedUnion('name', [
   z.object({ name: z.literal('limit.hit'), props: z.object({ limit: z.enum(LIMITS), current: z.number().int().min(0).optional(), max: z.number().int().min(0).optional() }).strict() }).strict(),
   z.object({ name: z.enum(['upgrade.prompt_shown', 'upgrade.prompt_clicked']), props: z.object({ placement: short, planFrom: short.optional(), planTo: short.optional() }).strict() }).strict(),
   z.object({ name: z.literal('onboarding.step_done'), props: z.object({ step: short }).strict() }).strict(),
+  // ดูตารางเทียบแพ็กเกจในแอป (รวม Enterprise) · สัญญาณ Lead ของ Ops (O54) จาก Workspace ทดลอง
+  z.object({ name: z.literal('pricing.viewed'), props: z.object({ placement: z.enum(['billing_plans', 'billing_dialog']) }).strict() }).strict(),
   z.object({ name: z.enum(['checkout.started', 'checkout.method_selected']), props: z.object({ plan: short.optional(), cycle: z.enum(['monthly', 'yearly']).optional(), method: z.enum(['card', 'promptpay', 'transfer', 'bill_payment']).optional() }).strict() }).strict(),
 ]);
 export const EventsBody = z.object({ events: z.array(EventItem).min(1).max(50) }).strict();
@@ -139,11 +141,13 @@ export class AnalyticsService implements OnModuleInit {
         const since = new Date(`${today()}T00:00:00+07:00`);
         let accepted = 0;
         for (const e of body.events) {
-          if (e.name === 'feature.used') {
+          // นับครั้งแรกของวันต่อคน: ฟีเจอร์ที่ใช้ · การเปิดดูตารางราคา (เปิดซ้ำทั้งวันไม่เพิ่มแถว)
+          const once = e.name === 'feature.used' ? (['feature', e.props.feature] as const) : e.name === 'pricing.viewed' ? (['placement', e.props.placement] as const) : null;
+          if (once) {
             const [seen] = await tx
               .select({ id: s.productEvents.id })
               .from(s.productEvents)
-              .where(and(eq(s.productEvents.userId, auth.userId), eq(s.productEvents.name, e.name), sql`${s.productEvents.props}->>'feature' = ${e.props.feature}`, gte(s.productEvents.occurredAt, since)))
+              .where(and(eq(s.productEvents.userId, auth.userId), eq(s.productEvents.name, e.name), sql`${s.productEvents.props}->>${once[0]} = ${once[1]}`, gte(s.productEvents.occurredAt, since)))
               .limit(1);
             if (seen) continue;
           }

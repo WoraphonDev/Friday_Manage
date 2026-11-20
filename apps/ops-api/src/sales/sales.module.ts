@@ -35,7 +35,8 @@ export class LeadsController {
   @Roles('owner')
   @Put('settings')
   saveSettings(@Req() req: OpsRequest, @Body() body: unknown) {
-    return this.leads.saveSettings(req.staff!, parse(LeadSettings, body));
+    // ส่งเฉพาะช่องที่แก้ได้ ที่เหลือใช้ค่าปัจจุบัน
+    return this.leads.saveSettings(req.staff!, parse(LeadSettings.partial(), body));
   }
   @Roles('owner')
   @Get(':id')

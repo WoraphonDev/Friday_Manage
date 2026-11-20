@@ -69,6 +69,15 @@ describe('เหตุการณ์ในแอป (POST w/{ws}/events)', () =
     expect(rows.map((r) => r.name)).toEqual(['feature.used', 'limit.hit', 'feature.used']);
   });
 
+  it('pricing.viewed นับครั้งแรกของวันต่อคนต่อที่เปิด (สัญญาณ Lead ของ Ops) · ที่เปิดต้องอยู่ในรายการ', async () => {
+    const view = (placement: string) => ({ name: 'pricing.viewed', props: { placement } });
+    expect((await team.lead.post(`${ws()}/events`, { events: [view('billing_plans'), view('billing_plans'), view('billing_dialog')] })).body).toEqual({ accepted: 2 });
+    expect((await team.lead.post(`${ws()}/events`, { events: [view('billing_plans')] })).body).toEqual({ accepted: 0 });
+    expect((await team.lead.post(`${ws()}/events`, { events: [view('landing')] })).status).toBe(400);
+    const rows = await q(`SELECT props->>'placement' AS placement FROM product_events WHERE workspace_id = $1 AND name = 'pricing.viewed' ORDER BY occurred_at`, [wsId]);
+    expect(rows.map((r) => r.placement)).toEqual(['billing_plans', 'billing_dialog']);
+  });
+
   it('props ห้ามมีข้อมูลอื่น · ชื่อเหตุการณ์ต้องอยู่ในรายการ · ส่งได้ไม่เกิน 50', async () => {
     expect((await team.lead.post(`${ws()}/events`, { events: [{ name: 'feature.used', props: { feature: 'gantt', title: 'ชื่องานลับ' } }] })).status).toBe(400);
     expect((await team.lead.post(`${ws()}/events`, { events: [{ name: 'issue.viewed', props: {} }] })).status).toBe(400);

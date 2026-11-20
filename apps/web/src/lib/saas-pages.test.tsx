@@ -495,6 +495,18 @@ describe("แพ็กเกจ & Billing", () => {
     expect(screen.getByRole("button", { name: /ย้อนกลับ/ })).toBeInTheDocument();
   });
 
+  it("O54 · เปิดตารางเทียบแพ็กเกจส่ง pricing.viewed · กดติดต่อฝ่ายขาย Enterprise ส่ง upgrade.prompt_clicked (สัญญาณ Lead ของ Ops)", async () => {
+    const user = userEvent.setup();
+    const events: unknown[] = [];
+    server.use(http.post("*/api/v1/w/:ws/events", async ({ request }) => (events.push(...((await request.json()) as { events: unknown[] }).events), HttpResponse.json({ accepted: 1 }, { status: 202 }))));
+    navigation.pathname = "/work/sample/billing/plans";
+    mountBilling({ section: "plans" });
+    await waitFor(() => expect(events).toEqual([{ name: "pricing.viewed", props: { placement: "billing_plans" } }]));
+    const enterprise = within(await screen.findByRole("article", { name: "Enterprise" }));
+    await user.click(enterprise.getByRole("link", { name: "ติดต่อฝ่ายขาย" }));
+    await waitFor(() => expect(events.at(-1)).toEqual({ name: "upgrade.prompt_clicked", props: { placement: "pricing", planFrom: "team_s", planTo: "enterprise" } }));
+  });
+
   it("O41 · R4 เครดิตคงเหลือ · R7 แถบการเปลี่ยนที่รออยู่ พร้อมสิ่งที่ต้องลดและยกเลิกได้", async () => {
     const user = userEvent.setup();
     let cancelled = false;

@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { ErrorState, Forbidden, LoadingState } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { ApiError, api } from "@/lib/api";
+import { trackEvents } from "@/lib/track";
 import type { PublicPlan } from "@/features/plan-limits";
 import { PricingSection, type Cyc, type PlanCta } from "../../../../(public)/_components/pricing";
 import type { BillingOverview } from "./types";
@@ -20,8 +22,10 @@ const SALES_URL = process.env.NEXT_PUBLIC_SALES_URL ?? "/contact-sales";
 export function PlansCompare({ ws, sub, heading = "h1" }: { ws: string; sub: BillingOverview["subscription"]; heading?: "h1" | "none" }) {
   const t = useTranslations("saas-pages.pricing");
   const base = `/work/${encodeURIComponent(ws)}/billing`;
+  // สัญญาณ Lead ของ Ops (O54): Workspace ทดลองที่เปิดดูราคา / กดติดต่อฝ่ายขาย Enterprise · API นับครั้งแรกของวันต่อคน
+  useEffect(() => trackEvents(ws, [{ name: "pricing.viewed", props: { placement: heading === "h1" ? "billing_plans" : "billing_dialog" } }]), [ws, heading]);
   const ctaFor = (p: PublicPlan, cycle: Cyc): PlanCta => {
-    if (p.contactSales) return { label: t("contact"), href: SALES_URL };
+    if (p.contactSales) return { label: t("contact"), href: SALES_URL, onClick: () => trackEvents(ws, [{ name: "upgrade.prompt_clicked", props: { placement: "pricing", planFrom: sub.planCode, planTo: p.code } }]) };
     const isCurrent = p.code === sub.planCode;
     // ใช้อยู่และจ่ายแล้วรอบเดียวกัน = ไม่มีอะไรให้ทำ · ช่วงทดลอง / ค้างชำระ / เปลี่ยนรอบบิล ยังไปชำระเงินได้
     if (isCurrent && (p.code === "free" || (sub.status === "active" && sub.cycle === cycle))) return { label: t("inApp.current") };

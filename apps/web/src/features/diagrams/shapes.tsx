@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DiagramIcon } from "./icons";
-import { columnTypeText, type IssueChip, type NodeColor, type NodeData, type Shape, type Tone } from "./types";
+import { columnTypeText, isFk, isPk, type Column, type IssueChip, type NodeColor, type NodeData, type Shape, type Tone } from "./types";
 import styles from "./diagrams.module.css";
 
 export type GroupKey = "flowchart" | "swimlane" | "uml" | "architecture" | "er" | "whiteboard";
@@ -387,7 +387,7 @@ function NodeView({ id, type, data, selected }: NodeProps<DiagramNode>) {
           <div className={cn(styles.tableRows, "nowheel")}>
             {(data.columns ?? []).map((c, i) => (
               <div key={i} className={styles.tableRow}>
-                <span className={styles.colKey}>{c.key ? c.key.toUpperCase() : ""}</span>
+                <ColumnKeys column={c} />
                 <span className={styles.colName}>{c.name}</span>
                 <span className={styles.colType}>
                   <span>{columnTypeText(c)}</span>
@@ -488,4 +488,16 @@ export function ShapeIcon({ item }: { item: PaletteItem }) {
   if (def.kind === "icon") return <span className={styles.paletteGlyph}><DiagramIcon name={def.icon} size={18} /></span>;
   if (def.kind === "stick") return <span className={styles.paletteGlyph}><StickFigure /></span>;
   return <span className={cn(styles.paletteBox, styles[`pb_${def.kind}`], def.variant && styles[`pbv_${def.variant}`], styles[`color_${color}`])} aria-hidden="true" />;
+}
+
+/** ป้ายคีย์หน้าชื่อคอลัมน์ · PK / FK / UQ สีต่างกัน (PK เป็น Unique อยู่แล้วจึงไม่แสดง UQ ซ้ำ) */
+export function ColumnKeys({ column: c }: { column: Column }) {
+  const pk = isPk(c);
+  return (
+    <span className={styles.colKey}>
+      {pk && <span className={styles.colPk}>PK</span>}
+      {isFk(c) && <span className={styles.colFk}>FK</span>}
+      {c.unique && !pk && <span className={styles.colUq}>UQ</span>}
+    </span>
+  );
 }

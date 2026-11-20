@@ -199,9 +199,9 @@ describe('ค้นงานสำหรับผูก', () => {
     expect(tooMany.status).toBe(400);
   });
 
-  it('คอลัมน์ตาราง ER เก็บความยาว NULL และค่า Default ได้ · ไม่ส่งมาคือ NOT NULL · ความยาวเกิน 20 / Default เกิน 60 ตัว → 400', async () => {
+  it('คอลัมน์ตาราง ER เก็บความยาว NULL ค่า Default Unique และ PK+FK ได้ · ไม่ส่งมาคือ NOT NULL · ความยาวเกิน 20 / Default เกิน 60 ตัว → 400', async () => {
     const d = (await team.lead.post(`${base}/diagrams`, { name: 'ตาราง ER' })).body;
-    const columns = [{ name: 'id', type: 'uuid', key: 'pk', defaultValue: 'newid()' }, { name: 'customer_name', type: 'nvarchar', length: ' 20 ', key: null, defaultValue: " 'N/A' " }, { name: 'note', type: 'nvarchar', length: 'max', nullable: true }];
+    const columns = [{ name: 'id', type: 'uuid', key: 'pk', defaultValue: 'newid()' }, { name: 'customer_name', type: 'nvarchar', length: ' 20 ', key: null, defaultValue: " 'N/A' " }, { name: 'note', type: 'nvarchar', length: 'max', nullable: true }, { name: 'email', type: 'nvarchar', length: '120', unique: true }, { name: 'order_id', type: 'uuid', key: 'pkfk' }];
     const r = await team.lead.put(`${base}/diagrams/${d.id}/content`, { revision: d.revision, content: { nodes: [{ id: 't', type: 'table', position: { x: 0, y: 0 }, data: { label: 'customer', columns } }], edges: [] } });
     expect(r.status, JSON.stringify(r.body)).toBe(200);
     const got = (await team.lead.get(`${base}/diagrams/${d.id}`)).body;
@@ -209,6 +209,8 @@ describe('ค้นงานสำหรับผูก', () => {
       { name: 'id', type: 'uuid', key: 'pk', defaultValue: 'newid()' },
       { name: 'customer_name', type: 'nvarchar', length: '20', key: null, defaultValue: "'N/A'" },
       { name: 'note', type: 'nvarchar', length: 'max', key: null, nullable: true },
+      { name: 'email', type: 'nvarchar', length: '120', key: null, unique: true },
+      { name: 'order_id', type: 'uuid', key: 'pkfk' },
     ]);
     const long = await team.lead.put(`${base}/diagrams/${d.id}/content`, { revision: got.revision, content: { nodes: [{ id: 't', type: 'table', position: { x: 0, y: 0 }, data: { label: 'x', columns: [{ name: 'a', type: 'varchar', length: '1'.repeat(21) }] } }], edges: [] } });
     expect(long.status).toBe(400);

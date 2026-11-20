@@ -25,13 +25,16 @@ export type Marker = (typeof MARKERS)[number];
 export interface Column {
   name: string;
   type: string;
-  key: "pk" | "fk" | null;
+  /** pkfk = เป็นทั้ง PK และ FK (ตารางเชื่อม) */
+  key: "pk" | "fk" | "pkfk" | null;
   /** เช่น 20, 10,2, max · ตรงกับ API (สูงสุด 20 ตัวอักษร) */
   length?: string;
   /** ไม่มีค่า = NOT NULL */
   nullable?: boolean;
   /** เช่น 0, 'ACTIVE', getdate() · ตรงกับ API (สูงสุด 60 ตัวอักษร) */
   defaultValue?: string;
+  /** PK เป็น Unique อยู่แล้ว ค่านี้ใช้กับคอลัมน์ที่ไม่ใช่ PK */
+  unique?: boolean;
 }
 export interface NodeData extends Record<string, unknown> {
   label: string;
@@ -197,3 +200,7 @@ export const takesLength = (type: string) => !!type && (LENGTH_TYPES.has(type.to
 export const isKnownType = (type: string) => KNOWN_TYPES.has(type);
 /** nvarchar + 20 → nvarchar(20) */
 export const columnTypeText = (c: Pick<Column, "type" | "length">) => (c.type && c.length ? `${c.type}(${c.length})` : c.type);
+
+export const isPk = (c: Pick<Column, "key">) => c.key === "pk" || c.key === "pkfk";
+export const isFk = (c: Pick<Column, "key">) => c.key === "fk" || c.key === "pkfk";
+export const keyOf = (pk: boolean, fk: boolean): Column["key"] => (pk && fk ? "pkfk" : pk ? "pk" : fk ? "fk" : null);

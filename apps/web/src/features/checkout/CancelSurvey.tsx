@@ -3,19 +3,47 @@
 import { useMutation } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import Link from "next/link";
+import { AlertCircle } from "lucide-react";
 import { Button, Dialog, Input, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
+import { formatDate } from "@/lib/format";
+import styles from "./cancel-survey.module.css";
 
 const REASONS = ["too_expensive", "missing_feature", "switched_tool", "project_ended", "hard_to_use", "company_closed", "other"] as const;
 type Reason = (typeof REASONS)[number];
+
+/** ใช้อยู่เกินขีดจำกัดของ Free (`freeBlockers` ของ `GET w/billing`) */
+type Blocker = { key: "seats" | "projects"; used: number; limit: number };
 
 /**
  * W22 · แบบสอบถามตอนยกเลิกแพ็กเกจ (เหตุผล · ฟีเจอร์ที่ขาด · ย้ายไปใช้อะไร)
  * คำตอบเก็บที่ `cancellation-feedback` (เฉพาะ Owner · ใช้ทำหน้าธุรกิจของทีม Friday) แล้วจึงยกเลิกจริง
  * Admin ยกเลิกได้แต่ไม่ส่งแบบสอบถาม · ส่งแบบสอบถามไม่สำเร็จไม่ขวางการยกเลิก
+ * ยกเลิก = เป็น Free เมื่อจบรอบ · ทีมใช้เกินขีดจำกัดของ Free อยู่ให้เห็นตัวเลขก่อนยืนยัน (ผู้ใช้เลือก 2026-11-20)
  */
-export function CancelSurvey({ open, onOpenChange, base, until, isOwner, onCancelled }: { open: boolean; onOpenChange: (o: boolean) => void; base: string; until: string; isOwner: boolean; onCancelled: () => void | Promise<void> }) {
+export function CancelSurvey({
+  open,
+  onOpenChange,
+  ws,
+  sub,
+  blockers = [],
+  isOwner,
+  onCancelled,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  ws: string;
+  sub: { status: string; trialEndsAt: string | null; currentPeriodEnd: string | null };
+  blockers?: Blocker[];
+  isOwner: boolean;
+  onCancelled: () => void | Promise<void>;
+}) {
   const t = useTranslations("checkout.cancel");
+  const base = `/w/${encodeURIComponent(ws)}`;
+  const home = `/work/${encodeURIComponent(ws)}`;
+  // ทดลองใช้ = ถึงวันสิ้นสุดทดลอง · แพ็กเกจที่จ่ายแล้ว = ถึงสิ้นรอบ (ตรงกับ API subscription/cancel)
+  const until = formatDate(sub.status === "trialing" ? sub.trialEndsAt : sub.currentPeriodEnd, "BE", true);
   const toast = useToast();
   const [reason, setReason] = useState<Reason | null>(null);
   const [feature, setFeature] = useState("");
@@ -61,6 +89,30 @@ export function CancelSurvey({ open, onOpenChange, base, until, isOwner, onCance
           cancel.mutate();
         }}
       >
+        {blockers.length > 0 && (
+          <div className={styles.over} role="status">
+            <AlertCircle size={16} aria-hidden="true" />
+            <div>
+              <b>{t("over.title")}</b>
+              <span>{blockers.map((b) => t(`over.${b.key}`, { used: b.used, limit: b.limit })).join(" · ")}</span>
+              <span>
+                {t("over.hint", { date: until })}
+                {blockers.some((b) => b.key === "seats") && (
+                  <>
+                    {" · "}
+                    <Link href={`${home}/members`}>{t("over.members")}</Link>
+                  </>
+                )}
+                {blockers.some((b) => b.key === "projects") && (
+                  <>
+                    {" · "}
+                    <Link href={`${home}/projects`}>{t("over.projectsLink")}</Link>
+                  </>
+                )}
+              </span>
+            </div>
+          </div>
+        )}
         <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }}>
           <legend>{t("why")}</legend>
           <span style={{ fontSize: 12, color: "var(--muted)" }}>

@@ -1,0 +1,6 @@
+/* กล่องเตือนในหน้าต่างยกเลิกแพ็กเกจ: ทีมใช้เกินขีดจำกัดของ Free · โทนเดียวกับแถบสิ่งที่ต้องทำในหน้า Billing */
+.over { display:flex; gap:10px; align-items:flex-start; padding:10px 12px; border:1px solid var(--warning-border); background:var(--warning-soft); color:var(--warning-text); border-radius:10px; font-size:13px; }
+.over > svg { flex:none; margin-top:2px; }
+.over > div { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.over b { font-weight:600; }
+.over a { color:inherit; text-decoration:underline; }

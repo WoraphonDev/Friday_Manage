@@ -118,6 +118,15 @@ describe('ลดแพ็กเกจ / เปลี่ยนรอบมีผ�
     expect((await team.lead.get(`${ws}/billing`)).body.pendingChange).toBeNull();
   });
 
+  it('หน้า Billing บอกสิ่งที่ใช้เกิน Free ไว้ล่วงหน้า (ยกเลิกแพ็กเกจ = เป็น Free เมื่อจบรอบ)', async () => {
+    await paidPeriod('team_s');
+    expect((await team.lead.get(`${ws}/billing`)).body.freeBlockers).toEqual([]);
+    // Free ได้ 3 โปรเจกต์ · มีแล้ว 1 สร้างเพิ่มอีก 3 = 4
+    for (const k of ['FA', 'FB', 'FC']) expect((await post(team.lead, `${ws}/projects`, { name: `Free ${k}`, key: k, startDate: '2026-11-05', goliveDate: '2027-04-21' })).status).toBe(201);
+    expect((await team.lead.get(`${ws}/billing`)).body.freeBlockers).toEqual([{ key: 'projects', used: 4, limit: 3 }]);
+    await t.owner.query(`UPDATE projects SET archived_at = now() WHERE workspace_id = $1 AND key IN ('FA', 'FB', 'FC')`, [wsId]);
+  });
+
   it('ลูกค้าเขียนเครดิตให้ตัวเองไม่ได้ (RLS: friday_app ใส่ได้เฉพาะแถว applied ที่ติดลบ)', async () => {
     const app = new (await import('pg')).default.Client({ connectionString: process.env.DATABASE_APP_URL ?? 'postgres://friday_api:friday_api_dev@localhost:54329/friday' });
     await app.connect();

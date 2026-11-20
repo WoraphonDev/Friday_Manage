@@ -12,8 +12,11 @@ import { baht, fitPlan, type PlanCode, type PublicPlan, type PublicPlans } from 
 import styles from "./public.module.css";
 
 export type Cyc = "monthly" | "yearly";
-/** ปุ่มของแต่ละแพ็กเกจ · ไม่มี href = แสดงเป็นป้ายเฉย ๆ (เช่น แพ็กเกจปัจจุบัน) */
-export type PlanCta = { label: string; href?: string; onClick?: () => void };
+/**
+ * ปุ่มของแต่ละแพ็กเกจ · href = ลิงก์ · มีแค่ onClick = ปุ่มในหน้า (เช่น เปิดหน้าต่างยกเลิกแพ็กเกจ)
+ * ไม่มีทั้งคู่ = ป้ายกดไม่ได้ (เช่น แพ็กเกจปัจจุบัน) · hint = เหตุผลสั้น ๆ ใต้ปุ่ม เพื่อไม่ให้กดแล้วเงียบ
+ */
+export type PlanCta = { label: string; href?: string; onClick?: () => void; hint?: string };
 // ช่องทางติดต่อฝ่ายขายตั้งตอน deploy · ไม่ตั้ง = ไปหน้าสมัครพร้อมแพ็กเกจ Enterprise ให้ทีมติดต่อกลับ
 const SALES_URL = process.env.NEXT_PUBLIC_SALES_URL ?? "/contact-sales";
 
@@ -125,11 +128,16 @@ function Plans({ data, cycle, team, setTeam, ctaFor }: { data: PublicPlans; cycl
                 <Link className={cn(buttonVariants({ variant: hot ? "primary" : "secondary" }), styles.btn)} href={c.href} onClick={c.onClick}>
                   {c.label}
                 </Link>
+              ) : c.onClick ? (
+                <button type="button" className={cn(buttonVariants({ variant: hot ? "primary" : "secondary" }), styles.btn)} onClick={c.onClick}>
+                  {c.label}
+                </button>
               ) : (
                 <span className={cn(buttonVariants({ variant: "secondary" }), styles.btn)} aria-disabled="true">
                   {c.label}
                 </span>
               )}
+              {c.hint && <span className={cn(styles.muted, styles.small)}>{c.hint}</span>}
               <ul>
                 {bullets(p).map((b) => (
                   <li key={b}>{b}</li>

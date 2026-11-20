@@ -434,7 +434,7 @@ describe("แบบสอบถามตอนยกเลิก (W22)", () => {
       http.post("*/api/v1/w/:ws/cancellation-feedback", async ({ request }) => (await record(request), HttpResponse.json({ id: "fb-1" }))),
       http.post("*/api/v1/w/:ws/billing/subscription/cancel", async ({ request }) => (await record(request), HttpResponse.json({ status: "canceled" }))),
     );
-    renderWithProviders(<CancelSurvey open onOpenChange={() => undefined} base="/w/sample" until="6 ธ.ค. 2569" isOwner={isOwner} onCancelled={onCancelled} />, { messages });
+    renderWithProviders(<CancelSurvey open onOpenChange={() => undefined} ws="sample" sub={{ status: "active", trialEndsAt: null, currentPeriodEnd: "2026-12-06T00:00:00+07:00" }} isOwner={isOwner} onCancelled={onCancelled} />, { messages });
     return onCancelled;
   };
 

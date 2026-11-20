@@ -198,6 +198,21 @@ describe('ค้นงานสำหรับผูก', () => {
     const tooMany = await team.lead.put(`${base}/diagrams/${d.id}/content`, { revision: got.revision, content: { nodes: [{ id: 'a', type: 'process', position: { x: 0, y: 0 }, data: { label: 'x', issueIds: many } }], edges: [] } });
     expect(tooMany.status).toBe(400);
   });
+
+  it('คอลัมน์ตาราง ER เก็บความยาวและ NULL ได้ · ไม่ส่งมาคือ NOT NULL · ความยาวเกิน 20 ตัว → 400', async () => {
+    const d = (await team.lead.post(`${base}/diagrams`, { name: 'ตาราง ER' })).body;
+    const columns = [{ name: 'id', type: 'uuid', key: 'pk' }, { name: 'customer_name', type: 'nvarchar', length: ' 20 ', key: null }, { name: 'note', type: 'nvarchar', length: 'max', nullable: true }];
+    const r = await team.lead.put(`${base}/diagrams/${d.id}/content`, { revision: d.revision, content: { nodes: [{ id: 't', type: 'table', position: { x: 0, y: 0 }, data: { label: 'customer', columns } }], edges: [] } });
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
+    const got = (await team.lead.get(`${base}/diagrams/${d.id}`)).body;
+    expect(got.content.nodes[0].data.columns).toEqual([
+      { name: 'id', type: 'uuid', key: 'pk' },
+      { name: 'customer_name', type: 'nvarchar', length: '20', key: null },
+      { name: 'note', type: 'nvarchar', length: 'max', key: null, nullable: true },
+    ]);
+    const long = await team.lead.put(`${base}/diagrams/${d.id}/content`, { revision: got.revision, content: { nodes: [{ id: 't', type: 'table', position: { x: 0, y: 0 }, data: { label: 'x', columns: [{ name: 'a', type: 'varchar', length: '1'.repeat(21) }] } }], edges: [] } });
+    expect(long.status).toBe(400);
+  });
 });
 
 describe('แพ็กเกจ Free', () => {

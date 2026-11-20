@@ -241,6 +241,7 @@ a.card:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
 .colKey { font-size:10px; font-weight:700; color:var(--primary-text); }
 .colName { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .colType { color:var(--muted); }
+.colNull { margin-left:6px; font-size:10px; font-weight:600; }
 .classSection { padding:4px 10px; font-size:11.5px; line-height:18px; white-space:pre-wrap; font-family:ui-monospace, monospace; border-bottom:1px solid var(--node-border, var(--border-strong)); text-align:left; }
 .classSection:last-child { border-bottom:0; flex:1; }
 .kind_lifeline { background:transparent; border-color:transparent; justify-content:flex-start; padding:0; gap:0; }
@@ -351,6 +352,12 @@ a.card:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
 .columns { display:flex; flex-direction:column; gap:6px; }
 .columnRow { display:grid; grid-template-columns:minmax(0, 1fr) 64px 52px 28px; gap:4px; align-items:center; }
 .columnRowEnum { grid-template-columns:minmax(0, 1fr) 28px; }
+/* ตาราง ER: 2 บรรทัดต่อคอลัมน์ (ชื่อ ชนิด ความยาว / คีย์ NULL ลบ) เพราะแผงกว้างแค่ 272px */
+.columnCard { display:flex; flex-direction:column; gap:4px; padding:5px; border:1px solid var(--border); border-radius:8px; background:var(--surface-2); }
+.columnLine { display:grid; grid-template-columns:minmax(0, 1fr) 84px 44px; gap:4px; }
+.columnLine2 { display:grid; grid-template-columns:56px minmax(0, 1fr) 28px; gap:6px; align-items:center; }
+.columnLine2 .check { font-size:12px; }
+.mini:disabled { background:var(--subtle); color:var(--faint); cursor:not-allowed; }
 .mini { min-width:0; min-height:28px; border:1px solid var(--border-strong); border-radius:6px; background:var(--card); color:var(--foreground); font:inherit; font-size:11.5px; font-weight:400; padding:0 6px; }
 .iconGrid { display:grid; grid-template-columns:repeat(7, 1fr); gap:3px; max-height:150px; overflow:auto; }
 .iconCell { aspect-ratio:1; display:grid; place-items:center; border:1px solid var(--border); border-radius:6px; background:var(--card); color:var(--foreground-soft); cursor:pointer; font-size:12px; }

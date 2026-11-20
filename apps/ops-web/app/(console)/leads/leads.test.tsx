@@ -92,7 +92,7 @@ describe("Lead และดีล", () => {
     page();
     server.use(
       http.get(`${OPS}/leads/settings`, () => HttpResponse.json({ trialSeats: 20, pricingDays: 2, enterpriseClick: true })),
-      http.put(`${OPS}/leads/settings`, async ({ request }) => ((sent = await request.json()), HttpResponse.json(sent))),
+      http.put(`${OPS}/leads/settings`, async ({ request }) => ((sent = await request.json()), HttpResponse.json(sent as Record<string, unknown>))),
     );
     await userEvent.click(await screen.findByRole("button", { name: "เกณฑ์ Lead จากลูกค้าทดลอง" }));
     const days = await screen.findByLabelText("เปิดดูตารางราคาในแอปตั้งแต่ (วัน)");

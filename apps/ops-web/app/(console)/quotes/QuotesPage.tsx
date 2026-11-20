@@ -8,6 +8,7 @@ import { hasAny, rolesOf } from "@/components/access";
 import { Empty, ErrorBlock, ListBar, NoAccess, PageHead, Pager, SettingsButton, TableSkeleton, Tabs, TodoCard } from "@/components/kit";
 import { Button, InlineError, Input, Pill, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
+import { calendarDaysUntil } from "@/lib/format";
 import { useMe } from "@/lib/query";
 import { useRowNav } from "@/lib/shortcuts";
 import { useUrlFilters } from "@/lib/url-state";
@@ -26,7 +27,7 @@ interface Summary {
   todo: Quote[];
   tabs: Record<Tab, number>;
 }
-const daysLeft = (d: string) => Math.max(0, Math.round((Date.parse(`${d}T23:59:59+07:00`) - Date.now()) / 86_400_000));
+const daysLeft = (d: string) => Math.max(0, calendarDaysUntil(d));
 
 /** ขายองค์กร › ใบเสนอราคาและสัญญา (O55 · storyboard เฟส 3 › Story 6) · Owner และการเงิน · ?new=1&lead=<id> เปิดตัวสร้างจาก Lead */
 export function QuotesPage() {

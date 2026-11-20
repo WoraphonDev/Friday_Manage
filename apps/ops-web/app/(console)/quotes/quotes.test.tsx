@@ -4,12 +4,14 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { AppShell } from "@/components/shell/AppShell";
+import { bangkokToday } from "@/lib/format";
 import { renderWithProviders } from "@/test/render";
 import { navigation } from "@/test/router";
 import { asRole, OPS, server } from "@/test/server";
 import { QuotesPage } from "./QuotesPage";
 
-const soon = new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10);
+// วันที่ตามเวลาไทย · ใช้วันที่ UTC แล้วช่วงเช้าของไทยนับได้ 3 วันจน test ล้มใน CI
+const soon = new Date(Date.parse(`${bangkokToday()}T00:00:00Z`) + 2 * 86_400_000).toISOString().slice(0, 10);
 const base = {
   seats: 150, months: 12, pricePerSeatSatang: 33_000, listPerSeatSatang: 40_000, subtotalSatang: 59_400_000, vatSatang: 4_158_000, totalSatang: 63_558_000, discountPct: 17.5,
   entitlements: { sso: true, api_rpm: 600 }, sla: { first: { n: 1, unit: "h" }, resolve: { n: 8, unit: "h" } }, contractStart: null, validUntil: soon, approvedAt: null, approvedBy: null, approvalStatus: null,
@@ -48,7 +50,7 @@ describe("ใบเสนอราคาและสัญญา", () => {
     expect(within(todo).getByText("QT-2611-0007 · ลานนาเทค · ส่วนลด 17.5%")).toBeInTheDocument();
     expect(within(todo).getByText("รออนุมัติ")).toBeInTheDocument();
     expect(within(todo).getByText("QT-2610-0004 · Orchid Insurance · ลูกค้าเปิดดู 3 ครั้ง")).toBeInTheDocument();
-    expect(within(todo).getByText(/หมดใน [12] วัน/)).toBeInTheDocument();
+    expect(within(todo).getByText("หมดใน 2 วัน")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /ตอบรับ\s*22/ })).toBeInTheDocument();
   });
 

@@ -84,6 +84,9 @@ export class IssueMoveService {
    * สคริปต์ Ops (Story 3) ผ่านคิวงาน: ทีม Friday ดูก่อน / ย้ายแทนลูกค้า · สิทธิ์ตรวจที่ Ops แล้ว (คนที่สองอนุมัติ)
    * ย้ายจริงใช้การจับคู่ตามชื่อ / ค่าแนะนำในหมวดเดียวกัน และเพิ่มคนที่ไม่ได้เป็นสมาชิก (เหมือนค่าเริ่มต้นของหน้าเว็บ)
    */
+  forStaff(workspaceId: string, staffName: string, mode: 'preview', input: z.infer<typeof PreviewMoveBody>): Promise<ReturnType<IssueMoveService['describe']>>;
+  forStaff(workspaceId: string, staffName: string, mode: 'move', input: z.infer<typeof PreviewMoveBody>): Promise<Awaited<ReturnType<IssueMoveService['apply']>>>;
+  forStaff(workspaceId: string, staffName: string, mode: 'preview' | 'move', input: z.infer<typeof PreviewMoveBody>): Promise<unknown>;
   async forStaff(workspaceId: string, staffName: string, mode: 'preview' | 'move', input: z.infer<typeof PreviewMoveBody>) {
     const actor: Actor = { kind: 'friday_staff', workspaceId, staffName };
     if (mode === 'preview') return this.system.transaction(async (tx) => this.describe(await this.plan(tx, actor, { ...input, statusMap: {}, moduleId: null, addMembers: true })));

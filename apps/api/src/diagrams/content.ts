@@ -43,6 +43,8 @@ const Column = z.object({
   length: z.string().trim().max(20).optional(),
   /** เป็น NULL ได้ · ไม่ส่งมา = NOT NULL (ตารางเดิมหน้าตาไม่เปลี่ยน) */
   nullable: z.boolean().optional(),
+  /** ค่า Default ตามที่พิมพ์ เช่น 0, 'ACTIVE', getdate() · ไม่ตรวจไวยากรณ์เพราะแต่ละฐานข้อมูลเขียนต่างกัน */
+  defaultValue: z.string().trim().max(60).optional(),
 });
 
 const Node = z.object({

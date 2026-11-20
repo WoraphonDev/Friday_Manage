@@ -192,6 +192,8 @@
     "columnType": "Type",
     "columnKey": "Key",
     "columnLength": "Len",
+    "columnDefault": "Default value",
+    "columnDefaultHint": "Default as written, e.g. 0, 'ACTIVE', getdate()",
     "columnLengthHint": "Length or precision, e.g. 20, 10,2, max",
     "columnTypeOther": "Custom…",
     "columnTypeCustom": "Type",

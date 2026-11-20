@@ -154,6 +154,7 @@ export function NodePanel({
                         }}>
                           <option value="">—</option><option value="pk">PK</option><option value="fk">FK</option>
                         </select>
+                        <input className={cn(styles.mini, styles.monoInput)} aria-label={t("panel.columnDefault")} placeholder="Default" title={t("panel.columnDefaultHint")} value={c.defaultValue ?? ""} maxLength={60} onFocus={() => (typed.current = false)} onChange={(e) => { once(); edit({ defaultValue: e.target.value || undefined }); }} />
                         <label className={styles.check}>
                           <input type="checkbox" checked={!!c.nullable && c.key !== "pk"} disabled={c.key === "pk"} onChange={(e) => { onSnapshot(); edit({ nullable: e.target.checked || undefined }); }} />
                           NULL

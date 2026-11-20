@@ -30,6 +30,8 @@ export interface Column {
   length?: string;
   /** ไม่มีค่า = NOT NULL */
   nullable?: boolean;
+  /** เช่น 0, 'ACTIVE', getdate() · ตรงกับ API (สูงสุด 60 ตัวอักษร) */
+  defaultValue?: string;
 }
 export interface NodeData extends Record<string, unknown> {
   label: string;

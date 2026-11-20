@@ -192,6 +192,8 @@
     "columnType": "ชนิด",
     "columnKey": "คีย์",
     "columnLength": "ยาว",
+    "columnDefault": "ค่า Default",
+    "columnDefaultHint": "ค่าเริ่มต้นตามที่พิมพ์ เช่น 0, 'ACTIVE', getdate()",
     "columnLengthHint": "ความยาวหรือความละเอียด เช่น 20, 10,2, max",
     "columnTypeOther": "พิมพ์เอง…",
     "columnTypeCustom": "ชนิด",

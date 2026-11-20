@@ -184,6 +184,19 @@ export class PrivacyService implements OnModuleInit {
     return { memberships: inScope, soleOwner: inScope.filter((m) => m.soleOwner && m.status === 'active'), invoicesKept: n };
   }
 
+  /**
+   * Lead ฝ่ายขาย (O54) ที่อีเมลตรงกับผู้ขอ · ทีม Friday เป็นผู้ควบคุมข้อมูลนี้เอง (ไม่ใช่ข้อมูลใน Workspace ของลูกค้า)
+   * จึงอยู่ในขอบเขตคำขอแม้ผู้ขอไม่มีบัญชี · acceptedQuotes = ใบเสนอราคาที่ตอบรับแล้ว (ชื่อ / ตำแหน่งผู้ตอบรับเป็นหลักฐานสัญญา)
+   */
+  private leadsOf(email: string) {
+    return this.rows<{ id: string; number: number; company: string; contactName: string | null; contactTitle: string | null; email: string | null; phone: string | null; message: string | null; source: string; stage: string; consentAt: string | null; ip: string | null; createdAt: string; notes: number; acceptedQuotes: number }>(sql`
+      select l.id, l.number, l.company, l.contact_name as "contactName", l.contact_title as "contactTitle", l.email, l.phone, l.message, l.source, l.stage,
+        l.consent_at as "consentAt", l.ip, l.created_at as "createdAt",
+        (select count(*)::int from lead_notes n where n.lead_id = l.id and n.kind <> 'system') as notes,
+        (select count(*)::int from quotes q where q.lead_id = l.id and q.accepted_at is not null) as "acceptedQuotes"
+      from leads l where lower(l.email) = ${email.toLowerCase()} order by l.created_at`);
+  }
+
   /** รายละเอียด + ประวัติทุกขั้น + สิ่งที่จะถูกลบ / เก็บต่อตามกฎหมาย (A6) */
   async get(id: string) {
     const r = await this.find(id);
@@ -194,17 +207,27 @@ export class PrivacyService implements OnModuleInit {
       .where(eq(s.staffAuditLogs.targetId, r.id))
       .orderBy(s.staffAuditLogs.createdAt);
     const scope = await this.scope(r);
+    const leads = await this.leadsOf(r.requesterEmail);
+    const quotesKept = leads.reduce((n, l) => n + l.acceptedQuotes, 0);
     const legalHold = r.requestType === 'erase' && r.status === 'open' && !!r.userId && (await this.holds.heldUsers([r.userId])).has(r.userId);
     return {
       request: { ...this.dto(r), legalHold },
       steps: STEPS.map((label, i) => ({ step: i + 1, label, done: r.step > i + 1 || r.status === 'completed' })),
       history,
       scope,
+      leads,
       erasePlan: r.requestType === 'erase'
         ? {
-            remove: ['บัญชีผู้ใช้ รูปโปรไฟล์ อีเมล เบอร์โทร การผูก LINE วิธีล็อกอิน 2FA'],
-            anonymize: [`งานและคอมเมนต์ที่เคยทำ: เปลี่ยนชื่อเป็น "${ERASED_NAME}" (งานของลูกค้ายังอยู่)`],
-            keep: scope.invoicesKept ? [`ใบกำกับภาษีที่ออกในชื่อบริษัท ${scope.invoicesKept} ฉบับ (ประมวลรัษฎากร 5 ปี)`] : [],
+            remove: [
+              ...(r.userId ? ['บัญชีผู้ใช้ รูปโปรไฟล์ อีเมล เบอร์โทร การผูก LINE วิธีล็อกอิน 2FA'] : []),
+              ...(leads.length ? [`ข้อมูลผู้ติดต่อใน Lead ${leads.length} รายการ (ชื่อ ตำแหน่ง อีเมล โทร ข้อความ IP การยินยอม) และบันทึกการคุย`] : []),
+            ],
+            anonymize: r.userId ? [`งานและคอมเมนต์ที่เคยทำ: เปลี่ยนชื่อเป็น "${ERASED_NAME}" (งานของลูกค้ายังอยู่)`] : [],
+            keep: [
+              ...(scope.invoicesKept ? [`ใบกำกับภาษีที่ออกในชื่อบริษัท ${scope.invoicesKept} ฉบับ (ประมวลรัษฎากร 5 ปี)`] : []),
+              ...(leads.length ? ['ชื่อบริษัทและมูลค่าดีลใน Lead (ข้อมูลธุรกิจ ไม่ใช่ข้อมูลส่วนบุคคล)'] : []),
+              ...(quotesKept ? [`ชื่อ / ตำแหน่งผู้ตอบรับในใบเสนอราคาที่ตอบรับแล้ว ${quotesKept} ฉบับ (หลักฐานสัญญา)`] : []),
+            ],
             backupDays: 35,
             blockers: [...scope.soleOwner.map((w) => ({ code: 'sole_owner', workspace: w.slug })), ...(legalHold ? [{ code: 'legal_hold', workspace: null }] : [])],
           }
@@ -230,7 +253,9 @@ export class PrivacyService implements OnModuleInit {
     await this.log(staff, 'privacy.request_created', `รับคำขอ #${row.number} ${TYPE_LABEL[row.requestType]} จาก ${row.requesterEmail} · ครบกำหนด ${row.dueDate}`, { type: 'privacy_request', id: row.id });
     const acknowledged = input.acknowledge ? await this.email(row.requesterEmail, `ได้รับคำขอ ${TYPE_LABEL[row.requestType]} (#${row.number})`, `ทีม Friday ได้รับคำขอของคุณแล้ว และจะดำเนินการภายใน ${row.dueDate}\nหากต้องยืนยันตัวตนเพิ่ม เราจะติดต่อกลับทางอีเมลนี้`) : false;
     // ไม่มีบัญชีกับ Friday = น่าจะเป็นข้อมูลที่ Workspace ของลูกค้าเป็นผู้ควบคุม → ส่งต่อ Owner ของ Workspace นั้น
-    return { request: this.dto(row), acknowledged, forwardToOwner: !user };
+    // ยกเว้นมี Lead ฝ่ายขายของอีเมลนี้ ซึ่งทีม Friday เป็นผู้ควบคุมเอง
+    const leads = (await this.leadsOf(row.requesterEmail)).length;
+    return { request: this.dto(row), acknowledged, forwardToOwner: !user && !leads, leads };
   }
 
   async verify(staff: Staff, id: string, input: z.infer<typeof VerifyBody>) {
@@ -278,7 +303,7 @@ export class PrivacyService implements OnModuleInit {
     this.open(r);
     if (r.requestType !== 'erase') throw new AppError(409, 'not_erase_request', 'คำขอนี้ไม่ใช่คำขอลบข้อมูล');
     if (r.step < 3 || r.identity === 'unverified') throw new AppError(409, 'not_ready', 'ยืนยันตัวตนและตรวจขอบเขตให้เสร็จก่อน (ขั้นที่ 3)');
-    if (!r.userId) throw new AppError(409, 'no_account', 'ไม่พบบัญชีของผู้ขอ จึงไม่มีข้อมูลบัญชีให้ลบ');
+    if (!r.userId && !(await this.leadsOf(r.requesterEmail)).length) throw new AppError(409, 'no_account', 'ไม่พบบัญชีหรือ Lead ของผู้ขอ จึงไม่มีข้อมูลให้ลบ');
     if (r.approvalRequestId) {
       const [a] = await this.db.select({ status: s.approvalRequests.status }).from(s.approvalRequests).where(eq(s.approvalRequests.id, r.approvalRequestId));
       if (a?.status === 'pending') throw new AppError(409, 'erase_pending', 'มีคำขออนุมัติลบที่รออยู่แล้ว', { approvalId: r.approvalRequestId });
@@ -302,13 +327,15 @@ export class PrivacyService implements OnModuleInit {
   private async applyErase(staff: Staff, id: string, ctx: ApprovalContext) {
     const r = await this.find(id);
     this.open(r);
-    const userId = r.userId!;
+    const userId = r.userId;
     // hold อาจถูกตั้งระหว่างรออนุมัติ
     await this.assertNotHeld(r);
     const scope = await this.scope(r);
     if (scope.soleOwner.length) throw new AppError(409, 'sole_owner', 'ผู้ขอเป็น Owner คนเดียวของ Workspace · ให้ลูกค้าโอนความเป็นเจ้าของก่อน', { workspaces: scope.soleOwner.map((w) => w.slug) });
     const wsIds = scope.memberships.map((m) => m.id);
-    const anonymized = await this.db.transaction(async (tx) => {
+    const leads = await this.leadsOf(r.requesterEmail);
+    const leadsErased = await this.eraseLeads(r.number, leads.map((l) => l.id));
+    const anonymized = !userId ? false : await this.db.transaction(async (tx) => {
       if (wsIds.length) {
         await tx.delete(s.teamMembers).where(and(eq(s.teamMembers.userId, userId), inArray(s.teamMembers.workspaceId, wsIds)));
         await tx.delete(s.projectMembers).where(and(eq(s.projectMembers.userId, userId), inArray(s.projectMembers.workspaceId, wsIds)));
@@ -335,8 +362,22 @@ export class PrivacyService implements OnModuleInit {
       return true;
     });
     await this.db.update(s.privacyRequests).set({ step: 4, handledBy: staff.id }).where(eq(s.privacyRequests.id, r.id));
-    await this.log(staff, 'privacy.erased', `#${r.number} ลบข้อมูลของ ${r.requesterEmail} · ถอนจาก ${wsIds.length} Workspace${anonymized ? ' · บัญชีถูกทำให้ระบุตัวไม่ได้' : ''}`, { type: 'privacy_request', id: r.id }, ctx);
-    return { requestId: r.id, workspaces: wsIds.length, anonymized };
+    await this.log(staff, 'privacy.erased', `#${r.number} ลบข้อมูลของ ${r.requesterEmail} · ถอนจาก ${wsIds.length} Workspace${anonymized ? ' · บัญชีถูกทำให้ระบุตัวไม่ได้' : ''}${leadsErased ? ` · ข้อมูลผู้ติดต่อใน Lead ${leadsErased} รายการ` : ''}`, { type: 'privacy_request', id: r.id }, ctx);
+    return { requestId: r.id, workspaces: wsIds.length, anonymized, leads: leadsErased };
+  }
+
+  /**
+   * ลบข้อมูลผู้ติดต่อใน Lead: ชื่อ ตำแหน่ง อีเมล โทร ข้อความ IP การยินยอม · บันทึกการคุยที่คนเขียนแทนด้วยข้อความกลาง
+   * ชื่อบริษัท ขั้นของดีล มูลค่า ยังอยู่ (ข้อมูลธุรกิจ) · ใบเสนอราคาที่ตอบรับแล้วเก็บเป็นหลักฐานสัญญา
+   */
+  private async eraseLeads(number: number, ids: string[]) {
+    if (!ids.length) return 0;
+    await this.db.transaction(async (tx) => {
+      await tx.update(s.leads).set({ contactName: null, contactTitle: null, email: null, phone: null, message: null, ip: null, consentAt: null, updatedAt: new Date() }).where(inArray(s.leads.id, ids));
+      await tx.update(s.leadNotes).set({ body: `[ลบตามคำขอ PDPA #${number}]` }).where(and(inArray(s.leadNotes.leadId, ids), sql`${s.leadNotes.kind} <> 'system'`));
+      await tx.insert(s.leadNotes).values(ids.map((leadId) => ({ leadId, kind: 'system', body: `ลบข้อมูลผู้ติดต่อตามคำขอ PDPA #${number}` })));
+    });
+    return ids.length;
   }
 
   /** ข้อมูลของผู้ขอติด Legal hold → ลบไม่ได้ ("รอ Legal hold") และแจ้งผู้ขอครั้งเดียวว่าเก็บไว้ตามกฎหมาย */

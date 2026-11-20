@@ -188,6 +188,7 @@ export function RequestDrawer({ id, canAct, onClose }: { id: string; canAct: boo
 
 function RequestBody({ d, canAct, verify, setModal }: { d: RequestDetail; canAct: boolean; verify: { mutate: (m: Exclude<Identity, "unverified">) => void; isPending: boolean }; setModal: (m: "advance" | "reject" | "erase") => void }) {
   const t = useTranslations("pl");
+  const tl = useTranslations("leads");
   const fmt = useFmt();
   const r = d.request;
   const open = r.status === "open";
@@ -251,7 +252,7 @@ function RequestBody({ d, canAct, verify, setModal }: { d: RequestDetail; canAct
             {held && erase && <Notice tone="warn" title={t("privacy.eraseHeld")}>{t("req.eraseHeld")}</Notice>}
             <div className="row">
               {eraseStep ? (
-                <Button variant="danger" disabled={blocked || !r.userId} onClick={() => setModal("erase")}>
+                <Button variant="danger" disabled={blocked || (!r.userId && !d.leads.length)} onClick={() => setModal("erase")}>
                   {t("req.erase")}
                 </Button>
               ) : (
@@ -273,6 +274,28 @@ function RequestBody({ d, canAct, verify, setModal }: { d: RequestDetail; canAct
             {d.scope.memberships.map((m) => (
               <li key={m.id}>
                 {m.name} <span className="muted">· {m.role}</span> {m.soleOwner && <span className="pill warn">{t("req.soleOwner")}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      {/* Lead ฝ่ายขาย (O54) ของอีเมลผู้ขอ · อยู่ในขอบเขตแม้ไม่มีบัญชี เพราะทีม Friday เป็นผู้ควบคุมข้อมูลนี้เอง */}
+      <section>
+        <h3 className="card-title">{t("req.leads")}</h3>
+        {!d.leads.length ? (
+          <p className="muted small">{t("req.leadsNone")}</p>
+        ) : (
+          <ul className="stack small" style={{ margin: 0, paddingLeft: 18, gap: 4 }}>
+            {d.leads.map((l) => (
+              <li key={l.id}>
+                <b>#{l.number} {l.company}</b> <span className="muted">· {tl(`stage.${l.stage}` as "stage.new")} · {fmt.date(l.createdAt)}</span>
+                <div className="muted">
+                  {[l.contactName, l.contactTitle, l.email, l.phone].filter(Boolean).join(" · ") || t("req.leadErased")}
+                  {l.consentAt ? ` · ${t("req.leadConsent", { date: fmt.date(l.consentAt) })}` : ""}
+                  {l.notes ? ` · ${t("req.leadNotes", { n: l.notes })}` : ""}
+                  {l.acceptedQuotes ? ` · ${t("req.leadQuotes", { n: l.acceptedQuotes })}` : ""}
+                </div>
+                {l.message && <div className="muted" style={{ whiteSpace: "pre-wrap" }}>“{l.message}”</div>}
               </li>
             ))}
           </ul>

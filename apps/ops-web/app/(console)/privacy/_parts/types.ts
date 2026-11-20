@@ -31,6 +31,8 @@ export interface RequestDetail {
   steps: { step: number; label: string; done: boolean }[];
   history: { at: string; action: string; text: string | null; staffName: string | null; approvedBy: string | null }[];
   scope: { memberships: { id: string; slug: string; name: string; role: string; status: string; soleOwner: boolean }[]; soleOwner: { slug: string; name: string }[]; invoicesKept: number };
+  /** Lead ฝ่ายขายที่อีเมลตรงกับผู้ขอ (ทีม Friday เป็นผู้ควบคุมข้อมูล) */
+  leads: { id: string; number: number; company: string; contactName: string | null; contactTitle: string | null; email: string | null; phone: string | null; message: string | null; source: string; stage: string; consentAt: string | null; ip: string | null; createdAt: string; notes: number; acceptedQuotes: number }[];
   erasePlan: { remove: string[]; anonymize: string[]; keep: string[]; backupDays: number; blockers: { code: string; workspace: string | null }[] } | null;
 }
 

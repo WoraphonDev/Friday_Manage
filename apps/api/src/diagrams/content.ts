@@ -38,13 +38,16 @@ const ElementId = z.string().trim().min(1).max(64);
 const Column = z.object({
   name: z.string().trim().max(80),
   type: z.string().trim().max(40).default(''),
-  key: z.enum(['pk', 'fk']).nullable().default(null),
+  /** pkfk = เป็นทั้ง PK และ FK (ตารางเชื่อม) */
+  key: z.enum(['pk', 'fk', 'pkfk']).nullable().default(null),
   /** ความยาว/ความละเอียดของชนิด เช่น 20, 10,2, max · แสดงเป็น nvarchar(20) */
   length: z.string().trim().max(20).optional(),
   /** เป็น NULL ได้ · ไม่ส่งมา = NOT NULL (ตารางเดิมหน้าตาไม่เปลี่ยน) */
   nullable: z.boolean().optional(),
   /** ค่า Default ตามที่พิมพ์ เช่น 0, 'ACTIVE', getdate() · ไม่ตรวจไวยากรณ์เพราะแต่ละฐานข้อมูลเขียนต่างกัน */
   defaultValue: z.string().trim().max(60).optional(),
+  /** Unique · PK เป็น Unique อยู่แล้วจึงไม่ต้องตั้ง */
+  unique: z.boolean().optional(),
 });
 
 const Node = z.object({

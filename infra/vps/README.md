@@ -44,6 +44,7 @@ infra/vps/deploy.sh
 - **ชำระเงิน**: ยังไม่มี Gateway จริง (A35b) · `PAYMENT_GATEWAY=fake` ใช้ได้เฉพาะเมื่อ `STRIPE_WEBHOOK_SECRET` ยาว ≥ 32 ตัวอักษร (กันการปิดใบแจ้งหนี้ด้วยลายเซ็น dev ใน repo)
 - **Stripe (ทดสอบบัตร / PromptPay จริง)**: สร้าง Webhook ใน Stripe Dashboard ที่ `https://<APP_HOST>/api/v1/hooks/stripe` (event `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`) แล้วรัน `ssh -t -i ~/.ssh/friday_vps root@<VPS> /opt/friday/set-stripe.sh` (ถาม pk / sk / whsec · กุญแจลับไม่แสดงบนจอ) จากนั้นรัน `deploy.sh` อีกครั้ง เพราะเว็บฝังกุญแจสาธารณะตอน build · มี `STRIPE_SECRET_KEY` = ใช้ Stripe แทนตัวจำลองทันที · PromptPay ใช้ได้กับบัญชี Stripe ประเทศไทยเท่านั้น
 - **อีเมล**: ไม่ตั้ง `SMTP_*` = ไม่ส่ง (เขียน log) · ช่วงยังไม่มีโดเมนใช้ Gmail + App Password (~500 ฉบับ/วัน): ส่ง `set-smtp.sh` ขึ้นเครื่องแล้ว `ssh -t -i ~/.ssh/friday_vps root@<ip> /opt/friday/set-smtp.sh` (ถามรหัสในเครื่อง ไม่ผ่านแชต) แล้ว `docker compose up -d api worker ops-api` · มีโดเมนแล้วค่อยย้ายไปผู้ให้บริการที่ยืนยันโดเมน (SPF/DKIM)
+- **เข้าสู่ระบบด้วย Google**: เพิ่ม Authorized redirect URI `https://<APP_HOST>/api/v1/auth/oauth/google/callback` ใน OAuth client ของ Google แล้วใส่ `OAUTH_GOOGLE_CLIENT_ID` / `OAUTH_GOOGLE_CLIENT_SECRET` ใน `/opt/friday/.env` (แก้บนเครื่องเอง ไม่ผ่านแชต) แล้ว `docker compose up -d api` · ไม่ตั้ง = ปุ่มตอบว่ายังไม่เปิดให้บริการ · Microsoft ใช้ `OAUTH_MICROSOFT_*` แบบเดียวกัน
 - **Owner คนแรกของ Ops**: `docker compose exec ops-api node dist/enroll.js <email> <ชื่อ> owner` แล้วเปิดลิงก์ลงทะเบียน Security key
 
 ## Backup

@@ -14,6 +14,7 @@ import { SignupForm } from "../../app/(auth)/signup/_components/signup-form";
 import { ForgotPasswordFlow } from "../../app/(auth)/forgot-password/_components/forgot-password-flow";
 import { JoinInvite } from "../../app/(auth)/join/[token]/_components/join-invite";
 import { OnboardingWizard, slugify } from "../../app/(auth)/onboarding/_components/onboarding-wizard";
+import AfterLoginPage from "../../app/work/page";
 
 const render = (ui: React.ReactElement) => renderWithProviders(ui, { messages: { "auth-onboarding": messages } });
 const apiError = (status: number, code: string, message: string, details: Record<string, unknown> = {}, requestId = "req_test01") =>
@@ -185,6 +186,25 @@ describe("J1 · เข้าสู่ระบบ", () => {
     expect(await screen.findByRole("heading", { name: "ยืนยันตัวตน 2 ขั้นตอน" })).toBeInTheDocument();
     expect(window.location.hash).toBe("");
     window.history.replaceState(null, "", "/");
+  });
+
+  it("OAuth ไม่มี returnTo: กลับมาที่ /work แล้วไป Workspace แรก · ลูกค้าใหม่ไป Onboarding (ไม่ค้างที่หน้า Landing)", async () => {
+    navigation.search = "";
+    const login = render(<LoginForm />);
+    expect(screen.getByRole("link", { name: /Google/ })).toHaveAttribute("href", "/api/v1/auth/oauth/google/start?next=%2Fwork&remember=true");
+    login.unmount();
+    const signup = render(<SignupForm />);
+    expect(screen.getByRole("link", { name: /Google/ })).toHaveAttribute("href", "/api/v1/auth/oauth/google/start?next=%2Fwork");
+    signup.unmount();
+
+    server.use(http.get("*/api/v1/me/workspaces", () => HttpResponse.json({ items: [{ slug: "friday-dev" }] })));
+    const page = render(<AfterLoginPage />);
+    await waitFor(() => expect(router.replace).toHaveBeenLastCalledWith("/work/friday-dev"));
+    page.unmount();
+
+    server.use(http.get("*/api/v1/me/workspaces", () => HttpResponse.json({ items: [] })));
+    render(<AfterLoginPage />);
+    await waitFor(() => expect(router.replace).toHaveBeenLastCalledWith("/onboarding"));
   });
 });
 

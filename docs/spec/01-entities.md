@@ -93,6 +93,7 @@ Workspace เลือกปฏิทินหลัก + เพิ่มวั�
 | `workflow_rule` | กฎการย้ายสถานะ เช่น "ห้ามย้ายไป Done ถ้า Sub-task ยังไม่ครบ" | workflow_id, rule_type, config (jsonb), enabled | A, L2 |
 | `custom_field` | ฟิลด์ที่ทีมเพิ่มเอง (Customer request, Release version, Effort ทีมลูกค้า) | project_id, name, field_type (text · number · select · multi_select · user · date), options (jsonb), sort | L2 |
 | `issue_custom_value` | ค่าของฟิลด์ข้างบน | issue_id, field_id, value (jsonb) | C |
+| `issue_key_alias` | Key เดิมของงานที่ย้ายข้ามโปรเจกต์ (DE-12 → WEB-46) · ลิงก์ / ค้นหา Key เดิมพาไปงานใหม่ (F03 · 2026-11-20) | project_id (โปรเจกต์เดิม), number (เลขเดิม), issue_id | B |
 | `label` | | project_id, name, color | L2 |
 
 ## F. งาน (Issue)

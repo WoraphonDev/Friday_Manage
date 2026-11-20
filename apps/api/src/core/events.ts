@@ -39,7 +39,9 @@ export type EventType =
   | 'trash.purged'
   // A44 · ศูนย์ช่วยเหลือ / Ticket ในแอป (ไม่มี projectId)
   | 'support.ticket_created'
-  | 'support.replied';
+  | 'support.replied'
+  // ย้ายงานข้ามโปรเจกต์ (2026-11-20) · projectId = ปลายทาง · data.oldKey / issueKey
+  | 'issue.moved';
 
 export interface DomainEvent {
   type: EventType;

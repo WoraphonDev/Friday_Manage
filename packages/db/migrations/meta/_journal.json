@@ -435,6 +435,13 @@
       "when": 1795117941171,
       "tag": "0061_ops_scripts",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1795154505147,
+      "tag": "0062_issue_key_aliases",
+      "breakpoints": true
     }
   ]
 }

@@ -139,6 +139,11 @@ export class NotificationFanout implements OnModuleInit {
       case 'issue.review_requested':
         return [new Send('issue.review_requested').add(ids(d.userIds).length ? ids(d.userIds) : (issue?.reviewerIds ?? []), REASONS.reviewer)];
 
+      // ย้ายงานข้ามโปรเจกต์: ผู้รับผิดชอบและผู้ติดตามรู้ Key ใหม่ · Sub-task ที่ย้ายตามแม่ไม่แจ้งซ้ำ
+      case 'issue.moved':
+        if (d.parentId) return [];
+        return [new Send('issue.moved', { oldKey: d.oldKey, fromProjectKey: d.fromProjectKey }).add(await assignees(), REASONS.assignee).add(await watchers(), REASONS.watcher)];
+
       case 'issue.updated': {
         const fields = ids(d.fields).filter((f) => WATCHED_FIELDS.has(f));
         if (!fields.length) return [];

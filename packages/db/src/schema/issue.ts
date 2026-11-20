@@ -492,3 +492,25 @@ export const milestoneIssues = pgTable(
   ],
 );
 
+
+/**
+ * Key เดิมของงานที่ย้ายข้ามโปรเจกต์ (เช่น DE-12 → WEB-46 · ผู้ใช้อนุมัติ storyboard 2026-11-20)
+ * project_id + number = Key เดิม · ลิงก์ ค้นหา และ @อ้างถึง Key เดิมพาไปงานใหม่ · ย้ายหลายรอบจำครบทุก Key
+ * เลขเดิมไม่ถูกใช้ซ้ำเพราะ issue_seq ของโปรเจกต์เดินหน้าอย่างเดียว
+ */
+export const issueKeyAliases = pgTable(
+  'issue_key_aliases',
+  {
+    workspaceId: workspaceId(),
+    projectId: uuid().notNull(),
+    number: integer().notNull(),
+    issueId: uuid().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.projectId, t.number] }),
+    inProject('issue_key_aliases', t),
+    sameWs('issue_key_aliases', 'issue', t, t.issueId, issues).onDelete('cascade'),
+    index('issue_key_aliases_issue_idx').on(t.issueId),
+  ],
+);

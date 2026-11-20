@@ -249,6 +249,8 @@
     "selectAll": "Select all shown",
     "selected": "{count} selected",
     "bulkModule": "Move Module",
+    "bulkMove": "Move project",
+    "bulkMoved": "Moved {count} tasks to {project}",
     "bulkDue": "Due date",
     "bulkAssignee": "Assignee",
     "apply": "Apply",

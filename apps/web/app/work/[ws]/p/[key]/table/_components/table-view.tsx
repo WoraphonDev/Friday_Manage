@@ -25,6 +25,7 @@ import { AttachmentBadge } from "@/features/attachments/attachment-badge";
 import { availableColumns, columnShowsAt, customText, DEFAULT_PROFILE, type CustomFieldDef, type FieldProfile, type Level } from "@/lib/field-profile";
 import { isClosedCategory, STATUS_CATEGORIES, statusColorStyle, type StatusTone, statusTone, useStatusColors } from "@/lib/status";
 import { CreateSprintDialog, MultiFilter, SprintBadge, SprintPicker, sprintFilterOptions } from "@/features/sprints/sprint-ui";
+import { MoveIssuesDialog } from "@/features/issue-move/move-dialog";
 import { openSprint, useSprints, type Sprint } from "@/features/sprints/sprints";
 
 // ต้องตรงกับความสูงแถว .table td ใน ot.module.css (ใช้คำนวณ virtual scroll)
@@ -229,6 +230,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   /** index ใน display ของ Module / กลุ่มที่ค้างใต้หัวตาราง */
   const [ctx, setCtx] = useState<{ module: number | null; phase: number | null }>({ module: null, phase: null });
   const [deleting, setDeleting] = useState(false);
+  const [moving, setMoving] = useState(false);
   const [reasonFor, setReasonFor] = useState<{ run: (reason: string) => Promise<void> } | null>(null);
   const [subFor, setSubFor] = useState<string | null>(null);
   // พื้นชิปมุมมองที่เลือก (ทั้งหมด / ของฉัน / Overdue / มุมมองที่บันทึก) เลื่อนตามชิปที่กด
@@ -750,7 +752,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
       )}
 
       {canEdit && selected.size > 0 && (
-        <BulkBar count={selected.size} options={options.data} statuses={statuses} canDelete={canDelete} onApply={(set) => bulk(set)} onStatus={(id) => void bulkStatus(id)} onDelete={() => setDeleting(true)} onClear={() => setSelected(new Set())}
+        <BulkBar count={selected.size} options={options.data} statuses={statuses} canDelete={canDelete} onApply={(set) => bulk(set)} onStatus={(id) => void bulkStatus(id)} onDelete={() => setDeleting(true)} onClear={() => setSelected(new Set())} onMove={() => setMoving(true)}
           sprints={sprints} year={year} onSprint={(id) => void bulkSprint(id)} onCreateSprint={canSprints ? () => setCreatingSprint({ bulk: true }) : undefined} />
       )}
 
@@ -893,6 +895,8 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
         setSaving(false);
         await cache.invalidateQueries({ queryKey: ["saved-views", ws, projectKey] });
       }} />}
+      {moving && <MoveIssuesDialog ws={ws} sourceKey={projectKey} keys={[...selected]} open={moving} onOpenChange={setMoving}
+        onMoved={(r) => { toast({ message: t("bulkMoved", { count: r.moved.length, project: r.target.name }) }); setSelected(new Set()); void cache.invalidateQueries({ queryKey: ["table", ws, projectKey] }); }} />}
       {deleting && <DeleteDialog count={selected.size} onClose={() => setDeleting(false)} onConfirm={async (confirmText) => {
         // error ทั้งคำขอ (เช่น สิทธิ์) โยนกลับให้กล่องยืนยันแสดง · งานที่ติดกติกาทีละงานเลือกค้างไว้ให้ลองใหม่
         const r = await api.post<{ results: { key: string; ok: boolean; error?: { message: string } }[] }>(`${base}/issues/bulk`, { keys: [...selected], delete: true, confirmText });
@@ -1077,8 +1081,8 @@ function IssueRow({ index, row, statusColor, sub, cols, profile, customFields, w
   );
 }
 
-function BulkBar({ count, options, statuses, canDelete, onApply, onStatus, onDelete, onClear, sprints, year, onSprint, onCreateSprint }: {
-  count: number; options?: Options; statuses: { id: string; name: string }[]; canDelete: boolean; onApply: (set: Record<string, unknown>) => void; onStatus: (id: string) => void; onDelete: () => void; onClear: () => void;
+function BulkBar({ count, options, statuses, canDelete, onApply, onStatus, onDelete, onClear, onMove, sprints, year, onSprint, onCreateSprint }: {
+  count: number; options?: Options; statuses: { id: string; name: string }[]; canDelete: boolean; onApply: (set: Record<string, unknown>) => void; onStatus: (id: string) => void; onDelete: () => void; onClear: () => void; onMove: () => void;
   sprints: Sprint[]; year: YearFormat; onSprint: (id: string | null) => void; onCreateSprint?: () => void;
 }) {
   const t = useTranslations("overview-table.table");
@@ -1113,6 +1117,7 @@ function BulkBar({ count, options, statuses, canDelete, onApply, onStatus, onDel
         <select aria-label={t("bulkModule")} value={moduleId} onChange={(e) => setModuleId(e.target.value)}><option value="">{t("bulkModule")}</option>{options?.modules.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select>
         <Button size="small" disabled={!moduleId} onClick={() => onApply({ moduleId })}>{t("apply")}</Button>
       </>)}
+      <button type="button" className={styles.bulkBtn} onClick={onMove}>{t("bulkMove")}</button>
       {canDelete && <button type="button" className={styles.bulkBtn} style={{ color: "var(--status-overdue-bg)" }} onClick={onDelete}>{t("delete")}</button>}
       <button type="button" className={`${styles.bulkBtn} ${styles.bulkClear}`} onClick={onClear}>{t("unselect")}</button>
     </div>

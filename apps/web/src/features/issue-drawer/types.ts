@@ -47,6 +47,8 @@ export interface Scope {
   ws: string; projectKey: string; meId: string; yearFormat: 'BE' | 'CE';
   access: Permissions; project?: ProjectMeta; people: Person[];
   navigate: (key: string) => void; createSubtask: (parent: Issue) => void;
+  /** เปิดงานที่ย้ายข้ามโปรเจกต์แล้ว (Key ใหม่อาจอยู่คนละโปรเจกต์กับหน้าที่เปิดอยู่) */
+  openMoved?: (key: string) => void;
 }
 export interface ChecklistItem { id: string; text: string; kind: 'checklist' | 'acceptance'; done: boolean; doneBy: string | null; doneAt: string | null }
 export interface Dependency { id: string; key: string; title: string; type: string; lagDays: number; status: Status; planStart: string | null; planEnd: string | null }

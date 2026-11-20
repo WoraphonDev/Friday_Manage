@@ -25,7 +25,7 @@
 - [x] หน้าตรงกับข้อเสนอที่ 1440 px · ใช้งานได้ที่ 390 px
 - [x] test: หักเครดิตทุกทางที่สร้างใบ, เครดิตพอทั้งใบ, ยกเลิกแล้วคืน, ส่วนต่างติดลบ, ลูกค้าอัปเกรด / ลดเอง, ลดแล้วเกินขีดจำกัด
 - [x] `pnpm typecheck` และ test ของแพ็กเกจที่แก้ผ่าน
-- [ ] deploy Docker ในเครื่องตาม CLAUDE.md และตรวจผ่าน :4000 / :3000
+- [x] deploy Docker ในเครื่องตาม CLAUDE.md และตรวจผ่าน :4000 / :3000
 
 ## บันทึกผล
 
@@ -56,3 +56,6 @@
 **ยังรอ**: ใบต่ออายุอัตโนมัติ / ตัดบัตร (A35b) ใช้ `applyCreditToInvoice` ตอนสร้างใบ · คำถามนักบัญชี: ใบส่วนต่างเป็นใบใหม่ (แบบนี้) หรือใบเพิ่มหนี้
 
 **Test** (ฐาน friday_o41): ops-api credit.e2e 9 + ชุดเดิมผ่าน · api plan-change.e2e 5 + ชุดเดิมผ่าน · ops-web 248 · web 722 · docs 12 · db 167 · typecheck ผ่าน
+
+**ตรวจผ่าน Docker (20 พ.ย. 2569 · main d42078d):** ops-web / ops-api deploy จาก main ที่ :4000 / :4001 · container healthy · ตรวจด้วยพนักงานสมมติ (ลบแล้ว)
+- `GET ops/workspaces/{id}/change-plan/preview` คืนแพ็กเกจเดิม / ใหม่ / ที่นั่งที่ใช้ · `GET ops/credits?workspaceId=` 200 · ฝั่งลูกค้า `GET w/{ws}/billing/quote` มี `credit.balanceSatang` / `applySatang` และ `GET w/{ws}/billing` มี `creditSatang` · หน้า checkout ที่ :3000 200

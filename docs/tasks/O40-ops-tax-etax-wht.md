@@ -40,7 +40,7 @@
 - [x] หน้าตรงกับข้อเสนอที่ 1440 px · ใช้งานได้ที่ 390 px · ซ่อนปุ่มตามบทบาท (การเงินทำ · Owner / ผู้ตรวจอ่าน)
 - [x] e2e ของ ops-api และ API ลูกค้า (e-Tax จำลอง, webhook ช้า, ยกเลิก, CN/DN, 50 ทวิ อัตโนมัติ, นำเข้า e-WHT) + test ของ packages/docs + component test ด้วย MSW
 - [x] `pnpm typecheck` และ test ของแพ็กเกจที่แก้ผ่าน
-- [ ] deploy Docker ในเครื่องตาม CLAUDE.md และตรวจผ่าน :4000 / :3000
+- [x] deploy Docker ในเครื่องตาม CLAUDE.md และตรวจผ่าน :4000 / :3000
 
 ## บันทึกผล
 
@@ -59,3 +59,6 @@
 **คำขอนอก lane**: `packages/db/src/documents.ts` (คิว e-Tax ร่วม) · `apps/ops-api/src/payments/ops-payments.service.ts` (เก็บสาเหตุไม่ผ่าน · ตอบ `reason`)
 
 **Test** (ฐาน friday_o40): ops-api 234 ผ่าน / 1 ข้าม · api 796 ผ่าน / 7 ข้าม · ops-web 224 · web 715 · docs 12 · `pnpm typecheck` ผ่าน
+
+**ตรวจผ่าน Docker (20 พ.ย. 2569 · main d42078d):** ops-web / ops-api deploy จาก main ที่ :4000 / :4001 · container healthy · ตรวจด้วยพนักงานสมมติ (ลบแล้ว)
+- ops-api `GET ops/tax` (ยอดขาย / VAT / สถานะ e-Tax ของเดือน) และ `GET ops/etax` 200 · หน้า `/payments` 200 · static assets 200 · หน้าใบแจ้งหนี้ของลูกค้า `:3000/work/{ws}/billing/invoices` 200

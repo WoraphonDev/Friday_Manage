@@ -79,6 +79,18 @@
 
 ยังไม่วางเป็นงาน (รอผู้ใช้สั่ง): SSO / SAML, เชื่อมระบบ HR (`/hooks/hr`), Gantt PDF, ค้นหาข้อความในไฟล์, GitLab
 
+### งานต่อที่ยังค้างจริง (ไล่จากหัวข้อ "ยังไม่ทำ" ของทุกไฟล์งานเทียบกับโค้ดใน main d42078d · 20 พ.ย. 2569)
+
+ข้อที่ไฟล์งานเขียนว่า "ยังไม่ทำ" แต่งานหลังทำแล้ว ไม่อยู่ในรายการนี้ (เช่น O42 / O43 ปิดของ O01–O05, O22–O25 ไปเกือบหมด)
+
+- **A35b** ต่อ Gateway จริง: รอผู้ใช้เลือกผู้ให้บริการ
+- **ส่วนลดเฉพาะรายจาก Ops (C3)**: `POST ops/workspaces/:id/discount` เขียน `subscriptions.discount` แต่ quote / checkout ของ API ลูกค้าคิดเฉพาะคูปอง (`resolveDiscount`) ลูกค้าจึงไม่ได้ส่วนลดนี้ ส่วน MRR ใน Ops คิดตามส่วนลดนี้ · ทางแก้ที่ O20 เสนอ: ย้ายเป็นคูปองเฉพาะรายใน `coupon_redemptions` (C3 "ใช้คูปองที่มีอยู่" ทำได้แล้วผ่าน `grantCoupon`)
+- **A34 ที่มาของลูกค้า**: หน้าสมัคร (`signup-form.tsx`) ยังไม่ส่ง `attribution` · สมัครด้วย Google ส่ง `undefined` · เว็บยังไม่ส่ง `feature.used` (ส่งแค่ `pricing.viewed` / `upgrade.prompt_clicked`) · `daily_usages.api_calls` ยังเป็น 0
+- **A40 OpenAPI**: ผลลัพธ์ทุก endpoint ยังเป็น schema ว่าง `{}`
+- **ค่าตั้งที่ต้องหามาใส่ (staging ยังว่าง)**: `BOT_API_CLIENT_ID` (ดึงวันหยุด ธปท. ของ O43) · `OPS_ACCOUNTING_EMAIL` (ส่งรายงานให้สำนักงานบัญชีวันที่ 5) · `SNS_VERIFY` + Topic เปิดตอนขึ้น AWS (I01)
+- **O43** ทดสอบ Web Push บนมือถือจริงผ่าน staging
+- เฟส 2 ตามแผน: นำเข้า statement ธนาคาร / Bill Payment (O03)
+
 ## งานทั้งหมด
 
 | งาน | ชื่อ | Wave | รอ merge | Lane หลัก |

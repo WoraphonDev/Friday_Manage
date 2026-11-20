@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Wave | 1 · ขนานกันได้ |
+| Wave | 1 · ขนานกันได้ · **ถูกแทนด้วย O10–O15 แล้ว** (ดีไซน์ Friday Ops ใหม่ · หน้าของงานนี้ไม่ใช้แล้ว ไม่ต้องเทียบภาพกับ `SuperAdmin.dc.html`) |
 | รอ merge | W00, A32 |
 | Lane (แก้ได้เฉพาะ) | `apps/ops-web/**` |
 | หน้าจอ | Q3 (`design/canvas/SuperAdmin.dc.html`) |

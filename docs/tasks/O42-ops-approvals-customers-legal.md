@@ -23,7 +23,7 @@
 - [x] หน้าตรงกับข้อเสนอที่ 1440 px · ใช้งานได้ที่ 390 px · ซ่อนปุ่มตามบทบาท
 - [x] e2e ops-api + API ลูกค้า (สรุปรายวัน, หลายราย, หมดเวลา / ขยาย, Legal hold กันลบ, ลบทันที, แจ้งเอกสารกฎหมาย) + component test ด้วย MSW
 - [x] `pnpm typecheck` และ test ของแพ็กเกจที่แก้ผ่าน
-- [ ] deploy Docker ในเครื่องตาม CLAUDE.md และตรวจผ่าน :4000 / :3000
+- [x] deploy Docker ในเครื่องตาม CLAUDE.md และตรวจผ่าน :4000 / :3000
 
 ## บันทึกผล
 
@@ -51,3 +51,6 @@
 - Announce.tsx (O43) ยังรับเฉพาะ id · รอ O43 เพิ่ม `filter` แล้วส่งตัวกรองจาก Workspaces
 
 **Test** (ฐาน friday_o42): ops-api 227 ผ่าน / 1 ข้าม · ops-web 237 · api 795 ผ่าน / 7 ข้าม · web 715 · db 167 · `pnpm typecheck` ผ่านทุกแพ็กเกจ
+
+**ตรวจผ่าน Docker (20 พ.ย. 2569 · main d42078d):** ops-web / ops-api deploy จาก main ที่ :4000 / :4001 · container healthy · ตรวจด้วยพนักงานสมมติ (ลบแล้ว)
+- `POST ops/workspaces/bulk/preview` (ขยายทดลอง) คืน ok / ต้องอนุมัติ / ข้าม ต่อราย · `GET ops/privacy/legal-holds` · `GET ops/approvals` · `GET ops/legal/documents` 200 · หน้า `/workspaces` `/privacy` `/legal` 200

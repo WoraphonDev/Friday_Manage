@@ -51,3 +51,7 @@
 **ยังไม่ทำ**: ทดสอบ Push บนเครื่องจริง (ทำบน staging หลัง deploy)
 
 **Test** (ฐาน friday_o43): ops-api 247 ผ่าน / 1 ข้าม · ops-web 232 · api 806 ผ่าน / 7 ข้าม · `pnpm typecheck` ผ่าน
+
+**ตรวจผ่าน Docker (20 พ.ย. 2569 · main d42078d):** ops-web / ops-api deploy จาก main ที่ :4000 / :4001 · container healthy · ตรวจด้วยพนักงานสมมติ (ลบแล้ว)
+- `GET ops/support/holidays` (ไม่ตั้ง `BOT_API_CLIENT_ID` = `configured: false`) · `GET ops/deliveries?q=` · `POST ops/announcements/audience` แบบ `filter` และ `all` นับ Workspace / ผู้รับได้ · `GET ops/system/alerts` + `alert-settings` 200 · หน้า `/support/settings` `/deliveries` `/announcements` `/system` `/m` 200
+- ยังไม่ได้ทดสอบ Push บนเครื่องจริง (ต้องเปิดหน้า Ops บน staging ด้วยมือถือแล้วกดอนุญาตแจ้งเตือนเอง) ช่องข้างบนจึงยังไม่ติ๊ก · staging ตั้ง `OPS_VAPID_PUBLIC_KEY` แล้ว

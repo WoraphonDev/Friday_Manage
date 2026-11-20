@@ -554,8 +554,25 @@ it("เพิ่ม Module ในตาราง 450 แถวแล้วเล
     tableData.modules.push({ id: "m-last", name: "กลุ่มท้ายตาราง", color: null, ...agg(0), phases: [{ id: null, name: null, ...agg(0) }] });
     return HttpResponse.json({ id: "m-last" }, { status: 201 });
   }));
-  mount(<TableView ws="sample" projectKey="DE" />); await user.click(await screen.findByRole("button", { name: "+ Module" })); await user.type(screen.getByLabelText("ชื่อ Module"), "กลุ่มท้ายตาราง"); await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "เพิ่ม" }));
-  expect(await screen.findByRole("link", { name: "+ เพิ่ม Task ใน กลุ่มท้ายตาราง" })).toBeInTheDocument();
+  // jsdom ไม่จัด layout: จำลองว่าเลื่อนหน้าแล้วขอบบนตาราง (ใต้หัวตารางที่ 0) ขยับขึ้นตาม
+  // ไม่งั้นรอบคำนวณ scroll ถัดไปเห็นตารางยังอยู่ที่ 0 แล้วดึงกลับไปต้นตาราง ลิงก์โผล่แค่ชั่วขณะ (test เคยล้มสลับใน CI)
+  const page = document.scrollingElement ?? document.documentElement;
+  let pageTop = 0;
+  Object.defineProperty(page, "scrollTop", { configurable: true, get: () => pageTop, set: (v: number) => { pageTop = Math.max(0, v); } });
+  try {
+    mount(<TableView ws="sample" projectKey="DE" />);
+    const scroll = await screen.findByTestId("table-scroll");
+    scroll.getBoundingClientRect = () => ({ top: -pageTop, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: -pageTop, toJSON: () => ({}) });
+    await user.click(await screen.findByRole("button", { name: "+ Module" })); await user.type(screen.getByLabelText("ชื่อ Module"), "กลุ่มท้ายตาราง"); await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "เพิ่ม" }));
+    expect(await screen.findByRole("link", { name: "+ เพิ่ม Task ใน กลุ่มท้ายตาราง" })).toBeInTheDocument();
+    expect(pageTop).toBeGreaterThan(38 * 400);
+    // ยังอยู่หลังรอบคำนวณ scroll ถัดไป ไม่ใช่โผล่ชั่วขณะ
+    fireEvent.scroll(window);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(screen.getByRole("link", { name: "+ เพิ่ม Task ใน กลุ่มท้ายตาราง" })).toBeInTheDocument();
+  } finally {
+    delete (page as { scrollTop?: number }).scrollTop;
+  }
 });
 
 describe("Sprint ในแท็บ Table (ผู้ใช้ขอ 2026-11-19)", () => {

@@ -1,6 +1,7 @@
 import { Body, Controller, Get, HttpCode, Module, Param, Post, Query, Req } from '@nestjs/common';
 import { type OpsRequest, Roles } from '../auth/auth.guard.js';
 import { parse } from '../errors.js';
+import { JobQueue } from '../system/job-queue.js';
 import { DryRunBody, RequestBody, RunsQuery, ScriptsService, UndoBody } from './scripts.service.js';
 
 /** ระบบ › สคริปต์ดูแลข้อมูล (O56) · Owner และวิศวกร · อนุมัติ / ปฏิเสธผ่าน /ops/approvals เดิม */
@@ -49,5 +50,5 @@ export class ScriptsController {
   }
 }
 
-@Module({ controllers: [ScriptsController], providers: [ScriptsService], exports: [ScriptsService] })
+@Module({ controllers: [ScriptsController], providers: [ScriptsService, JobQueue], exports: [ScriptsService] })
 export class ScriptsModule {}

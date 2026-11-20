@@ -1,10 +1,12 @@
 // O56 · สคริปต์ดูแลข้อมูล · ข้อมูลสมมติเท่านั้น
 import { createHash, randomUUID } from 'node:crypto';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { renderInvitationEmail as apiInvitationEmail } from '../../api/src/invitations/invitation-mail.js';
 import { Mailer } from '../src/mail.js';
 import { renderInvitationEmail } from '../src/scripts/invitation-mail.js';
 import { ScriptsService } from '../src/scripts/scripts.service.js';
+import { JobQueue } from '../src/system/job-queue.js';
+import { AppError } from '../src/errors.js';
 import { customer, type Customer, reauth, staff, type Staff, startOps, type TestOps } from './helpers.js';
 
 let t: TestOps;
@@ -47,6 +49,7 @@ describe('สคริปต์ดูแลข้อมูล', () => {
       ['shift_plan_dates', true],
       ['shift_off_holidays', true],
       ['resend_failed_invitations', false],
+      ['move_issues', false],
     ]);
   });
 
@@ -226,3 +229,54 @@ describe('สคริปต์ชุดที่ 2', () => {
     expect(body.scripts).toEqual([expect.objectContaining({ scriptKey: 'shift_off_holidays', workspaceName: 'Co nordlight', error: 'deadlock detected', changed: 500 })]);
   });
 });
+
+describe('ย้ายงานข้ามโปรเจกต์ (API ทำแทนผ่านคิว)', () => {
+  it('ทดลองรัน: ส่งงาน preview เข้าคิวพร้อม Key จากช่อง Key / Module · ผลแสดงก่อน / หลัง + สิ่งที่ตามไปไม่ได้ · รันจริงส่งงาน move แล้วจบเป็นสำเร็จ', async () => {
+    const ws = await customer(t, 'mover', { plan: 'team_m', status: 'active' });
+    const src = await project(ws, 'MVS');
+    await project(ws, 'MVT');
+    const mod = (await t.owner.query(`INSERT INTO modules (workspace_id, project_id, name) VALUES ($1, $2, 'Checkout') RETURNING id`, [ws.id, src.pid])).rows[0].id;
+    await src.issue('2026-12-01', '2026-12-02');
+    await src.issue('2026-12-01', '2026-12-02');
+    await t.owner.query(`UPDATE issues SET module_id = $1 WHERE project_id = $2 AND number = 2`, [mod, src.pid]);
+    const preview = {
+      count: 2, issues: [{ key: 'MVS-1', newKey: 'MVT-1', title: 'งาน 1' }, { key: 'MVS-2', newKey: 'MVT-2', title: 'งาน 2' }],
+      types: [{ from: { name: 'Task' }, to: { name: 'Task' } }],
+      statuses: [{ typeName: 'Task', from: { name: 'In progress' }, to: null, suggested: { name: 'กำลังทำ' } }],
+      dropped: { requirements: ['FR-01'], screens: [], milestones: [], customFields: [], dependencies: [], dueRequests: 0 },
+      people: { outside: [] }, files: { move: 0, keep: 0 },
+    };
+    const run = vi.spyOn(JobQueue.prototype, 'run').mockImplementation(async (_name, data) => ((data as { mode: string }).mode === 'preview' ? preview : { moved: [{ from: 'MVS-1', to: 'MVT-1' }, { from: 'MVS-2', to: 'MVT-2' }] }) as never);
+    try {
+      expect((await eng.agent.post('/ops/scripts/move_issues/dry-run').send({ workspaceId: ws.id, params: { projectKey: 'MVS', targetKey: 'MVS', keys: 'MVS-1' } })).body.error.code).toBe('invalid_params');
+      expect((await eng.agent.post('/ops/scripts/move_issues/dry-run').send({ workspaceId: ws.id, params: { projectKey: 'MVS', targetKey: 'MVT', keys: 'ABC-1' } })).body.error.code).toBe('invalid_params');
+      const dry = (await eng.agent.post('/ops/scripts/move_issues/dry-run').send({ workspaceId: ws.id, params: { projectKey: 'mvs', targetKey: 'mvt', keys: 'MVS-1', module: 'checkout' } }).expect(200)).body;
+      expect(run).toHaveBeenLastCalledWith('ops.issues_move', { workspaceId: ws.id, staffName: 'วิศวกร เอ', mode: 'preview', input: { keys: ['MVS-1', 'MVS-2'], targetProjectKey: 'MVT', typeMap: {} } });
+      expect(dry.dryResult).toMatchObject({ count: 2, sample: [{ label: 'MVS-1 งาน 1', before: { key: 'MVS-1' }, after: { key: 'MVT-1' } }, { after: { key: 'MVT-2' } }] });
+      expect(dry.dryResult.notes).toEqual(['สถานะ In progress → กำลังทำ (ค่าแนะนำในหมวดเดียวกัน)', 'ลิงก์ Requirement หลุด: FR-01']);
+      expect((await eng.agent.post(`/ops/scripts/runs/${dry.id}/request`).send({ reason: 'ลูกค้านำเข้างานผิดโปรเจกต์' })).body.error.code).toBe('confirm_required');
+      const r = (await eng.agent.post(`/ops/scripts/runs/${dry.id}/request`).send({ reason: 'ลูกค้านำเข้างานผิดโปรเจกต์', confirmSlug: 'mover' }).expect(202)).body;
+      await boss.agent.post(`/ops/approvals/${r.pendingApproval.id}/approve`).send({}).expect(200);
+      await waitRun(dry.id);
+      expect(run).toHaveBeenLastCalledWith('ops.issues_move', expect.objectContaining({ mode: 'move', input: { keys: ['MVS-1', 'MVS-2'], targetProjectKey: 'MVT', typeMap: {} } }), 120_000);
+      expect((await eng.agent.get(`/ops/scripts/runs/${dry.id}`)).body).toMatchObject({ status: 'done', changed: 2, hasChanges: false });
+    } finally {
+      run.mockRestore();
+    }
+  });
+
+  it('คิวไม่ได้เชื่อม / API ปฏิเสธ: แสดงสาเหตุตอนทดลองรัน', async () => {
+    const ws = await customer(t, 'mover2', { plan: 'team_m', status: 'active' });
+    const src = await project(ws, 'MVA');
+    await src.issue('2026-12-01', '2026-12-02');
+    expect((await eng.agent.post('/ops/scripts/move_issues/dry-run').send({ workspaceId: ws.id, params: { projectKey: 'MVA', targetKey: 'MVB', keys: 'MVA-1' } })).body.error.code).toBe(process.env.VALKEY_URL ? expect.any(String) : 'queue_not_configured');
+    // API ตอบกฎไม่ผ่าน (JobQueue.run แปลง failedReason เป็น AppError)
+    const run = vi.spyOn(JobQueue.prototype, 'run').mockRejectedValue(new AppError(422, 'project_not_found', 'ไม่พบโปรเจกต์ MVB'));
+    try {
+      expect((await eng.agent.post('/ops/scripts/move_issues/dry-run').send({ workspaceId: ws.id, params: { projectKey: 'MVA', targetKey: 'MVB', keys: 'MVA-1' } })).body.error).toMatchObject({ code: 'project_not_found', message: 'ไม่พบโปรเจกต์ MVB' });
+    } finally {
+      run.mockRestore();
+    }
+  });
+});
+

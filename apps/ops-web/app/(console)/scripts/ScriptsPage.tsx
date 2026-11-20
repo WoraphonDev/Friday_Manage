@@ -16,7 +16,7 @@ const KEY = ["ops", "scripts"] as const;
 const PAGE = 50;
 interface Field {
   key: string;
-  kind: "project" | "number" | "date";
+  kind: "project" | "number" | "date" | "text";
   min?: number;
   max?: number;
   optional?: boolean;
@@ -39,7 +39,7 @@ interface Run {
   params: Record<string, unknown>;
   status: "dry_run" | "pending_approval" | "running" | "stopping" | "done" | "failed" | "stopped" | "undone" | "rejected" | "expired" | "cancelled";
   decisionNote?: string | null;
-  dryResult: { count: number; ms: number; sample: { id: string; label: string; before: Record<string, unknown>; after: Record<string, unknown> }[] } | null;
+  dryResult: { count: number; ms: number; sample: { id: string; label: string; before: Record<string, unknown>; after: Record<string, unknown> }[]; notes?: string[] } | null;
   reason: string | null;
   ticketRef: string | null;
   requestedBy: string;
@@ -347,6 +347,14 @@ function ScriptDrawer({ script, onClose }: { script: Script; onClose: () => void
                   </tbody>
                 </table>
               </div>
+            )}
+            {/* สคริปต์ที่ API ทำแทน (ย้ายงาน): สิ่งที่ตามไปไม่ได้และการจับคู่ที่ใช้ค่าแนะนำ ให้คนอนุมัติเห็นก่อน */}
+            {!!dry.run.dryResult.notes?.length && (
+              <Notice tone="warn">
+                <ul className="stack-tight" style={{ margin: 0, paddingLeft: 18 }}>
+                  {dry.run.dryResult.notes.map((n) => <li key={n}>{n}</li>)}
+                </ul>
+              </Notice>
             )}
           </section>
         )}

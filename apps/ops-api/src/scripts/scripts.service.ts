@@ -12,7 +12,8 @@ import { AppError } from '../errors.js';
 import { Mailer } from '../mail.js';
 import { PageQuery } from '../paging.js';
 import { sqlRows } from '../sql-rows.js';
-import { type AfterCommit, type MaintenanceScript, scriptOf, SCRIPTS, type Target } from './registry.js';
+import { JobQueue } from '../system/job-queue.js';
+import { type AfterCommit, type MaintenanceScript, type MoveParams, scriptOf, SCRIPTS, type Target } from './registry.js';
 
 const s = schema;
 const BATCH = 500;
@@ -50,6 +51,7 @@ export class ScriptsService implements OnModuleInit, OnModuleDestroy {
     @Inject(OPS_DB) private readonly db: Db,
     private readonly approvals: ApprovalsService,
     private readonly mail: Mailer,
+    private readonly queue: JobQueue,
   ) {}
 
   onModuleInit() {
@@ -153,9 +155,15 @@ export class ScriptsService implements OnModuleInit, OnModuleDestroy {
     if (sc.sendsMail && !this.mail.enabled) throw new AppError(409, 'mail_disabled', 'ยังไม่ได้ตั้ง SMTP ของ Ops · สคริปต์นี้ส่งอีเมลไม่ได้');
     await this.assertWorkspace(input.workspaceId);
     const started = Date.now();
-    const rows = await this.targets(sc, input.workspaceId, parsed.data);
-    const dryResult = { count: rows.length, sample: rows.slice(0, SAMPLE), ms: Date.now() - started };
-    const [r] = await this.db.insert(s.scriptRuns).values({ scriptKey: key, workspaceId: input.workspaceId, params: parsed.data as object, status: 'dry_run', dryResult, requestedBy: staff.id, total: rows.length }).returning({ id: s.scriptRuns.id });
+    let dryResult: { count: number; sample: Target[]; ms: number; notes?: string[] };
+    if (sc.remote === 'issue_move') {
+      const p = await this.movePreview(staff, input.workspaceId, parsed.data as MoveParams);
+      dryResult = { ...p, ms: Date.now() - started };
+    } else {
+      const rows = await this.targets(sc, input.workspaceId, parsed.data);
+      dryResult = { count: rows.length, sample: rows.slice(0, SAMPLE), ms: Date.now() - started };
+    }
+    const [r] = await this.db.insert(s.scriptRuns).values({ scriptKey: key, workspaceId: input.workspaceId, params: parsed.data as object, status: 'dry_run', dryResult, requestedBy: staff.id, total: dryResult.count }).returning({ id: s.scriptRuns.id });
     return this.run(r.id);
   }
 
@@ -203,6 +211,15 @@ export class ScriptsService implements OnModuleInit, OnModuleDestroy {
     const r = await this.row(id);
     const sc = this.script(r.scriptKey);
     await this.assertWorkspace(r.workspaceId!);
+    if (sc.remote === 'issue_move') {
+      // ทำทั้งก้อนในธุรกรรมเดียวที่ API · หยุดกลางทางไม่ได้ (ล้มแล้วไม่มีอะไรเปลี่ยน)
+      const staff = await this.staffOf(r.requestedBy);
+      const keys = await this.moveKeys(r.workspaceId!, r.params as MoveParams);
+      const moved = await this.queue.run<{ moved: { from: string; to: string }[] }>('ops.issues_move', { workspaceId: r.workspaceId, staffName: staff.name, mode: 'move', input: { keys, targetProjectKey: (r.params as MoveParams).targetKey, typeMap: {} } }, 120_000);
+      await this.db.update(s.scriptRuns).set({ total: moved.moved.length }).where(eq(s.scriptRuns.id, id));
+      await this.finish(r, 'done', moved.moved.length);
+      return;
+    }
     const rows = await this.targets(sc, r.workspaceId!, r.params);
     await this.db.update(s.scriptRuns).set({ total: rows.length }).where(eq(s.scriptRuns.id, id));
     let changed = 0;
@@ -267,6 +284,52 @@ export class ScriptsService implements OnModuleInit, OnModuleDestroy {
     await this.db.update(s.scriptRuns).set({ status: 'stopping' }).where(eq(s.scriptRuns.id, id));
     await staffAudit(this.db, staff, 'scripts.stopped', r.scriptKey, { type: 'script_run', id }, r.workspaceId ?? undefined);
     return this.run(id);
+  }
+
+  // ---------------------------------------------------------------- ย้ายงานข้ามโปรเจกต์ (API ทำแทนผ่านคิว)
+
+  /** Key ของงานที่จะย้าย: จากช่อง Key (คั่นด้วยจุลภาค / ช่องว่าง) หรือทุก Task ใน Module · ข้าม RLS จึงกรอง workspace_id เอง */
+  private async moveKeys(workspaceId: string, p: MoveParams) {
+    const keys = new Set<string>();
+    for (const k of (p.keys ?? '').split(/[\s,]+/).filter(Boolean)) {
+      const m = /^([A-Za-z][A-Za-z0-9]{1,9})-(\d{1,9})$/.exec(k.trim());
+      if (!m || m[1].toUpperCase() !== p.projectKey) throw new AppError(400, 'invalid_params', `Key ${k} ไม่ใช่งานของโปรเจกต์ ${p.projectKey}`);
+      keys.add(k.trim().toUpperCase());
+    }
+    if (p.module) {
+      const rows = await this.rows<{ key: string }>(sql`
+        select pr.key || '-' || i.number as key from issues i join projects pr on pr.id = i.project_id join modules m on m.id = i.module_id
+        where i.workspace_id = ${workspaceId}::uuid and pr.workspace_id = ${workspaceId}::uuid and pr.key = ${p.projectKey} and pr.deleted_at is null
+          and i.deleted_at is null and i.parent_id is null and lower(m.name) = lower(${p.module}) order by i.number`);
+      if (!rows.length) throw new AppError(422, 'nothing_to_change', `ไม่พบ Task ใน Module "${p.module}" ของ ${p.projectKey}`);
+      rows.forEach((r) => keys.add(r.key));
+    }
+    if (keys.size > 200) throw new AppError(422, 'too_many', `ย้ายได้ครั้งละไม่เกิน 200 งาน · เลือกไว้ ${keys.size} งาน`);
+    return [...keys];
+  }
+
+  /** ดูก่อนย้ายจาก API · แปลงเป็นผลทดลองรัน (ก่อน / หลัง = Key) พร้อมสิ่งที่ตามไปไม่ได้ให้คนอนุมัติเห็น */
+  private async movePreview(staff: Staff, workspaceId: string, p: MoveParams) {
+    const keys = await this.moveKeys(workspaceId, p);
+    type Preview = { count: number; issues: { key: string; newKey: string; title: string }[]; statuses: { typeName: string; from: { name: string }; to: { name: string } | null; suggested: { name: string } | null }[]; types: { from: { name: string }; to: { name: string } | null }[]; dropped: { requirements: string[]; screens: string[]; milestones: string[]; customFields: string[]; dependencies: { other: string }[]; dueRequests: number }; people: { outside: { name: string }[] }; files: { move: number; keep: number } };
+    const r = await this.queue.run<Preview>('ops.issues_move', { workspaceId, staffName: staff.name, mode: 'preview', input: { keys, targetProjectKey: p.targetKey, typeMap: {} } });
+    const noType = r.types.filter((t) => !t.to).map((t) => t.from.name);
+    if (noType.length) throw new AppError(422, 'mapping_required', `โปรเจกต์ ${p.targetKey} ไม่มีประเภทงาน ${noType.join(', ')} · ให้ลูกค้าย้ายเองจากหน้าเว็บเพื่อเลือกประเภทงาน`);
+    const noStatus = r.statuses.filter((x) => !x.to && !x.suggested).map((x) => `${x.typeName} · ${x.from.name}`);
+    if (noStatus.length) throw new AppError(422, 'mapping_required', `จับคู่สถานะไม่ได้: ${noStatus.join(', ')}`);
+    const d = r.dropped;
+    const notes = [
+      ...r.statuses.filter((x) => !x.to && x.suggested).map((x) => `สถานะ ${x.from.name} → ${x.suggested!.name} (ค่าแนะนำในหมวดเดียวกัน)`),
+      d.requirements.length ? `ลิงก์ Requirement หลุด: ${d.requirements.join(', ')}` : '',
+      d.screens.length ? `ลิงก์ Screen หลุด: ${d.screens.join(', ')}` : '',
+      d.milestones.length ? `Milestone หลุด: ${d.milestones.join(', ')}` : '',
+      d.customFields.length ? `ค่า Custom field หลุด: ${d.customFields.join(', ')}` : '',
+      d.dependencies.length ? `Dependency กับงานที่ไม่ย้ายหลุด: ${[...new Set(d.dependencies.map((x) => x.other))].join(', ')}` : '',
+      d.dueRequests ? `คำขอเลื่อน Due ที่รออยู่ถูกยกเลิก ${d.dueRequests} รายการ` : '',
+      r.people.outside.length ? `เพิ่มเป็นสมาชิก ${p.targetKey}: ${r.people.outside.map((x) => x.name).join(', ')}` : '',
+      r.files.move ? `ไฟล์แนบ ${r.files.move} ไฟล์ย้ายตามไป · ใช้ร่วม ${r.files.keep} ไฟล์อยู่ที่เดิม` : '',
+    ].filter(Boolean);
+    return { count: r.count, sample: r.issues.slice(0, SAMPLE).map((i) => ({ id: i.key, label: `${i.key} ${i.title}`.slice(0, 80), before: { key: i.key }, after: { key: i.newKey } })), notes };
   }
 
   // ---------------------------------------------------------------- ย้อนกลับ

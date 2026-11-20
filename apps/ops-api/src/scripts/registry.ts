@@ -14,7 +14,7 @@ export interface Target {
 }
 export interface Field {
   key: string;
-  kind: 'project' | 'number' | 'date';
+  kind: 'project' | 'number' | 'date' | 'text';
   min?: number;
   max?: number;
   optional?: boolean;
@@ -57,6 +57,11 @@ export interface MaintenanceScript<P = Record<string, unknown>> {
   apply?: (ctx: ApplyContext, t: Target) => Promise<AfterCommit | void>;
   /** ส่งอีเมล · ไม่ได้ตั้ง SMTP ของ Ops = ทดลองรันไม่ได้ (รันไปก็ไม่มีอีเมลออก) */
   sendsMail?: boolean;
+  /**
+   * ให้ API ทำแทนผ่านคิวงาน (ตรรกะซับซ้อนที่ต้องเหมือนหน้าเว็บทุกอย่าง) · targets / apply ไม่ใช้
+   * issue_move = ย้ายงานข้ามโปรเจกต์ (apps/api/src/issue-move/issue-move.jobs.ts)
+   */
+  remote?: 'issue_move';
   params: z.ZodType<P>;
   fields: Field[];
   /** query ของแถวเป้าหมาย · ต้องคืน id, label, before (jsonb), after (jsonb) */
@@ -204,5 +209,22 @@ const resendInvites: MaintenanceScript<Record<string, never>> = {
   },
 };
 
-export const SCRIPTS: MaintenanceScript[] = [staleSessions, staleInvites, shiftPlan, holidayShift, resendInvites] as unknown as MaintenanceScript[];
+export type MoveParams = { projectKey: string; targetKey: string; keys?: string; module?: string };
+const moveIssues: MaintenanceScript<MoveParams> = {
+  key: 'move_issues',
+  table: 'issues',
+  columns: ['project_id', 'number'],
+  // เลขงานเปลี่ยนแล้ว ย้อนด้วยการคืนค่าไม่ได้ · ย้ายกลับด้วยสคริปต์เดียวกัน (ได้เลขใหม่อีกครั้ง Key เดิมยังพาไปถูก)
+  undoable: false,
+  remote: 'issue_move',
+  params: z
+    .object({ projectKey, targetKey: projectKey, keys: z.string().trim().max(4000).optional(), module: z.string().trim().max(120).optional() })
+    .strict()
+    .refine((p) => !!p.keys || !!p.module, 'ระบุ Key ของงาน หรือชื่อ Module อย่างใดอย่างหนึ่ง')
+    .refine((p) => p.projectKey !== p.targetKey, 'โปรเจกต์ต้นทางและปลายทางต้องต่างกัน') as unknown as z.ZodType<MoveParams>,
+  fields: [{ key: 'projectKey', kind: 'project' }, { key: 'targetKey', kind: 'project' }, { key: 'keys', kind: 'text', optional: true }, { key: 'module', kind: 'text', optional: true }],
+  targets: () => sql`select null::uuid as id where false`,
+};
+
+export const SCRIPTS: MaintenanceScript[] = [staleSessions, staleInvites, shiftPlan, holidayShift, resendInvites, moveIssues] as unknown as MaintenanceScript[];
 export const scriptOf = (key: string) => SCRIPTS.find((s) => s.key === key);

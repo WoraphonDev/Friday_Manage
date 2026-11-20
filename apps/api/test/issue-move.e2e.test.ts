@@ -1,5 +1,7 @@
 // ย้ายงานข้ามโปรเจกต์ (storyboard 2026-11-20) · ข้อมูลสมมติเท่านั้น
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { randomUUID } from 'node:crypto';
+import { IssueMoveService } from '../src/issue-move/issue-move.service.js';
 import { addMember, client, type Client, seedTeam, signup, startApp, type TestApp } from './helpers.js';
 
 let t: TestApp;
@@ -132,5 +134,19 @@ describe('ย้ายงานข้ามโปรเจกต์', () => {
     expect(newKey).not.toBe(parentKey);
     expect((await team.lead.get(issue(parentKey))).body.error.details.key).toBe(newKey);
     expect((await team.lead.get(issue('WEB-1'))).body.error.details.key).toBe(newKey);
+  });
+
+  it('สคริปต์ Ops (ทีม Friday ผ่านคิว): ดูก่อน / ย้ายด้วยการจับคู่ค่าแนะนำ · ประวัติและ Audit ติดป้ายทีม Friday · หาโปรเจกต์เฉพาะใน Workspace ที่ระบุ', async () => {
+    const svc = t.app.get(IssueMoveService);
+    await expect(svc.forStaff(randomUUID(), 'พนักงานสมมติ', 'preview', { keys: [otherKey], targetProjectKey: 'WEB', typeMap: {} })).rejects.toMatchObject({ code: 'project_not_found' });
+    const p = await svc.forStaff(wsId, 'พนักงานสมมติ', 'preview', { keys: [otherKey], targetProjectKey: 'WEB', typeMap: {} });
+    expect(p).toMatchObject({ count: 1, people: { canInvite: true } });
+    const r = await svc.forStaff(wsId, 'พนักงานสมมติ', 'move', { keys: [otherKey], targetProjectKey: 'WEB', typeMap: {} });
+    expect(r).toMatchObject({ moved: [{ from: otherKey }] });
+    const id = (await t.owner.query(`SELECT i.id FROM issues i JOIN projects p ON p.id = i.project_id WHERE p.key || '-' || i.number = $1`, [r.key])).rows[0].id;
+    const act = (await t.owner.query(`SELECT actor_id, actor_kind FROM activities WHERE issue_id = $1 AND verb = 'moved'`, [id])).rows;
+    expect(act).toEqual([{ actor_id: null, actor_kind: 'friday_staff' }]);
+    const audit = (await t.owner.query(`SELECT actor_kind, summary FROM audit_logs WHERE action = 'issue.moved' AND target_id = $1`, [id])).rows[0];
+    expect(audit).toEqual({ actor_kind: 'friday_staff', summary: `[Friday · พนักงานสมมติ] ย้าย ${otherKey} → ${r.key}` });
   });
 });

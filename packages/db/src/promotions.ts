@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto';
 import { and, count, eq, gt, inArray, isNotNull, ne, or, sql } from 'drizzle-orm';
 import type { Db, Tx } from './client.ts';
 import { invoices } from './schema/billing.ts';
+import { staffUsers } from './schema/ops.ts';
 import { couponRedemptions, coupons, couponUses } from './schema/promotions.ts';
 
 /** ราคารายเดือนตั้งต้นต่อ Workspace (ราคาในตาราง plans / เวอร์ชันราคาชนะเมื่อมี) · null = ฟรี / ติดต่อฝ่ายขาย */
@@ -205,6 +206,8 @@ export interface PrivateDiscount {
   cyclesLeft: number | null;
   reason: string;
   setAt: Date | null;
+  /** ชื่อพนักงานที่ตั้ง (คนขอ ไม่ใช่คนอนุมัติ) */
+  setByName: string | null;
 }
 
 /** ส่วนลดเฉพาะรายที่ยังใช้อยู่ของแต่ละ Workspace (ครบรอบแล้ว = ไม่มี) */
@@ -212,12 +215,13 @@ export async function privateDiscounts(db: Db | Tx, workspaceIds: string[]) {
   const out = new Map<string, PrivateDiscount>();
   if (!workspaceIds.length) return out;
   const rows = await db
-    .select({ r: couponRedemptions, c: coupons })
+    .select({ r: couponRedemptions, c: coupons, setByName: staffUsers.name })
     .from(couponRedemptions)
     .innerJoin(coupons, eq(coupons.id, couponRedemptions.couponId))
+    .leftJoin(staffUsers, eq(staffUsers.id, coupons.createdBy))
     .where(and(inArray(couponRedemptions.workspaceId, workspaceIds), eq(couponRedemptions.status, 'active'), isNotNull(coupons.workspaceId)));
   const used = await paidCycles(db, rows.map((x) => x.r.id));
-  for (const { r, c } of rows) {
+  for (const { r, c, setByName } of rows) {
     out.set(r.workspaceId, {
       code: c.code,
       percent: c.value,
@@ -225,6 +229,7 @@ export async function privateDiscounts(db: Db | Tx, workspaceIds: string[]) {
       cyclesLeft: r.cyclesTotal === null ? null : Math.max(0, r.cyclesTotal - (used.get(r.id) ?? 0)),
       reason: c.description ?? '',
       setAt: r.activatedAt,
+      setByName,
     });
   }
   return out;

@@ -5,7 +5,7 @@ import { BillingModule } from '../billing/billing.module.js';
 import { parse } from '../errors.js';
 import { BulkBody, BulkService } from './bulk.service.js';
 import { AuditQuery, CustomersService, ListQuery, TestFlagBody } from './customers.service.js';
-import { AccessRequestBody, ChangePlanBody, DiscountBody, ExtendTrialBody, type Gated, NoteBody, PreviewQuery, ResumeBody, SuspendBody, TransferOwnerBody, WorkspacesService } from './workspaces.service.js';
+import { AccessRequestBody, ChangePlanBody, DiscountBody, ExtendTrialBody, type Gated, NoteBody, PreviewQuery, RemoveDiscountBody, ResumeBody, SuspendBody, TransferOwnerBody, WorkspacesService } from './workspaces.service.js';
 
 /** เกินวงเงิน → 202 พร้อมคำขออนุมัติ · ไม่เกิน → 200 พร้อมผล */
 async function respond<T extends object>(res: Response, p: Promise<Gated<T>>) {
@@ -109,6 +109,12 @@ export class WorkspacesController {
   @HttpCode(200)
   discount(@Req() req: OpsRequest, @Param('id') id: string, @Body() body: unknown, @Res({ passthrough: true }) res: Response) {
     return respond(res, this.workspaces.discount(req.staff!, id, parse(DiscountBody, body)));
+  }
+  @Roles('finance')
+  @Post(['workspaces/:id/discount/remove', 'workspaces/:id\\:remove-discount'])
+  @HttpCode(200)
+  removeDiscount(@Req() req: OpsRequest, @Param('id') id: string, @Body() body: unknown) {
+    return this.workspaces.removeDiscount(req.staff!, id, parse(RemoveDiscountBody, body));
   }
   @Roles('finance')
   @Get('workspaces/:id/change-plan/preview')

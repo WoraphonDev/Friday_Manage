@@ -11,7 +11,7 @@ import { Button, buttonClass, errorToast, Textarea, useToast } from "@/component
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import { CreditCard } from "./Credit";
-import { healthTone, planLabel, useFmt } from "./format";
+import { healthTone, planLabel, useDiscountLeft, useFmt } from "./format";
 import type { Member, Overview } from "./types";
 
 /** โหลดข้อมูลของแท็บ · แต่ละแท็บล้มได้เฉพาะส่วน (S6) */
@@ -59,10 +59,12 @@ function Table({ head, children, label }: { head: string[]; children: React.Reac
 
 // ---------------------------------------------------------------- ภาพรวม
 
-export function OverviewPanel({ ws }: { ws: Overview }) {
+/** `onRemoveDiscount` = ปุ่มยกเลิกส่วนลดเฉพาะราย (ส่งมาเฉพาะคนที่ให้ส่วนลดได้) */
+export function OverviewPanel({ ws, onRemoveDiscount }: { ws: Overview; onRemoveDiscount?: () => void }) {
   const t = useTranslations("customers");
   const fmt = useFmt();
   const sub = ws.subscription;
+  const discountLeft = useDiscountLeft();
   return (
     <div className="grid-2">
       <Card title={t("overview.dau")} sub={t("overview.dauNote", { n: ws.usage.active30, last: fmt.ago(ws.usage.lastActiveAt) })}>
@@ -109,11 +111,20 @@ export function OverviewPanel({ ws }: { ws: Overview }) {
             <tr>
               <td className="muted">{t("overview.discount")}</td>
               <td>
-                {sub?.discount?.percent != null
-                  ? t("overview.discountValue", { pct: sub.discount.percent, months: sub.discount.months ? t("overview.monthsLeft", { n: sub.discount.months }) : t("overview.forever") })
-                  : sub?.discount?.active
-                    ? "✓"
-                    : t("overview.none")}
+                {sub?.discount?.percent != null ? (
+                  <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                    <span>{t("overview.discountValue", { pct: sub.discount.percent, months: discountLeft(sub.discount) })}</span>
+                    {onRemoveDiscount && (
+                      <Button size="small" style={{ color: "var(--danger)" }} aria-label={t("overview.removeDiscountLabel", { pct: sub.discount.percent })} onClick={onRemoveDiscount}>
+                        {t("overview.removeDiscount")}
+                      </Button>
+                    )}
+                  </div>
+                ) : sub?.discount?.active ? (
+                  "✓"
+                ) : (
+                  t("overview.none")
+                )}
               </td>
             </tr>
           </tbody>

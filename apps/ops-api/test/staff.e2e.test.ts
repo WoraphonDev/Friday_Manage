@@ -58,7 +58,8 @@ describe('การอนุมัติ (06 › 4) · มี Owner คนเด
     expect(r.status, JSON.stringify(r.body)).toBe(202);
     expect(r.body.pendingApproval).toMatchObject({ kind: 'workspace.discount', status: 'pending', requestedBy: finance.id, canSelfApprove: false });
     expect(mail.sent.slice(before).map((m) => m.to)).toContain(owner.email);
-    expect((await t.owner.query(`SELECT discount FROM subscriptions WHERE id = $1`, [c.sub])).rows[0].discount).toEqual({});
+    const privateDiscount = async () => (await t.owner.query(`SELECT c.value, c.created_by FROM coupons c WHERE c.workspace_id = $1 AND c.status = 'active'`, [c.id])).rows;
+    expect(await privateDiscount()).toEqual([]);
 
     const id = r.body.pendingApproval.id;
     expect((await finance.agent.post(`/ops/approvals/${id}:approve`).send({})).status).toBe(403);
@@ -67,7 +68,7 @@ describe('การอนุมัติ (06 › 4) · มี Owner คนเด
     const ok = await owner.agent.post(`/ops/approvals/${id}:approve`).send({ note: 'ตามสัญญา' });
     expect(ok.status, JSON.stringify(ok.body)).toBe(200);
     expect(ok.body.approval).toMatchObject({ status: 'approved', decidedBy: owner.id, selfApproved: false });
-    expect((await t.owner.query(`SELECT discount FROM subscriptions WHERE id = $1`, [c.sub])).rows[0].discount).toMatchObject({ percent: 40, setBy: finance.id });
+    expect(await privateDiscount()).toEqual([{ value: 40, created_by: finance.id }]);
     const [log] = (await staffLog('ops.discount_set')).filter((l) => l.workspace_id === c.id);
     expect(log).toMatchObject({ staff_id: finance.id, approved_by: owner.id, self_approved: false });
     expect((await owner.agent.post(`/ops/approvals/${id}:approve`).send({})).body.error.code).toBe('approval_not_pending');

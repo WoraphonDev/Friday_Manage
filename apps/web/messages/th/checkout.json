@@ -128,6 +128,7 @@
     "applied": "ใช้โค้ด {code} แล้ว",
     "remove": "เอาโค้ด {code} ออก",
     "line": "ส่วนลด {code}",
+    "special": "ส่วนลดพิเศษ {value}%",
     "lineGeneric": "ส่วนลด",
     "cyclesLeft": "เหลือ {n} รอบ",
     "forever": "ตลอดไป",

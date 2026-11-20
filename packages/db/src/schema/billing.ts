@@ -24,6 +24,7 @@ export const subscriptions = pgTable('subscriptions', {
   cycle: billingCycle().notNull().default('monthly'), status: subscriptionStatus().notNull().default('trialing'),
   trialEndsAt: tstz(), currentPeriodStart: tstz(), currentPeriodEnd: tstz(), paymentMethod: paymentMethod(),
   stripeCustomerId: text(), stripeSubscriptionId: text(),
+  /** เลิกใช้: ส่วนลดเฉพาะราย (C3) ย้ายไปเป็นคูปองเฉพาะราย (`coupons.workspace_id`) เพื่อให้ checkout หักจริง · ไม่มีโค้ดอ่านหรือเขียนแล้ว */
   discount: jsonb().notNull().default(sql`'{}'::jsonb`),
   /** ใบแจ้งหนี้ที่เปิดสิทธิ์ปัจจุบัน (ชำระแล้วหรือเปิดชั่วคราวระหว่างรอตรวจสลิป) · ใช้ตัดสินว่าใบไหนแทนใบไหน (N01/N02) */
   sourceInvoiceId: uuid(),

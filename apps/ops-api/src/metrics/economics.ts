@@ -32,12 +32,12 @@ export function healthScore(x: HealthInput) {
   return { score, parts: { usage: pct(usage), payment: pct(payment), support: pct(support), growth: pct(growth) } };
 }
 
-/** MRR ก่อน VAT หลังส่วนลด (สตางค์) · ใช้ค่าล่าสุดจาก subscription_changes ถ้ามี ไม่มีก็คิดจากราคาแพ็กเกจ */
-export function mrrOf(sub: { status: string; cycle: string; discount: unknown } | null, plan: { priceMonthlySatang: number | null; priceYearlySatang: number | null } | null, lastChange?: number | null) {
+/** MRR ก่อน VAT หลังส่วนลด (สตางค์) · ใช้ค่าล่าสุดจาก subscription_changes ถ้ามี ไม่มีก็คิดจากราคาแพ็กเกจ · `discountPct` = ส่วนลดเฉพาะราย (privateDiscounts) */
+export function mrrOf(sub: { status: string; cycle: string; discountPct?: number | null } | null, plan: { priceMonthlySatang: number | null; priceYearlySatang: number | null } | null, lastChange?: number | null) {
   if (lastChange != null) return lastChange;
   if (!sub || !plan || !['active', 'past_due'].includes(sub.status)) return 0;
   const base = sub.cycle === 'yearly' ? Math.round((plan.priceYearlySatang ?? 0) / 12) : plan.priceMonthlySatang ?? 0;
-  const pct = (sub.discount as { percent?: number } | null)?.percent ?? 0;
+  const pct = sub.discountPct ?? 0;
   return Math.round(base * (1 - pct / 100));
 }
 

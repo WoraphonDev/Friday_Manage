@@ -1,5 +1,5 @@
 import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
-import { COUPON_DURATIONS, COUPON_KINDS, cyclesOf, type Db, PLAN_DEFAULT_MONTHLY_SATANG, PRICE_NOTICE_DAYS, schema, type Tx, YEARLY_MONTHS } from '@friday/db';
+import { COUPON_DURATIONS, COUPON_KINDS, cyclesOf, type Db, PLAN_DEFAULT_MONTHLY_SATANG, PRICE_NOTICE_DAYS, PRIVATE_DISCOUNT_PREFIX, schema, type Tx, YEARLY_MONTHS } from '@friday/db';
 import { and, desc, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { AnnouncementsService } from '../announcements/announcements.service.js';
@@ -40,7 +40,9 @@ const code = z
   .string()
   .trim()
   .transform((v) => v.toUpperCase())
-  .pipe(z.string().regex(/^[A-Z0-9][A-Z0-9_-]{2,31}$/, 'โค้ด 3–32 ตัว ใช้ A–Z 0–9 - _ (ขึ้นต้นด้วยตัวอักษรหรือตัวเลข)'));
+  .pipe(z.string().regex(/^[A-Z0-9][A-Z0-9_-]{2,31}$/, 'โค้ด 3–32 ตัว ใช้ A–Z 0–9 - _ (ขึ้นต้นด้วยตัวอักษรหรือตัวเลข)'))
+  // SP- สงวนไว้ให้ส่วนลดเฉพาะราย (C3)
+  .refine((v) => !v.startsWith(PRIVATE_DISCOUNT_PREFIX), `โค้ดที่ขึ้นต้นด้วย ${PRIVATE_DISCOUNT_PREFIX} สงวนไว้ให้ส่วนลดเฉพาะราย`);
 const couponFields = {
   code,
   description: z.string().trim().max(200).nullish(),
@@ -344,7 +346,7 @@ export class PromotionsService implements OnModuleInit {
 
   private async couponRows(ids?: string[]) {
     const creator = sql<string | null>`(select name from staff_users where id = ${s.coupons.createdBy})`;
-    const rows = await this.db.select({ c: s.coupons, createdBy: creator }).from(s.coupons).where(ids ? inArray(s.coupons.id, ids) : undefined).orderBy(desc(s.coupons.createdAt));
+    const rows = await this.db.select({ c: s.coupons, createdBy: creator }).from(s.coupons).where(and(ids ? inArray(s.coupons.id, ids) : undefined, isNull(s.coupons.workspaceId))).orderBy(desc(s.coupons.createdAt));
     if (!rows.length) return [];
     const couponIds = rows.map((r) => r.c.id);
     const stats = await this.db
@@ -438,7 +440,8 @@ export class PromotionsService implements OnModuleInit {
 
   private async coupon(id: string) {
     if (!z.uuid().safeParse(id).success) throw new AppError(404, 'not_found', 'ไม่พบคูปองนี้');
-    const [c] = await this.db.select().from(s.coupons).where(eq(s.coupons.id, id));
+    // ส่วนลดเฉพาะราย (coupons.workspace_id) จัดการที่หน้าลูกค้า ไม่ใช่หน้าโปรโมชัน
+    const [c] = await this.db.select().from(s.coupons).where(and(eq(s.coupons.id, id), isNull(s.coupons.workspaceId)));
     if (!c) throw new AppError(404, 'not_found', 'ไม่พบคูปองนี้');
     return c;
   }

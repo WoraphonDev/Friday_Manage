@@ -1,5 +1,5 @@
 import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
-import { creditBalance, type Db, periodDays, schema } from '@friday/db';
+import { creditBalance, type Db, grantPrivateDiscount, periodDays, privateDiscounts, schema } from '@friday/db';
 import { and, eq, inArray, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { ApprovalsService, type ApprovalContext } from '../approvals/approvals.service.js';
@@ -168,13 +168,15 @@ export class WorkspacesService implements OnModuleInit {
     return this.applyDiscount(staff, id, input);
   }
 
+  /** ส่วนลดเฉพาะราย = คูปองเฉพาะ Workspace นี้ ให้ checkout ของลูกค้าหักจริงตั้งแต่ใบแจ้งหนี้ถัดไป · ตั้งใหม่แทนของเดิม */
   async applyDiscount(staff: Staff, id: string, input: z.infer<typeof DiscountBody>, ctx?: ApprovalContext) {
     const { sub } = await this.sub(id);
     if (!sub) throw new AppError(409, 'no_subscription', 'Workspace นี้ยังไม่มีแพ็กเกจ');
-    const discount = { percent: input.percent, months: input.months ?? null, reason: input.reason, setBy: staff.id, setAt: new Date().toISOString() };
-    await this.db.transaction(async (tx) => {
-      await tx.update(s.subscriptions).set({ discount, updatedAt: new Date() }).where(eq(s.subscriptions.id, sub.id));
-      await audit(tx, staff, id, 'plan', 'ops.discount_set', `ส่วนลด ${input.percent}%${input.months ? ` นาน ${input.months} รอบ` : ''} · ${input.reason}`, { type: 'subscription', id: sub.id }, approvalOf(ctx));
+    const cycles = input.months ?? null;
+    const discount = await this.db.transaction(async (tx) => {
+      const { coupon, redemptionId } = await grantPrivateDiscount(tx, { workspaceId: id, percent: input.percent, cycles, reason: input.reason, staffId: staff.id });
+      await audit(tx, staff, id, 'plan', 'ops.discount_set', `ส่วนลด ${input.percent}%${cycles ? ` นาน ${cycles} รอบ` : ' ตลอดไป'} (${coupon.code}) ใช้กับใบแจ้งหนี้ถัดไป · ${input.reason}`, { type: 'coupon_redemption', id: redemptionId }, approvalOf(ctx));
+      return { code: coupon.code, percent: input.percent, months: cycles, reason: input.reason };
     });
     return { discount };
   }
@@ -289,8 +291,9 @@ export class WorkspacesService implements OnModuleInit {
       return { plan: input.plan, cycle, previous: prev.code, effective: 'next_cycle' as const, effectiveAt: sub.currentPeriodEnd, invoice: null, warnings: [] };
     }
 
-    const before = mrrOf(sub, prev);
-    const after = mrrOf({ status: 'active', cycle, discount: sub.discount }, plan);
+    const discountPct = (await privateDiscounts(this.db, [id])).get(id)?.percent ?? null;
+    const before = mrrOf({ ...sub, discountPct }, prev);
+    const after = mrrOf({ status: 'active', cycle, discountPct }, plan);
     await this.db.transaction(async (tx) => {
       // แพ็กเกจที่ทีมกำหนดเอง = เปิดใช้ทันที ไม่นับเป็นช่วงทดลอง · ล้างการลดแพ็กเกจที่ตั้งไว้
       await tx.update(s.subscriptions).set({ planId: plan.id, cycle, status: 'active', trialEndsAt: null, pendingPlanId: null, pendingCycle: null, updatedAt: new Date() }).where(eq(s.subscriptions.id, sub.id));

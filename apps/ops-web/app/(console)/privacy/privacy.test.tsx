@@ -112,13 +112,14 @@ const page = (search = "") => {
   navigation.search = search;
   server.use(
     http.get(`${OPS}/privacy/requests`, requestsRes([eraseReq, exportReq, doneReq])),
-    http.get(`${OPS}/privacy/requests/${R}`, () => HttpResponse.json({ request: exportReq, steps: steps(1), history: [], scope, erasePlan: null })),
+    http.get(`${OPS}/privacy/requests/${R}`, () => HttpResponse.json({ request: exportReq, steps: steps(1), history: [], scope, leads: [], erasePlan: null })),
     http.get(`${OPS}/privacy/requests/${E}`, () =>
       HttpResponse.json({
         request: eraseReq,
         steps: steps(3),
         history: [{ at: iso(-20), action: "privacy.request_created", text: "รับคำขอ #19", staffName: "ซัพพอร์ตตัวอย่าง", approvedBy: null }],
         scope,
+        leads: [],
         erasePlan: { remove: ["บัญชีผู้ใช้ รูปโปรไฟล์"], anonymize: ["งานและคอมเมนต์: เปลี่ยนชื่อ"], keep: [], backupDays: 35, blockers: [] },
       }),
     ),
@@ -244,6 +245,27 @@ describe("คำขอ PDPA", () => {
     await userEvent.click(await screen.findByRole("button", { name: "แตะ Passkey" }));
     expect(await screen.findByText("ส่งขออนุมัติแล้ว")).toBeInTheDocument();
     expect(body).toEqual({ confirm: "ลบข้อมูล", reason: "ผู้ขอยืนยันตัวตนแล้ว" });
+  });
+
+  it("O54 ผู้ขอไม่มีบัญชีแต่มี Lead ฝ่ายขาย: แสดง Lead ในขอบเขต · ลบตามคำขอกดได้", async () => {
+    asRole("support");
+    const leadOnly = { ...eraseReq, userId: null };
+    page(`request=${E}`);
+    server.use(
+      http.get(`${OPS}/privacy/requests/${E}`, () =>
+        HttpResponse.json({
+          request: leadOnly, steps: steps(3), history: [], scope: { memberships: [], soleOwner: [], invoicesKept: 0 },
+          leads: [{ id: "l1", number: 7, company: "บริษัท ตัวอย่างลีด จำกัด", contactName: "คุณลีด ตัวอย่าง", contactTitle: "IT Manager", email: "lead@corp.example", phone: "0811111111", message: "สนใจแพ็กเกจองค์กร", source: "form", stage: "contacted", consentAt: iso(-30), ip: null, createdAt: iso(-30), notes: 2, acceptedQuotes: 0 }],
+          erasePlan: { remove: ["ข้อมูลผู้ติดต่อใน Lead 1 รายการ"], anonymize: [], keep: ["ชื่อบริษัทและมูลค่าดีลใน Lead"], backupDays: 35, blockers: [] },
+        }),
+      ),
+    );
+    const drawer = await screen.findByRole("dialog", { name: /DSR-0019/ });
+    const leads = within(drawer).getByRole("heading", { name: "ข้อมูลในฝ่ายขาย (Lead)" }).closest("section")!;
+    expect(within(leads).getByText("#7 บริษัท ตัวอย่างลีด จำกัด")).toBeInTheDocument();
+    expect(within(leads).getByText(/คุณลีด ตัวอย่าง · IT Manager · lead@corp.example · 0811111111/)).toHaveTextContent("บันทึกการคุย 2 รายการ");
+    expect(within(leads).getByText(/ติดต่อแล้ว/)).toBeInTheDocument();
+    expect(within(drawer).getByRole("button", { name: "ลบตามคำขอ (ต้องมีคนที่สองอนุมัติ)" })).toBeEnabled();
   });
 });
 
@@ -379,7 +401,7 @@ describe("Legal hold · การเก็บข้อมูล · Workspace ท
     server.use(
       http.get(`${OPS}/privacy/requests`, requestsRes([held, exportReq])),
       http.get(`${OPS}/privacy/requests/${E}`, () =>
-        HttpResponse.json({ request: held, steps: steps(3), history: [], scope, erasePlan: { remove: ["บัญชีผู้ใช้"], anonymize: [], keep: [], backupDays: 35, blockers: [{ code: "legal_hold", workspace: null }] } }),
+        HttpResponse.json({ request: held, steps: steps(3), history: [], scope, leads: [], erasePlan: { remove: ["บัญชีผู้ใช้"], anonymize: [], keep: [], backupDays: 35, blockers: [{ code: "legal_hold", workspace: null }] } }),
       ),
     );
     const drawer = await screen.findByRole("dialog", { name: /DSR-0019/ });

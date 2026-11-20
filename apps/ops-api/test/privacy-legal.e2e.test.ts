@@ -110,7 +110,7 @@ describe('ลบตามคำขอ (A6) · ต้องมีคนที่�
     await reauth(owner);
     const ok = await owner.agent.post(`/ops/approvals/${r.body.pendingApproval.id}/approve`).send({ note: 'ตรวจแล้ว' });
     expect(ok.status, JSON.stringify(ok.body)).toBe(200);
-    expect(ok.body.result).toEqual({ requestId: req, workspaces: 1, anonymized: true });
+    expect(ok.body.result).toEqual({ requestId: req, workspaces: 1, anonymized: true, leads: 0 });
     const u = (await t.owner.query(`SELECT email, display_name, phone, disabled_at FROM users WHERE id = $1`, [user])).rows[0];
     expect(u).toMatchObject({ email: `erased-${user}@invalid.example`, display_name: 'ผู้ใช้ที่ถูกลบ', phone: null });
     expect(u.disabled_at).not.toBeNull();
@@ -133,6 +133,50 @@ describe('ลบตามคำขอ (A6) · ต้องมีคนที่�
     const sole = (await support.agent.post('/ops/privacy/requests').send({ requestType: 'erase', requesterEmail: 'owner@pdpa-demo.example.com', identity: 'email_match', acknowledge: false })).body.request;
     await support.agent.post(`/ops/privacy/requests/${sole.id}/advance`).send({ note: 'ตรวจขอบเขตแล้ว' });
     expect((await support.agent.post(`/ops/privacy/requests/${sole.id}/erase`).send({ confirm: 'ลบข้อมูล', reason: 'ตามคำขอ' })).body.error).toMatchObject({ code: 'sole_owner', details: { workspaces: ['pdpa-demo'] } });
+  });
+});
+
+describe('Lead ฝ่ายขายในคำขอ PDPA (O54)', () => {
+  let req = '';
+  let lead = '';
+
+  beforeAll(async () => {
+    // ผู้ติดต่อจากฟอร์มติดต่อฝ่ายขาย ไม่มีบัญชีกับ Friday
+    lead = (await t.owner.query(
+      `INSERT INTO leads (company, contact_name, contact_title, email, phone, message, source, consent_at, ip) VALUES ('บริษัท ตัวอย่างลีด จำกัด', 'คุณลีด ตัวอย่าง', 'IT Manager', 'Lead.Only@corp.example', '0811111111', 'สนใจแพ็กเกจองค์กร', 'form', now(), '203.0.113.9') RETURNING id`,
+    )).rows[0].id;
+    await t.owner.query(`INSERT INTO lead_notes (lead_id, kind, body, created_by) VALUES ($1, 'call', 'โทรคุยกับคุณลีด เบอร์มือถือส่วนตัว', $2), ($1, 'system', 'สร้างจากฟอร์มติดต่อฝ่ายขาย', NULL)`, [lead, owner.id]);
+  });
+
+  it('ไม่มีบัญชีแต่มี Lead: ไม่ส่งต่อ Owner · รายละเอียดแสดง Lead · แผนการลบบอกสิ่งที่ลบและเก็บต่อ', async () => {
+    const r = await support.agent.post('/ops/privacy/requests').send({ requestType: 'erase', requesterEmail: 'lead.only@corp.example', identity: 'link_confirmed', acknowledge: false });
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
+    expect(r.body).toMatchObject({ forwardToOwner: false, leads: 1 });
+    req = r.body.request.id;
+    const d = (await support.agent.get(`/ops/privacy/requests/${req}`)).body;
+    expect(d.leads).toEqual([expect.objectContaining({ company: 'บริษัท ตัวอย่างลีด จำกัด', contactName: 'คุณลีด ตัวอย่าง', email: 'Lead.Only@corp.example', phone: '0811111111', source: 'form', notes: 1, acceptedQuotes: 0 })]);
+    expect(d.erasePlan).toMatchObject({
+      remove: ['ข้อมูลผู้ติดต่อใน Lead 1 รายการ (ชื่อ ตำแหน่ง อีเมล โทร ข้อความ IP การยินยอม) และบันทึกการคุย'],
+      anonymize: [],
+      keep: ['ชื่อบริษัทและมูลค่าดีลใน Lead (ข้อมูลธุรกิจ ไม่ใช่ข้อมูลส่วนบุคคล)'],
+      blockers: [],
+    });
+  });
+
+  it('ลบตามคำขอ (คนที่สองอนุมัติ): ล้างข้อมูลผู้ติดต่อและบันทึกการคุย · บริษัทและขั้นดีลยังอยู่', async () => {
+    await support.agent.post(`/ops/privacy/requests/${req}/advance`).send({ note: 'พบเฉพาะ Lead ฝ่ายขาย' });
+    await reauth(support);
+    const r = await support.agent.post(`/ops/privacy/requests/${req}/erase`).send({ confirm: 'ลบข้อมูล', reason: 'ผู้ติดต่อขอลบข้อมูลทางอีเมล' });
+    expect(r.status, JSON.stringify(r.body)).toBe(202);
+    await reauth(owner);
+    const ok = await owner.agent.post(`/ops/approvals/${r.body.pendingApproval.id}/approve`).send({ note: 'ตรวจแล้ว' });
+    expect(ok.status, JSON.stringify(ok.body)).toBe(200);
+    expect(ok.body.result).toEqual({ requestId: req, workspaces: 0, anonymized: false, leads: 1 });
+    const l = (await t.owner.query(`SELECT company, contact_name, contact_title, email, phone, message, ip, consent_at, stage FROM leads WHERE id = $1`, [lead])).rows[0];
+    expect(l).toEqual({ company: 'บริษัท ตัวอย่างลีด จำกัด', contact_name: null, contact_title: null, email: null, phone: null, message: null, ip: null, consent_at: null, stage: 'new' });
+    const notes = (await t.owner.query(`SELECT kind, body FROM lead_notes WHERE lead_id = $1 ORDER BY created_at, kind`, [lead])).rows;
+    expect(notes).toEqual(expect.arrayContaining([{ kind: 'call', body: expect.stringMatching(/^\[ลบตามคำขอ PDPA #\d+\]$/) }, { kind: 'system', body: 'สร้างจากฟอร์มติดต่อฝ่ายขาย' }, { kind: 'system', body: expect.stringMatching(/^ลบข้อมูลผู้ติดต่อตามคำขอ PDPA #\d+$/) }]));
+    expect((await support.agent.get(`/ops/privacy/requests/${req}`)).body.leads).toEqual([]);
   });
 });
 

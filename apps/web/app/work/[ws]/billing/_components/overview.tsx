@@ -408,16 +408,17 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
       {/* เปรียบเทียบแพ็กเกจเป็นหน้าต่างซ้อน ไม่ออกจากหน้า Billing (ผู้ใช้ขอ 2026-11-15) · กดปุ่มของแพ็กเกจแล้วปิดหน้าต่างไปตามลิงก์ */}
       <Dialog open={comparing} onOpenChange={setComparing} title={t("compare")} size="xl">
         <div onClickCapture={(e) => { if ((e.target as HTMLElement).closest("a[href]")) setComparing(false); }}>
-          <PlansCompare ws={ws} sub={sub} heading="none" />
+          <PlansCompare ws={ws} sub={sub} heading="none" onToFree={() => (setComparing(false), setCancelling(true))} />
         </div>
       </Dialog>
 
       <CancelSurvey
         open={cancelling}
         onOpenChange={setCancelling}
-        base={base}
+        ws={ws}
         isOwner={workspace.role === "owner"}
-        until={formatDate(sub.status === "trialing" ? sub.trialEndsAt : sub.currentPeriodEnd, "BE", true)}
+        sub={sub}
+        blockers={o.freeBlockers}
         onCancelled={refresh}
       />
     </div>

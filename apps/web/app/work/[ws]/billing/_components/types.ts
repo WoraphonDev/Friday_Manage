@@ -23,7 +23,16 @@ export interface BillingOverview {
   /** O41 · R4 เครดิตคงเหลือ (สตางค์) · หักใบถัดไปอัตโนมัติ */
   creditSatang?: number;
   /** O41 · R7 ลดแพ็กเกจ / เปลี่ยนรอบที่ตั้งไว้ มีผลเมื่อจบรอบ · blockers = ต้องลดก่อนวันที่มีผล */
-  pendingChange?: { plan: PlanCode; cycle: Cycle; effectiveAt: string | null; blockers: { key: "seats" | "projects"; used: number; limit: number }[] } | null;
+  pendingChange?: { plan: PlanCode; cycle: Cycle; effectiveAt: string | null; blockers: PlanBlocker[] } | null;
+  /** ยกเลิกแพ็กเกจ = เป็น Free เมื่อจบรอบ · สิ่งที่ใช้เกินขีดจำกัดของ Free อยู่ (API รุ่นเก่าไม่ส่ง) */
+  freeBlockers?: PlanBlocker[];
+}
+
+/** ใช้อยู่เกินขีดจำกัดของแพ็กเกจปลายทาง · ต้องลดก่อนวันที่มีผล */
+export interface PlanBlocker {
+  key: "seats" | "projects";
+  used: number;
+  limit: number;
 }
 
 /** `GET w/billing/quote` */

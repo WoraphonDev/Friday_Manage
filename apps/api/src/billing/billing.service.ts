@@ -127,6 +127,8 @@ export class BillingService {
       },
       creditSatang,
       pendingChange: pending ? { plan: pending.plan, cycle: pending.cycle ?? sub.cycle, effectiveAt: sub.currentPeriodEnd, blockers: await this.downgradeBlockers(tenant.workspaceId, pending.plan as PlanCode) } : null,
+      // ยกเลิกแพ็กเกจ = กลับเป็น Free เมื่อจบรอบ · หน้าต่างยกเลิกบอกล่วงหน้าว่าทีมใช้เกินขีดจำกัดของ Free อยู่เท่าไร
+      freeBlockers: sub.planCode === 'free' ? [] : await this.downgradeBlockers(tenant.workspaceId, 'free'),
       limits: snap.limits,
       invoices,
       profile,

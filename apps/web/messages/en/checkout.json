@@ -189,7 +189,15 @@
     "keep": "Keep my plan",
     "confirm": "Cancel plan",
     "done": "Canceled · you can use it until the end of the cycle",
-    "kept": "Thanks for staying with Friday"
+    "kept": "Thanks for staying with Friday",
+    "over": {
+      "title": "Your team is over the Free limits",
+      "seats": "{used} / {limit} members",
+      "projects": "{used} / {limit} projects",
+      "hint": "Reduce before {date}",
+      "members": "Manage members",
+      "projectsLink": "Manage projects"
+    }
   },
   "invoicePay": {
     "title": "Pay invoice {number}",

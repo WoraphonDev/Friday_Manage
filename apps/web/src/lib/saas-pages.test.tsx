@@ -474,8 +474,14 @@ describe("แพ็กเกจ & Billing", () => {
     const compare = await screen.findByRole("dialog", { name: "ดูเปรียบเทียบแพ็กเกจ" });
     const inDialog = within(await within(compare).findByRole("article", { name: "Team M" }));
     expect(inDialog.getByRole("link", { name: "เลือกแพ็กเกจนี้" })).toHaveAttribute("href", "/work/sample/billing/checkout?plan=team_m&cycle=monthly");
-    await user.click(within(await within(compare).findByRole("article", { name: "Free" })).getByRole("link", { name: "เปลี่ยนเป็น Free" }));
+    // เปลี่ยนเป็น Free = ยกเลิกแพ็กเกจ: หน้าต่างเปรียบเทียบปิด แล้วเปิดหน้าต่างยกเลิกต่อทันที (เดิมปิดเงียบ · ผู้ใช้แจ้ง 2026-11-20)
+    await user.click(within(await within(compare).findByRole("article", { name: "Free" })).getByRole("button", { name: "เปลี่ยนเป็น Free" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "ดูเปรียบเทียบแพ็กเกจ" })).not.toBeInTheDocument());
+    const cancel = await screen.findByRole("dialog", { name: "ยกเลิกแพ็กเกจ?" });
+    // ทดลองใช้ = ใช้ได้ถึงวันสิ้นสุดทดลอง
+    expect(cancel).toHaveTextContent("ใช้ต่อได้ถึง 19 พ.ย. 2569");
+    await user.click(within(cancel).getByRole("button", { name: "ยกเลิกแพ็กเกจ" }));
+    await waitFor(() => expect(calls.at(-1)!.path).toBe("/w/sample/billing/subscription/cancel"));
     o.unmount();
 
     // ลิงก์ตรง /billing/plans ยังเปิดได้
@@ -486,13 +492,51 @@ describe("แพ็กเกจ & Billing", () => {
     // ทดลอง Team S อยู่ = ยังชำระเงินแพ็กเกจปัจจุบันได้
     expect((await card("Team S")).getByRole("link", { name: "ชำระเงินแพ็กเกจนี้" })).toHaveAttribute("href", "/work/sample/billing/checkout?plan=team_s&cycle=monthly");
     expect((await card("Team M")).getByRole("link", { name: "เลือกแพ็กเกจนี้" })).toHaveAttribute("href", "/work/sample/billing/checkout?plan=team_m&cycle=monthly");
-    expect((await card("Free")).getByRole("link", { name: "เปลี่ยนเป็น Free" })).toHaveAttribute("href", "/work/sample/billing");
+    // ลิงก์ตรงก็เปิดหน้าต่างยกเลิกได้เหมือนกัน
+    await user.click((await card("Free")).getByRole("button", { name: "เปลี่ยนเป็น Free" }));
+    await user.click(within(await screen.findByRole("dialog", { name: "ยกเลิกแพ็กเกจ?" })).getByRole("button", { name: "ใช้ต่อ" }));
     expect(screen.queryByRole("link", { name: /ทดลอง 14 วัน/ })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /รายปี/ }));
     expect((await card("Team M")).getByRole("link", { name: "เลือกแพ็กเกจนี้" })).toHaveAttribute("href", "/work/sample/billing/checkout?plan=team_m&cycle=yearly");
     // อยู่ในกรอบของระบบ: มี Sidebar และปุ่มย้อนกลับ
     expect(screen.getAllByRole("navigation").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: /ย้อนกลับ/ })).toBeInTheDocument();
+  });
+
+  it("เปลี่ยนเป็น Free: บอกสิ่งที่ใช้เกิน Free ก่อนยืนยัน · ยกเลิกแล้วบอกวันที่เป็น Free · Admin เห็นว่าเฉพาะ Owner", async () => {
+    const user = userEvent.setup();
+    let body: object = { ...overview("active"), freeBlockers: [{ key: "seats", used: 7, limit: 5 }, { key: "projects", used: 4, limit: 3 }] };
+    server.use(http.get("*/api/v1/w/:ws/billing", () => HttpResponse.json(body)));
+    const a = mountBilling();
+    await user.click(await screen.findByRole("button", { name: "ดูเปรียบเทียบแพ็กเกจ" }));
+    await user.click(within(await screen.findByRole("article", { name: "Free" })).getByRole("button", { name: "เปลี่ยนเป็น Free" }));
+    const cancel = await screen.findByRole("dialog", { name: "ยกเลิกแพ็กเกจ?" });
+    expect(cancel).toHaveTextContent("ใช้ต่อได้ถึง 6 ธ.ค. 2569");
+    const over = within(cancel).getByRole("status");
+    expect(over).toHaveTextContent("ทีมใช้เกินขีดจำกัดของ Free");
+    expect(over).toHaveTextContent("สมาชิก 7 / 5 คน · โปรเจกต์ 4 / 3 โปรเจกต์");
+    expect(over).toHaveTextContent("ลดให้ไม่เกินก่อน 6 ธ.ค. 2569");
+    expect(within(over).getByRole("link", { name: "จัดการสมาชิก" })).toHaveAttribute("href", "/work/sample/members");
+    expect(within(over).getByRole("link", { name: "จัดการโปรเจกต์" })).toHaveAttribute("href", "/work/sample/projects");
+    await user.click(within(cancel).getByRole("button", { name: "ใช้ต่อ" }));
+    a.unmount();
+
+    // ยกเลิกแล้ว: ปุ่ม Free บอกวันที่ กดไม่ได้ (ไม่เปิดหน้าต่างซ้ำ)
+    body = { ...overview("active"), subscription: { ...overview("active").subscription, status: "canceled" } };
+    navigation.pathname = "/work/sample/billing/plans";
+    const c = mountBilling({ section: "plans" });
+    const free = within(await screen.findByRole("article", { name: "Free" }));
+    expect(free.queryByRole("button", { name: "เปลี่ยนเป็น Free" })).not.toBeInTheDocument();
+    expect(free.getByText("เป็น Free 6 ธ.ค. 2569")).toHaveAttribute("aria-disabled", "true");
+    c.unmount();
+
+    // Admin: API ให้เฉพาะ Owner ยกเลิก · บอกเหตุผลแทนการกดแล้วเงียบ
+    asRole("admin");
+    body = overview("active");
+    mountBilling({ section: "plans" });
+    const adminFree = within(await screen.findByRole("article", { name: "Free" }));
+    expect(adminFree.getByText("เปลี่ยนเป็น Free")).toHaveAttribute("aria-disabled", "true");
+    expect(adminFree.getByText("เฉพาะ Owner ยกเลิกแพ็กเกจได้")).toBeInTheDocument();
   });
 
   it("O54 · เปิดตารางเทียบแพ็กเกจส่ง pricing.viewed · กดติดต่อฝ่ายขาย Enterprise ส่ง upgrade.prompt_clicked (สัญญาณ Lead ของ Ops)", async () => {

@@ -22,6 +22,8 @@ services:
       OPS_HOST: ${OPS_HOST}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # site ของระบบอื่นบนเครื่องเดียวกัน (import ใน Caddyfile)
+      - ./sites:/etc/caddy/sites:ro
       - caddy-data:/data
       - caddy-config:/config
     mem_limit: 96m

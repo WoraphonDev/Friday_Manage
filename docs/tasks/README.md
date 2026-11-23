@@ -89,7 +89,7 @@
 - ~~**A40 OpenAPI**: ผลลัพธ์ทุก endpoint ยังเป็น schema ว่าง~~ ทำแล้ว 23 พ.ย.: อ่านจากชนิด TypeScript ที่ handler คืนค่า (445 / 460 operation)
 - **ค่าตั้งที่ต้องหามาใส่ (staging ยังว่าง)**: `BOT_API_CLIENT_ID` (ดึงวันหยุด ธปท. ของ O43) · `OPS_ACCOUNTING_EMAIL` (ส่งรายงานให้สำนักงานบัญชีวันที่ 5) · `SNS_VERIFY` + Topic เปิดตอนขึ้น AWS (I01)
 - **O43** ทดสอบ Web Push บนมือถือจริงผ่าน staging
-- เฟส 2 ตามแผน: นำเข้า statement ธนาคาร / Bill Payment (O03)
+- ~~เฟส 2: นำเข้า statement ธนาคาร (O03)~~ ทำแล้ว 23 พ.ย. (กสิกรไทย · migration 0064) · **ต้องตรวจกับไฟล์ statement จริงของ KBank** · Bill Payment รอผู้ใช้เปิดบริการกับธนาคาร
 
 ## งานทั้งหมด
 

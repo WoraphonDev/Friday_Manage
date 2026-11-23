@@ -666,3 +666,30 @@ export const scriptRunChanges = pgTable('script_run_changes', {
   tableName: text().notNull(), rowId: uuid().notNull(), workspaceId: uuid(), before: jsonb().notNull(), after: jsonb().notNull(),
   createdAt: createdAt(),
 }, (t) => [index('script_run_changes_run_idx').on(t.runId), index('script_run_changes_created_idx').on(t.createdAt)]);
+
+/** ผลของแต่ละรายการเงินเข้าใน statement (O03 เฟส 2) · matched = ยืนยันเงินเข้าให้ใบแจ้งหนี้ · reconciled = ตรงกับรายการที่ทีมยืนยันจากสลิปไปแล้ว · review = รอคนตรวจ · ignored = ไม่เกี่ยวกับลูกค้า */
+export const STATEMENT_LINE_STATUSES = ['matched', 'reconciled', 'review', 'ignored'] as const;
+
+/** รอบนำเข้า statement ธนาคาร · ใช้เฉพาะทีม Friday (ops-api) */
+export const bankStatementImports = pgTable('bank_statement_imports', {
+  id: pk(), bank: text().notNull(), accountNo: text().notNull(), fileName: text().notNull(), fileSha256: text().notNull(),
+  periodFrom: date(), periodTo: date(),
+  deposits: integer().notNull().default(0), withdrawals: integer().notNull().default(0), duplicates: integer().notNull().default(0),
+  matched: integer().notNull().default(0), reconciled: integer().notNull().default(0), review: integer().notNull().default(0), ignored: integer().notNull().default(0),
+  createdBy: uuid().notNull().references(() => staffUsers.id), createdAt: createdAt(),
+}, (t) => [index('bank_statement_imports_created_idx').on(t.createdAt)]);
+
+/**
+ * เงินเข้าแต่ละรายการจาก statement · fingerprint กันนำเข้าซ้ำเมื่อไฟล์ช่วงวันซ้อนกัน
+ * payment_id / invoice_id ไม่มี FK เพราะ payments / invoices เป็นตารางของลูกค้า (คีย์ร่วม workspace_id) · ลบ Workspace แล้วรายการนี้ยังอยู่เพื่อกระทบยอดบัญชี
+ */
+export const bankStatementLines = pgTable('bank_statement_lines', {
+  id: pk(), importId: uuid().notNull().references(() => bankStatementImports.id, { onDelete: 'cascade' }),
+  txnAt: tstz().notNull(), amount: bigint({ mode: 'number' }).notNull(), balance: bigint({ mode: 'number' }),
+  description: text(), channel: text(), fingerprint: text().notNull(),
+  status: text().notNull(), reason: text(),
+  workspaceId: uuid().references(() => workspaces.id, { onDelete: 'set null' }), invoiceId: uuid(), paymentId: uuid(),
+  resolvedBy: uuid().references(() => staffUsers.id), resolvedAt: tstz(), note: text(), createdAt: createdAt(),
+}, (t) => [uniqueIndex('bank_statement_lines_fingerprint_key').on(t.fingerprint), index('bank_statement_lines_status_idx').on(t.status, t.txnAt),
+  index('bank_statement_lines_payment_idx').on(t.paymentId), check('bank_statement_lines_status_valid', oneOf(t.status, STATEMENT_LINE_STATUSES)),
+  check('bank_statement_lines_amount_positive', sql`${t.amount} > 0`)]);

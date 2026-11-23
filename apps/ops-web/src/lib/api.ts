@@ -57,6 +57,20 @@ export class OpsClient {
     if (!response.ok) throw this.failure(response, await response.json().catch(() => undefined), true);
     return response.blob();
   }
+  /** ส่งไฟล์ตรง ๆ (application/octet-stream) · ชื่อไฟล์ใน X-File-Name · error แบบเดียวกับคำขอ JSON */
+  async upload<T>(path: string, file: Blob, name: string): Promise<T> {
+    if (!path.startsWith("/") || path.startsWith("//") || path.includes("\\")) throw new TypeError("path ต้องเป็น relative ของ /ops-api");
+    let response: Response;
+    try {
+      response = await this.fetcher(`${OPS_BASE}${path}`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/octet-stream", "X-File-Name": encodeURIComponent(name) }, body: file });
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") throw error;
+      throw new ApiError(0, "network_error", ops.ui.networkError);
+    }
+    const data = await response.json().catch(() => undefined);
+    if (!response.ok) throw this.failure(response, data, true);
+    return data as T;
+  }
   private failure(response: Response, data: { error?: { code?: string; message?: string; details?: unknown; requestId?: string } } | undefined, redirectOnUnauthorized: boolean) {
     const payload = data?.error;
     const error = new ApiError(

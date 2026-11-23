@@ -31,7 +31,9 @@ const opsTables = ['staff_users', 'support_sessions', 'feature_flags', 'feature_
   // ใบเสนอราคา (เฟส 3 · 0060)
   'quotes',
   // สคริปต์ดูแลข้อมูล (เฟส 3 · 0061)
-  'script_runs', 'script_run_changes'];
+  'script_runs', 'script_run_changes',
+  // นำเข้า statement ธนาคาร (O03 เฟส 2 · 0064)
+  'bank_statement_imports', 'bank_statement_lines'];
 
 beforeAll(() => owner.connect());
 afterAll(() => owner.end());

@@ -278,6 +278,9 @@ export class OpsPaymentsService {
       .where(and(ne(s.payments.status, 'rejected'), sql`(coalesce(${s.payments.reviewedAt}, ${s.payments.updatedAt}) at time zone 'Asia/Bangkok')::date = ${day}::date`, sql`(${s.payments.status} = 'confirmed' or ${s.payments.slipFileKey} is not null or ${s.payments.exceptionReason} is not null)`))
       .orderBy(desc(s.payments.updatedAt))
       .limit(q.limit);
+    // ทีมยืนยันจากสลิปแล้วและพบเงินเข้าใน statement ธนาคาร = กระทบยอดแล้ว (O03 เฟส 2)
+    const ids = rows.map((r) => r.p.id);
+    const inStatement = new Set(ids.length ? (await this.db.select({ id: s.bankStatementLines.paymentId }).from(s.bankStatementLines).where(inArray(s.bankStatementLines.paymentId, ids))).map((x) => x.id) : []);
     const items = rows.map(({ p, inv, ws }) => ({
       id: p.id,
       at: p.reviewedAt ?? p.updatedAt,
@@ -287,8 +290,8 @@ export class OpsPaymentsService {
       providerRef: p.providerRef?.startsWith('slip:') ? null : p.providerRef,
       status: p.status,
       exceptionReason: p.exceptionReason,
-      /** ระบบผู้ให้บริการยืนยัน = กระทบยอดแล้ว · ทีมยืนยันจากสลิป = รอเทียบ statement ธนาคาร (Bill Payment / statement เข้าเฟส 2) */
-      reconciliation: p.status !== 'confirmed' ? 'pending' : p.verifiedBy === 'webhook' || p.verifiedBy === 'bank' ? 'matched' : 'manual',
+      /** ผู้ให้บริการ / statement ธนาคารยืนยัน = กระทบยอดแล้ว · ทีมยืนยันจากสลิปแต่ยังไม่พบใน statement = ตรวจจากสลิป */
+      reconciliation: p.status !== 'confirmed' ? 'pending' : p.verifiedBy === 'webhook' || p.verifiedBy === 'bank' || inStatement.has(p.id) ? 'matched' : 'manual',
       invoice: inv,
       workspace: ws,
     }));

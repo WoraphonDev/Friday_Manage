@@ -23,6 +23,8 @@ export const handlers = [
   // ช่วง 3: มุมมองที่บันทึก · ค่าเริ่มต้นว่าง (test ที่ต้องใช้ใส่ handler เอง)
   http.get(`${OPS}/views`, () => HttpResponse.json({ items: [], canManageTeam: false, maxPinned: 5 })),
   http.get(`${OPS}/views/counts`, () => HttpResponse.json({ items: [] })),
+  // เงินเข้าจาก statement ที่ยังจับคู่ไม่ได้ (O03 เฟส 2) · แท็บต้องตรวจเรียกทุกครั้ง · ค่าเริ่มต้น = ไม่มี
+  http.get(`${OPS}/bank-statement-lines`, () => HttpResponse.json({ items: [], total: 0 })),
   // ช่วง 3: บัญชีลูกค้า (ค้นหา ⌘K) · ค่าเริ่มต้นว่าง
   http.get(`${OPS}/accounts`, () => HttpResponse.json({ items: [], total: 0, limit: 5, offset: 0 })),
   // ความยาวรหัสผ่านขั้นต่ำของพนักงาน (หน้าตั้งรหัสผ่าน) · ค่าเริ่มต้นเดิม 12

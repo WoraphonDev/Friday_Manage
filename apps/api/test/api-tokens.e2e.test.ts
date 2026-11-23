@@ -88,6 +88,8 @@ describe('Authorization: Bearer', () => {
     const ro = await mint(team.lead, { name: 'read only', scopes: ['read'] });
     const issues = await api(ro.token).get(`${team.ws}/projects/${team.key}/issues`);
     expect(issues.status, JSON.stringify(issues.body)).toBe(200);
+    // การใช้ฟีเจอร์ API (A34) บันทึกเป็นของผู้สร้าง token
+    await expect.poll(async () => (await t.owner.query(`SELECT count(*)::int AS n FROM product_events WHERE workspace_id = $1 AND user_id = $2 AND name = 'feature.used' AND props->>'feature' = 'api'`, [wsId, team.leadId])).rows[0].n).toBe(1);
     const denied = await api(ro.token).post(`${team.ws}/projects/${team.key}/issues`, { title: 'จาก token read', moduleId });
     expect(denied.status).toBe(403);
     expect(denied.body.error).toMatchObject({ code: 'insufficient_scope', details: { required: 'write', scopes: ['read'] } });

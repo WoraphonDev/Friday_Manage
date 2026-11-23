@@ -1,7 +1,8 @@
 // A34 · เก็บข้อมูลธุรกิจตั้งแต่วันแรก (05-business-metrics › 1) · ข้อมูลสมมติเท่านั้น
+import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Db } from '@friday/db';
-import { AnalyticsService, classifyChange, referrerHost } from '../src/analytics/analytics.service.js';
+import { AnalyticsService, attributionFromCookie, classifyChange, referrerHost } from '../src/analytics/analytics.service.js';
 import { SYSTEM_DB } from '../src/db/db.module.js';
 import { client, seedTeam, signup, startApp, type TestApp } from './helpers.js';
 
@@ -20,6 +21,9 @@ beforeAll(async () => {
   wsId = (await t.owner.query('SELECT id FROM workspaces WHERE slug = $1', [team.slug])).rows[0].id;
 });
 afterAll(() => t.close());
+/** สมัครพร้อม cookie ที่ตั้งเอง · CSRF แบบ double submit จึงตั้ง fm_csrf กับ header ค่าเดียวกันได้ */
+const signupWithCookie = (cookie: string, body: object) =>
+  request(t.app.getHttpServer()).post('/api/v1/auth/signup').set('cookie', `${cookie}; fm_csrf=a34-csrf`).set('x-csrf-token', 'a34-csrf').send({ password: 'Friday2026', acceptTerms: true, ...body });
 
 describe('ที่มาของผู้ใช้และ Workspace', () => {
   it('สมัครพร้อม UTM → เก็บเฉพาะ host ของ referrer และ path ที่ไม่มี query · สร้าง Workspace แล้วคัดลอกที่มา', async () => {
@@ -46,6 +50,24 @@ describe('ที่มาของผู้ใช้และ Workspace', () => 
     expect((await team.dev.post('/workspaces', { name: 'Dev Side', slug: 'dev-side' })).status).toBe(201);
     const [row] = await q(`SELECT a.via, a.referring_workspace_id FROM workspace_acquisitions a JOIN workspaces w ON w.id = a.workspace_id WHERE w.slug = 'dev-side'`);
     expect(row).toEqual({ via: 'invited_user', referring_workspace_id: wsId });
+  });
+
+  it('ไม่ส่ง attribution ใน body → อ่านจาก cookie fm_attr ที่เว็บเขียนไว้ · body ส่งมาเองมาก่อน cookie', async () => {
+    const cookie = `fm_attr=${encodeURIComponent(JSON.stringify({ utmSource: 'facebook', utmCampaign: 'launch', referrer: 'l.facebook.com', landingPath: '/', firstSeenAt: '2026-11-20T09:00:00+07:00' }))}`;
+    const r = await signupWithCookie(cookie, { email: 'fb@a34.example.com', displayName: 'จาก Facebook' });
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
+    expect((await q('SELECT utm_source, utm_campaign, referrer_host, landing_path FROM signup_attributions WHERE user_id = $1', [r.body.id]))[0]).toEqual({ utm_source: 'facebook', utm_campaign: 'launch', referrer_host: 'l.facebook.com', landing_path: '/' });
+
+    const r2 = await signupWithCookie(cookie, { email: 'body@a34.example.com', displayName: 'ส่งเอง', attribution: { utmSource: 'line' } });
+    expect((await q('SELECT utm_source FROM signup_attributions WHERE user_id = $1', [r2.body.id]))[0]).toEqual({ utm_source: 'line' });
+  });
+
+  it('cookie ที่มาผิดรูปแบบ / มีช่องแปลก / ยาวเกิน → ไม่มีที่มา (การสมัครไม่ล้ม)', () => {
+    expect(attributionFromCookie('not-json')).toBeUndefined();
+    expect(attributionFromCookie(JSON.stringify({ utmSource: 'x', email: 'leak@example.com' }))).toBeUndefined();
+    expect(attributionFromCookie('x'.repeat(2001))).toBeUndefined();
+    expect(attributionFromCookie(undefined)).toBeUndefined();
+    expect(attributionFromCookie(JSON.stringify({ utmMedium: 'email' }))).toEqual({ utmMedium: 'email' });
   });
 
   it('referrerHost รับได้ทั้ง URL และ host · ค่าเสียคืน null', () => {
@@ -135,6 +157,28 @@ describe('ยอดใช้รายวันและ PDPA', () => {
     await analytics.rollupDailyUsage('2026-11-08');
     await analytics.rollupDailyUsage('2026-11-08');
     expect(await q(`SELECT line_messages, emails, webhook_calls FROM daily_usages WHERE workspace_id = $1 AND date = '2026-11-08'`, [wsId])).toEqual([{ line_messages: 2, emails: 1, webhook_calls: 1 }]);
+  });
+
+  it('api_calls = คำขอด้วย API token ที่ตอบไปในวันนั้น (เวลาไทย) จาก api_usage_hours · ไม่นับที่ถูก rate limit', async () => {
+    const token = '00000000-0000-4000-8000-00000000a34a';
+    const hour = (at: string, calls: number, rejected: number, route = 'GET /w/:ws/issues') =>
+      t.owner.query(`INSERT INTO api_usage_hours (workspace_id, hour, token_id, route, calls, rejected) VALUES ($1, $2, $3, $4, $5, $6)`, [wsId, at, token, route, calls, rejected]);
+    await hour('2026-11-10T00:00:00+07:00', 40, 5);
+    await hour('2026-11-10T23:00:00+07:00', 10, 0, 'POST /w/:ws/issues');
+    await hour('2026-11-11T00:00:00+07:00', 99, 0); // วันถัดไป
+    await hour('2026-11-09T23:00:00+07:00', 77, 0); // วันก่อน
+    await analytics.rollupDailyUsage('2026-11-10');
+    await analytics.rollupDailyUsage('2026-11-10');
+    expect(await q(`SELECT api_calls FROM daily_usages WHERE workspace_id = $1 AND date = '2026-11-10'`, [wsId])).toEqual([{ api_calls: 45 }]);
+  });
+
+  it('ใช้ API token → feature.used api ครั้งแรกของวันต่อคน (กันซ้ำในหน่วยความจำ)', async () => {
+    const count = async () => Number((await q(`SELECT count(*) FROM product_events WHERE workspace_id = $1 AND user_id = $2 AND name = 'feature.used' AND props->>'feature' = 'api'`, [wsId, team.devId]))[0].count);
+    analytics.apiTokenUsed(wsId, team.devId);
+    analytics.apiTokenUsed(wsId, team.devId);
+    await expect.poll(count).toBe(1);
+    await new Promise((r) => setTimeout(r, 100));
+    expect(await count()).toBe(1);
   });
 
   it('ลืมผู้ใช้: ลบที่มา และทำให้เหตุการณ์ / แบบสอบถามระบุตัวไม่ได้ แต่ตัวเลขรวมยังอยู่', async () => {

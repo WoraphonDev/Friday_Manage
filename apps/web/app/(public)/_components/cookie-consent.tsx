@@ -5,29 +5,10 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui";
 import styles from "./public.module.css";
+import { CONSENT_CHANGED, CONSENT_KEY, CONSENT_VERSION, type CookieConsentValue, readConsent } from "@/lib/consent";
 
-/** ความยินยอมเก็บในเบราว์เซอร์ (03-api: ไม่มี endpoint) · เปลี่ยนเวอร์ชันเมื่อหมวดคุกกี้เปลี่ยนเพื่อถามใหม่ */
-export const CONSENT_KEY = "fm_cookie_consent";
-const VERSION = 1;
+export { CONSENT_KEY, readConsent, type CookieConsentValue };
 const OPEN_EVENT = "friday:cookie-settings";
-
-export interface CookieConsentValue {
-  v: number;
-  necessary: true;
-  analytics: boolean;
-  marketing: boolean;
-  at: string;
-}
-
-export function readConsent(): CookieConsentValue | null {
-  try {
-    const raw = localStorage.getItem(CONSENT_KEY);
-    const value = raw ? (JSON.parse(raw) as CookieConsentValue) : null;
-    return value?.v === VERSION ? value : null;
-  } catch {
-    return null;
-  }
-}
 
 /** ปุ่ม "ตั้งค่าคุกกี้" ที่ footer เปิดแบนเนอร์อีกครั้งเพื่อเปลี่ยนความยินยอม */
 export function openCookieSettings() {
@@ -57,12 +38,13 @@ export function CookieConsent() {
   }, []);
 
   function save(a: boolean, m: boolean) {
-    const value: CookieConsentValue = { v: VERSION, necessary: true, analytics: a, marketing: m, at: new Date().toISOString() };
+    const value: CookieConsentValue = { v: CONSENT_VERSION, necessary: true, analytics: a, marketing: m, at: new Date().toISOString() };
     try {
       localStorage.setItem(CONSENT_KEY, JSON.stringify(value));
     } catch {
       /* เบราว์เซอร์ไม่ให้เก็บ: ถือว่าปฏิเสธที่ไม่จำเป็น และถามใหม่ครั้งหน้า */
     }
+    window.dispatchEvent(new Event(CONSENT_CHANGED));
     setOpen(false);
     setPrefs(false);
   }

@@ -446,6 +446,15 @@ describe('เปลี่ยนรหัสผ่านและอีเมล'
 });
 
 describe('Google / Microsoft (OAuth + PKCE กับ provider ปลอม)', () => {
+  it('สมัครใหม่ด้วย Google → เก็บที่มาจาก cookie fm_attr ที่มีตอนกดเริ่ม (A34)', async () => {
+    const c = await client(t.app);
+    const attr = encodeURIComponent(JSON.stringify({ utmSource: 'google', utmMedium: 'cpc', referrer: 'https://www.google.com/search?q=x', landingPath: '/pricing' }));
+    (c.agent as unknown as { jar: { setCookie(v: string, domain: string, path: string): void } }).jar.setCookie(`fm_attr=${attr}; Path=/`, '127.0.0.1', '/');
+    await oauth(c, 'google', { sub: 'g-a34', email: 'attr.google@example.com', email_verified: true });
+    const rows = (await t.owner.query(`SELECT a.utm_source, a.utm_medium, a.referrer_host, a.landing_path FROM signup_attributions a JOIN users u ON u.id = a.user_id WHERE u.email = 'attr.google@example.com'`)).rows;
+    expect(rows).toEqual([{ utm_source: 'google', utm_medium: 'cpc', referrer_host: 'www.google.com', landing_path: '/pricing' }]);
+  });
+
   it('start ส่งไป provider พร้อม PKCE S256 · สมัครบัญชีใหม่ให้ถ้ายังไม่มี', async () => {
     const c = await client(t.app);
     const { authorize, location } = await oauth(c, 'google', { sub: 'g-1001', email: 'Nok@Example.com', email_verified: true, name: 'Nok' }, '?next=/work/friday-dev&remember=true');

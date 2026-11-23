@@ -22,7 +22,7 @@
 | `signup_attributions` | ช่องทางที่ผู้ใช้มาครั้งแรก (1:1 กับ `user`) | user_id, utm_source, utm_medium, utm_campaign, utm_term, referrer_host, landing_path, via (direct · invited · ops_created), invited_by_user_id, invited_workspace_id, first_seen_at | ระบบ |
 | `workspace_acquisitions` | ที่มาของ Workspace (คัดลอกจากผู้สร้างตอนสร้าง) | workspace_id (PK), source, medium, campaign, referrer_host, via (signup · invited_user · sales · ops_created), referring_workspace_id (เมื่อผู้สร้างเคยถูกชวนเข้า Workspace อื่น) | ระบบ |
 
-- เว็บเก็บ UTM / referrer ของการเข้าครั้งแรกไว้ใน cookie ของโดเมนเราเอง (first-party, อายุ 30 วัน) แล้วส่งมากับ `POST auth/signup`
+- เว็บเก็บ UTM / referrer ของการเข้าครั้งแรกไว้ใน cookie ของโดเมนเราเอง (`fm_attr` · first-party, อายุ 30 วัน) **เมื่อผู้เข้าชมยินยอมคุกกี้วิเคราะห์** (แบนเนอร์ R4) · cookie ไปกับ `POST auth/signup` และ `auth/oauth/:provider/start` แล้ว API อ่านเอง (body `attribution` ส่งเองได้และมาก่อน)
 - เก็บ `referrer_host` เท่านั้น ไม่เก็บ URL เต็ม เพราะ URL อาจมีข้อมูลส่วนตัว
 - `via = invited` ใช้วัด "ถูกชวนแล้วไปเปิด Workspace เอง" (การโตที่ไม่ต้องจ่ายค่าโฆษณา)
 
@@ -68,7 +68,7 @@
 | `infra_costs` | ค่าใช้จ่ายส่วนกลางรายเดือน (ดึงจาก AWS Cost Explorer + กรอกเอง) | month, category (aws · tools · other), amount_satang | ระบบ |
 | `marketing_costs` | ค่าการตลาดรายเดือนตามช่องทาง (ทีม Friday กรอก) | month, source, amount_satang, note | ระบบ |
 
-- `daily_usages` นับจาก `notification_delivery` (status = sent), `file_version` และ log ของ API · job ใช้ `SYSTEM_DB` เพราะรวมทุก Workspace (เขียนเหตุผลไว้ในคอมเมนต์)
+- `daily_usages` นับจาก `notification_delivery` (status = sent), `file_version` และสถิติ API token (`api_usage_hours`: calls − rejected) · job ใช้ `SYSTEM_DB` เพราะรวมทุก Workspace (เขียนเหตุผลไว้ในคอมเมนต์)
 - ต้นทุนของลูกค้า 1 ราย = Σ(usage × `cost_rates`) + ค่าธรรมเนียมรับเงินจริงจาก `payment` + ส่วนแบ่ง `infra_costs` ตามสัดส่วนผู้ใช้งาน
 
 ---

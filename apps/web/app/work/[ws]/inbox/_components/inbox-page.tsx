@@ -1,5 +1,6 @@
 "use client";
 
+import { trackFeature } from "@/lib/track";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -152,6 +153,8 @@ export function InboxPage({ ws }: { ws: string }) {
   const run = (path: string, message?: string, body?: unknown) => {
     // รับทราบ / เตือนพรุ่งนี้ / ตัดสินคำขอ = จัดการแล้ว ให้หลุดจากแท็บตามผลจริงของ API
     if (current) setKept((list) => list.filter((n) => n.id !== current.id));
+    // อนุมัติ / ปฏิเสธคำขอเลื่อนกำหนด = ใช้ฟีเจอร์ due_request (A34)
+    if (/\/due-requests\/[^/]+\/(approve|reject)$/.test(path)) trackFeature(ws, "due_request");
     act.mutate({ path, message, body });
   };
   const settle = (action: "done" | "snooze", path: string, message: string, body?: unknown) => {

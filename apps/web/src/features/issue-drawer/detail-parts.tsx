@@ -1,5 +1,6 @@
 'use client';
 // ส่วนย่อยของ Drawer รายละเอียดงานตาม Canvas C / D / K2 (แถวคุณสมบัติ, Sub-task, Development, ไฟล์แนบ, Bug)
+import { useFeatureUsed } from '@/lib/track';
 import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
@@ -85,6 +86,8 @@ export function Development({ scope, issue }: { scope: Scope; issue: Issue }) {
   const t = useTranslations('issue-drawer');
   const toast = useToast();
   const git = useQuery({ queryKey: ['issue-git', scope.ws, issue.key], queryFn: ({ signal }) => api.get<GitInfo>(`${issuePath(scope.ws, issue.key)}/git`, { signal }), retry: false });
+  // เห็น commit / PR ที่ผูกกับงาน = ใช้ฟีเจอร์ git (A34)
+  useFeatureUsed(scope.ws, 'git', !!(git.data?.commits.length || git.data?.pullRequests.length));
   // ชื่อ branch แนะนำ: รหัสงาน + ชื่อภาษาอังกฤษที่ตัดเหลือตัวอักษรที่ใช้ใน branch ได้
   const slug = issue.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30);
   const branch = git.data?.pullRequests[0]?.sourceBranch ?? `feature/${issue.key}${slug ? `-${slug}` : ''}`;

@@ -29,6 +29,7 @@ import { ProjectInviteDialog } from "@/features/project-invite/project-invite-di
 import { useWorkspace } from "./workspace-shell";
 import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
 import { useIsMobile } from "@/lib/use-mobile";
+import { type Feature, useFeatureUsed } from "@/lib/track";
 
 // ใช้ queryKey เดียวกับหน้า Overview และหน้า Members เพื่อไม่ยิง API ซ้ำเมื่อเปิดหน้านั้น
 type HealthLevel = "on_track" | "at_risk" | "off_track";
@@ -44,6 +45,9 @@ interface HeaderMember {
   avatarUrl: string | null;
   active: boolean;
 }
+
+/** แท็บของโปรเจกต์ → ฟีเจอร์ที่นับการใช้ (A34 · 05 › 1.2) · เปิดแท็บได้ = ใช้ฟีเจอร์ */
+const TAB_FEATURES: Record<string, Feature> = { table: "table", board: "kanban", gantt: "gantt", timeline: "timeline", calendar: "calendar", automation: "automation", reports: "report" };
 
 export const projectTabs = [
   // mobile: แท็บที่มีบนมือถือตาม Canvas M6/M7 (Overview, Kanban, List, Calendar, Files)
@@ -170,6 +174,8 @@ export function ProjectShell({
   const [viewsOpen, setViewsOpen] = useState(false);
   const { openSearch } = useWorkspace();
   const error = project.error ?? permissions.error;
+  const tabFeature = TAB_FEATURES[/\/p\/[^/]+\/([^/?#]+)/.exec(pathname)?.[1] ?? ""];
+  useFeatureUsed(ws, tabFeature ?? "table", !!tabFeature && !!project.data && !!permissions.data);
   async function joinAsAdmin() {
     try {
       await api.post(`${endpoint}/join-as-admin`);

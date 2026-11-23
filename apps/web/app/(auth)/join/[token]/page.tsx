@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+import { CookieConsent } from "../../../(public)/_components/cookie-consent";
 import { JoinInvite } from "./_components/join-invite";
 
 // ชื่อแท็บตามภาษาของคำขอ (W21)
@@ -10,5 +11,10 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function Page({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  return <JoinInvite token={token} />;
+  return (
+    <>
+      <JoinInvite token={token} />
+      <CookieConsent />
+    </>
+  );
 }

@@ -50,10 +50,27 @@
 
 ### ยังไม่ได้ทำ
 
-- หน้าเว็บยังไม่ส่ง `attribution` ตอนสมัคร และยังไม่ส่ง `feature.used` (งานเว็บ · บันทึกไว้ให้ W01 / W22 / งานหน้าเว็บที่เกี่ยวข้อง)
-- `api_calls` ใน `daily_usages` ยังเป็น 0 จนกว่าจะเก็บ log ของ API token
-- สมัครด้วย Google / Microsoft ยังไม่เก็บที่มา (ขั้นตอน redirect ไม่มีที่ส่งข้อมูล) · Workspace ของผู้ใช้เหล่านี้ยังได้ `workspace_acquisitions` (via = signup หรือ invited_user)
+- ~~หน้าเว็บยังไม่ส่ง `attribution` ตอนสมัคร และยังไม่ส่ง `feature.used`~~ ทำแล้ว (ดูหัวข้อ "งานต่อ 23 พ.ย. 2569")
+- ~~`api_calls` ใน `daily_usages` ยังเป็น 0~~ ทำแล้ว
+- ~~สมัครด้วย Google / Microsoft ยังไม่เก็บที่มา~~ ทำแล้ว
 - ops-api เปลี่ยนแพ็กเกจเองยังไม่บันทึก `subscription_changes` (เพิ่มใน O02)
+
+### งานต่อ 23 พ.ย. 2569
+
+- **ที่มาของผู้ใช้**
+  - เว็บเขียน cookie `fm_attr` (first-party อายุ 30 วัน · `src/lib/attribution.ts` ใน layout ราก) **เฉพาะเมื่อยินยอมคุกกี้วิเคราะห์** ในแบนเนอร์ R4 ตามข้อความ "คุกกี้วิเคราะห์การใช้งานจะเปิดเมื่อคุณยินยอมเท่านั้น"
+  - ก่อนยินยอม จำหน้าแรกไว้ใน sessionStorage ของแท็บนั้น (ไม่ส่งออก) จึงได้ที่มาของหน้าแรกแม้ยินยอมทีหลัง · ปฏิเสธ / ถอนความยินยอม = ลบ cookie · หน้า `/work` ไม่เก็บ
+  - API อ่าน cookie เองตอนสมัคร (body `attribution` ยังส่งได้และมาก่อน) จึงครบทั้งสมัครด้วยรหัสผ่าน รับคำเชิญ และ Google / Microsoft
+  - OAuth อ่าน cookie ตอน `start` (ผ่าน rewrite ของเว็บ) แล้วเก็บใน state ที่ลงลายมือชื่อ เพราะ callback มาจาก provider ซึ่งอาจอยู่คนละ host
+  - cookie ผิดรูปแบบ = ไม่มีที่มา ไม่ทำให้สมัครล้ม
+- **`feature.used` จากเว็บ** (`trackFeature` / `useFeatureUsed` ใน `src/lib/track.ts` · กันซ้ำในแท็บวันละครั้งต่อ Workspace ต่อฟีเจอร์ · API กันซ้ำต่อคนอีกชั้น)
+  - เปิดแท็บโปรเจกต์ (`ProjectShell`): table, kanban (board), gantt, timeline, calendar, automation, report (reports) · Overview / Backlog / Files ไม่ใช่ฟีเจอร์ในรายการ
+  - workload: แผง Workload ในหน้า Members และ heatmap ใน Overview
+  - import: นำเข้าสำเร็จ (`ImportWizard` ทุกทาง) · saved_view: ใช้หรือบันทึกมุมมอง · due_request: ส่งคำขอเลื่อน และอนุมัติ / ปฏิเสธใน Inbox
+  - git: เห็น commit / PR ที่ผูกกับงานใน Drawer · line: ผูก LINE สำเร็จหรือส่งทดสอบ
+- **`api`**: API บันทึกเองเมื่อคำขอด้วย API token ผ่าน rate limit (`AuthGuard` → `AnalyticsService.apiTokenUsed` · กันซ้ำในหน่วยความจำ)
+- **`api_calls`**: job 01:00 รวม `calls - rejected` จาก `api_usage_hours` (มีอยู่แล้วจาก O51 · เก็บ 90 วัน จึงรันย้อนหลังได้)
+- ข้อสังเกต: หน้าสมัคร / Login (กลุ่ม `(auth)`) ไม่มีแบนเนอร์คุกกี้ คนที่เข้าจากโฆษณาตรงหน้าสมัครจึงยังไม่ได้ที่มาจนกว่าจะยินยอมในหน้าสาธารณะ · นโยบายคุกกี้ (แก้ใน Ops O14) ควรระบุ `fm_attr` ในหมวดวิเคราะห์
 
 ### ทดสอบ
 

@@ -3,6 +3,7 @@ import { cleanup } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
 import { server } from "./server";
 import { navigation, router } from "./router";
+import { resetFeatureTracking } from "@/lib/track";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => router,
@@ -23,6 +24,7 @@ beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
   cleanup();
   server.resetHandlers();
+  resetFeatureTracking();
   vi.clearAllMocks();
   navigation.pathname = "/work/sample";
   navigation.search = "";

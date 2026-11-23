@@ -265,6 +265,23 @@ describe("Workspace / Project shell", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("เปิดแท็บ Kanban → ส่ง feature.used kanban หลังโหลดโปรเจกต์ · Overview ไม่ใช่ฟีเจอร์ที่นับ (A34)", async () => {
+    const sent: unknown[] = [];
+    server.use(
+      http.post("*/api/v1/w/:ws/events", async ({ request }) => {
+        sent.push(await request.json());
+        return HttpResponse.json({ accepted: 1 }, { status: 202 });
+      }),
+    );
+    navigation.pathname = "/work/sample/p/DE";
+    const view = renderWithProviders(<ProjectExample />);
+    expect(await screen.findByText("หน้าโปรเจกต์")).toBeInTheDocument();
+    view.unmount();
+    navigation.pathname = "/work/sample/p/DE/board";
+    renderWithProviders(<ProjectExample />);
+    await waitFor(() => expect(sent).toEqual([{ events: [{ name: "feature.used", props: { feature: "kanban" } }] }]));
+  });
+
   it("เข้า Settings ตรงจาก URL โดยไม่มี permission ได้ Forbidden", async () => {
     navigation.pathname = "/work/sample/p/DE/settings";
     server.use(

@@ -40,6 +40,21 @@ export const AttributionBody = z
     firstSeenAt: z.iso.datetime({ offset: true }).optional(),
   })
   .strict();
+export type Attribution = z.infer<typeof AttributionBody>;
+
+/** cookie ที่มาของการเข้าครั้งแรก (first-party อายุ 30 วัน · 05 › 1.1) · เว็บเขียนเมื่อผู้เข้าชมยินยอมคุกกี้วิเคราะห์ */
+export const ATTRIBUTION_COOKIE = 'fm_attr';
+
+/** อ่าน cookie ที่มา · รูปแบบผิดหรือแก้ด้วยมือ = ไม่มีที่มา (ไม่ทำให้การสมัครล้ม) */
+export function attributionFromCookie(raw: unknown): Attribution | undefined {
+  if (typeof raw !== 'string' || !raw || raw.length > 2000) return undefined;
+  try {
+    const parsed = AttributionBody.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export const CancellationBody = z
   .object({
@@ -83,6 +98,8 @@ export function classifyChange(prev: { plan: string | null; status: string | nul
 @Injectable()
 export class AnalyticsService implements OnModuleInit {
   private readonly log = new Logger('Analytics');
+  /** (Workspace|ผู้ใช้) → วันที่บันทึก feature.used api ไปแล้ว */
+  private readonly apiSeen = new Map<string, string>();
 
   constructor(
     @Inject(SYSTEM_DB) private readonly sys: Db,
@@ -99,7 +116,7 @@ export class AnalyticsService implements OnModuleInit {
   }
 
   /** ช่องทางที่ผู้ใช้มาครั้งแรก · เรียกใน transaction ของการสมัคร (SYSTEM_DB) · ip = IP ตอนสมัคร ใช้ตรวจสมัครถี่ (O50) */
-  async recordSignup(tx: Tx | Db, userId: string, a?: z.infer<typeof AttributionBody>, ip?: string | null) {
+  async recordSignup(tx: Tx | Db, userId: string, a?: Attribution, ip?: string | null) {
     await tx
       .insert(s.signupAttributions)
       .values({
@@ -162,6 +179,28 @@ export class AnalyticsService implements OnModuleInit {
     }
   }
 
+  /**
+   * ฟีเจอร์ `api` ใช้ผ่าน API token จากระบบภายนอก เว็บจึงส่งให้ไม่ได้ · AuthGuard เรียกทุกคำขอด้วย token ที่ผ่านการตรวจ
+   * กันซ้ำในหน่วยความจำต่อ (Workspace, ผู้สร้าง token, วัน) จึงอ่านฐานข้อมูลไม่เกินวันละครั้งต่อคู่ · ไม่รอผล ล้มแล้วทิ้ง
+   * ใช้ SYSTEM_DB เพราะเรียกจาก guard ก่อนตั้งบริบท Workspace ให้ RLS
+   */
+  apiTokenUsed(workspaceId: string, userId: string) {
+    const day = today();
+    const key = `${workspaceId}|${userId}`;
+    if (this.apiSeen.get(key) === day) return;
+    this.apiSeen.set(key, day);
+    if (this.apiSeen.size > 10_000) this.apiSeen.clear();
+    void (async () => {
+      const since = new Date(`${day}T00:00:00+07:00`);
+      const [seen] = await this.sys
+        .select({ id: s.productEvents.id })
+        .from(s.productEvents)
+        .where(and(eq(s.productEvents.workspaceId, workspaceId), eq(s.productEvents.userId, userId), eq(s.productEvents.name, 'feature.used'), sql`${s.productEvents.props}->>'feature' = 'api'`, gte(s.productEvents.occurredAt, since)))
+        .limit(1);
+      if (!seen) await this.sys.insert(s.productEvents).values({ workspaceId, userId, name: 'feature.used', props: { feature: 'api' } });
+    })().catch((err) => this.log.warn(`ทิ้ง feature.used api: ${(err as Error).message}`));
+  }
+
   /** แบบสอบถามตอนกดยกเลิก (ต้องตอบก่อนยืนยันยกเลิก) */
   async cancellation(auth: AuthInfo, tenant: TenantInfo, body: z.infer<typeof CancellationBody>) {
     if (tenant.role !== 'owner') throw new AppError(403, 'forbidden', 'เฉพาะ Owner ของ Workspace');
@@ -198,25 +237,27 @@ export class AnalyticsService implements OnModuleInit {
 
   /**
    * ยอดใช้ต่อ Workspace ของวันหนึ่ง (เวลาไทย) · ใช้ SYSTEM_DB เพราะรวมทุก Workspace
-   * api_calls ยังเป็น 0 จนกว่าจะเก็บ log ของ API token
+   * api_calls = คำขอด้วย API token ที่ตอบไป (ไม่นับที่ถูก rate limit) จาก api_usage_hours ซึ่งเก็บ 90 วัน จึงรันย้อนหลังได้
+   * ชั่วโมงสุดท้ายของวันถูกยุบตอน 00:05 ก่อน job นี้ (01:00) · เวลาไทยตรงกับขอบชั่วโมงของ UTC
    */
   async rollupDailyUsage(date: string) {
     const from = new Date(`${date}T00:00:00+07:00`);
     const to = new Date(from.getTime() + 86_400_000);
     await this.sys.execute(sql`
-      insert into daily_usages (workspace_id, date, line_messages, emails, webhook_calls, storage_bytes, automation_runs, active_users)
+      insert into daily_usages (workspace_id, date, line_messages, emails, webhook_calls, storage_bytes, api_calls, automation_runs, active_users)
       select w.id, ${date}::date,
         (select count(*)::int from notification_deliveries d where d.workspace_id = w.id and d.status = 'sent' and d.channel in ('line', 'line_group') and d.created_at >= ${from} and d.created_at < ${to}),
         (select count(*)::int from notification_deliveries d where d.workspace_id = w.id and d.status = 'sent' and d.channel = 'email' and d.created_at >= ${from} and d.created_at < ${to}),
         (select count(*)::int from notification_deliveries d where d.workspace_id = w.id and d.status = 'sent' and d.channel = 'webhook' and d.created_at >= ${from} and d.created_at < ${to}),
         (select coalesce(sum(v.size_bytes), 0)::bigint from file_versions v where v.workspace_id = w.id),
+        (select coalesce(sum(h.calls - h.rejected), 0)::int from api_usage_hours h where h.workspace_id = w.id and h.hour >= ${from} and h.hour < ${to}),
         (select count(*)::int from automation_runs r where r.workspace_id = w.id and r.created_at >= ${from} and r.created_at < ${to}),
         (select count(*)::int from workspace_members m where m.workspace_id = w.id and m.status = 'active' and m.last_active_at >= ${from} and m.last_active_at < ${to})
       from workspaces w
       where w.deleted_at is null
       on conflict (workspace_id, date) do update set
         line_messages = excluded.line_messages, emails = excluded.emails, webhook_calls = excluded.webhook_calls,
-        storage_bytes = excluded.storage_bytes, automation_runs = excluded.automation_runs, active_users = excluded.active_users`);
+        storage_bytes = excluded.storage_bytes, api_calls = excluded.api_calls, automation_runs = excluded.automation_runs, active_users = excluded.active_users`);
     return { date };
   }
 

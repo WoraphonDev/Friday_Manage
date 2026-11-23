@@ -1,5 +1,6 @@
 "use client";
 
+import { useFeatureUsed } from "@/lib/track";
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -28,6 +29,7 @@ const shortDate = (date: string) => `${Number(date.slice(8, 10))}/${Number(date.
 
 export function WorkloadHeatmap({ ws, projectKey, today, yearFormat, issueHref }: { ws: string; projectKey: string; today: string; yearFormat: YearFormat; issueHref: (key: string) => string }) {
   const t = useTranslations("lead-dashboard-reports");
+  useFeatureUsed(ws, "workload");
   const from = addDays(weekStart(today), -7 * HEAT_WEEKS_BACK);
   const to = addDays(from, HEAT_WEEKS * 7 - 1);
   const [picked, setPicked] = useState<{ person: number; week: number } | null>(null);

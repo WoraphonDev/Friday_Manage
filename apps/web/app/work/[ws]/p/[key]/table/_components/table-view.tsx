@@ -1,5 +1,6 @@
 "use client";
 
+import { trackFeature } from "@/lib/track";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -569,7 +570,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
         <button type="button" className={styles.chip} aria-pressed={activeView({ sprint: "none" })} onClick={() => setFilters({ sprint: "none" })}>{t("backlogView")}</button>
         {views.data?.items.map((v) => (
           <span key={v.id} style={{ display: "inline-flex", alignItems: "center" }}>
-            <button type="button" className={styles.chip} aria-pressed={activeView(v.filters as Filters)} onClick={() => setFilters(v.filters as Filters)}>{v.name}</button>
+            <button type="button" className={styles.chip} aria-pressed={activeView(v.filters as Filters)} onClick={() => { setFilters(v.filters as Filters); trackFeature(ws, "saved_view"); }}>{v.name}</button>
             {v.mine !== false && <button type="button" className={styles.toggle} aria-label={t("deleteView", { name: v.name })} onClick={async () => { await api.delete(`${base}/saved-views/${v.id}`); await cache.invalidateQueries({ queryKey: ["saved-views", ws, projectKey] }); }}><X size={14} /></button>}
           </span>
         ))}
@@ -891,6 +892,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
       {structure && <StructureDialog base={base} action={structure} onClose={() => setStructure(null)} onSaved={structureSaved} />}
       {saving && <SaveViewDialog onClose={() => setSaving(false)} onSave={async (name, shared) => {
         await api.post(`${base}/saved-views`, { name, viewType: "table", shared, filters: Object.fromEntries(Object.entries(filters).filter(([, v]) => v)) });
+        trackFeature(ws, "saved_view");
         toast({ message: t("viewSaved", { name }) });
         setSaving(false);
         await cache.invalidateQueries({ queryKey: ["saved-views", ws, projectKey] });

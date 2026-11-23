@@ -201,7 +201,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 
 | Method | Path | สิทธิ์ | Event / หมายเหตุ |
 |---|---|---|---|
-| POST | `auth/signup` | สาธารณะ | ส่งรหัสยืนยันอีเมล |
+| POST | `auth/signup` | สาธารณะ | ส่งรหัสยืนยันอีเมล · ที่มาของผู้ใช้จาก body `attribution` หรือ cookie `fm_attr` (05 › 1.1) |
 | POST | `auth/verify-email` · `:resend` | สาธารณะ | resend ได้ทุก 60 วินาที |
 | POST | `auth/login` | สาธารณะ | นับครั้งผิดตาม `security_policy` ของ Workspace ที่เข้มที่สุดที่ผู้ใช้อยู่ · Audit `secu.login_failed` |
 | POST | `auth/login/mfa` | มี `mfaToken` | รับ TOTP หรือ Backup code · `trustDevice` 30 วัน |

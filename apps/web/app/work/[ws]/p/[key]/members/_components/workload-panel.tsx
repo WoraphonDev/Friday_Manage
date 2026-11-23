@@ -1,5 +1,6 @@
 "use client";
 
+import { useFeatureUsed } from "@/lib/track";
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -45,6 +46,7 @@ export function WorkloadPanel({
   canReassign: boolean;
 }) {
   const t = useTranslations("members-workload.workload");
+  useFeatureUsed(ws, "workload");
   const cache = useQueryClient();
   const toast = useToast();
   const [group, setGroup] = useState<Group>("week");

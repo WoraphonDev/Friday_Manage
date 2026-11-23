@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { Providers } from "@/components/providers";
+import { AttributionCapture } from "@/lib/attribution";
 import { DEFAULT_THEME, THEME_COOKIE, THEME_SCRIPT, isThemePref } from "@/features/theme-switch/theme";
 import "@fontsource/ibm-plex-sans-thai/400.css";
 import "@fontsource/ibm-plex-sans-thai/500.css";
@@ -41,6 +42,7 @@ export default async function RootLayout({
           timeZone="Asia/Bangkok"
         >
           <Providers>{children}</Providers>
+          <AttributionCapture />
         </NextIntlClientProvider>
       </body>
     </html>

@@ -282,7 +282,7 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
     const text = card.due?.state === "overdue" ? t("dueOverdue", { days: card.due.days })
       : card.due?.state === "today" ? t("dueToday")
         : card.due?.state === "soon" ? t("dueSoon", { days: card.due.days })
-          : (qa ? card.qaDue : card.planEnd) ? formatDate((qa ? card.qaDue : card.planEnd)!, yearFormat) : t("noDue");
+          : (qa ? card.qaDue : card.dueDate ?? card.planEnd) ? formatDate((qa ? card.qaDue : card.dueDate ?? card.planEnd)!, yearFormat) : t("noDue");
     return qa ? t("qaDuePrefix", { text }) : text;
   };
 
@@ -317,6 +317,7 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
       <Link className={styles.cardTitle} href={href(card.key)} draggable={false}>{card.title}</Link>
       <div className={styles.cardMeta}>
         <span className={`${styles.due} ${card.due?.state === "overdue" ? styles.late : card.due?.state === "today" ? styles.today : ""}`} title={card.qaDue && card.status.category === "review" ? t("qaDueDate", { date: formatDate(card.qaDue, yearFormat, true) }) : card.planEnd ? t("dueDate", { date: formatDate(card.planEnd, yearFormat, true) }) : undefined}>{dueText(card)}</span>
+        {!!card.dueShift && card.dueDate && <span className={styles.shiftChip} title={t("dueShiftHint", { date: formatDate(card.dueDate, yearFormat, true), days: card.dueShift })}>+{card.dueShift}</span>}
         <AttachmentBadge counts={card.attachments} href={href(card.key)} />
         {card.subtasks && <span className={styles.meta} title={t("subtaskProgress", card.subtasks)}><ListChecks size={14} aria-hidden="true" />{card.subtasks.done}/{card.subtasks.total}</span>}
         {card.comments > 0 && <span className={styles.meta} title={t("comments", { count: card.comments })}><MessageCircle size={14} aria-hidden="true" />{card.comments}</span>}

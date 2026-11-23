@@ -62,6 +62,7 @@
   "dueDate": "Due {date}",
   "qaDueDate": "QA due {date}",
   "qaDuePrefix": "QA · {text}",
+  "dueShiftHint": "Dev due {date} · moved {days, plural, one {# day} other {# days}} spent with QA",
   "completed": "Done",
   "cancelled": "Cancelled",
   "confirmTitle": "Sub-tasks not done",

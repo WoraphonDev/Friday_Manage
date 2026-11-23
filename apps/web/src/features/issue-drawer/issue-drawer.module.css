@@ -107,6 +107,9 @@
 .dueCell { grid-column:2 / -1; }
 .qaDueCell { grid-column:2 / -1; display:flex; align-items:center; gap:6px; min-width:0; }
 .qaDueCell small { overflow:hidden; text-overflow:ellipsis; }
+.shiftLine { grid-column:2 / -1; display:flex; flex-wrap:wrap; gap:0 6px; align-items:baseline; white-space:normal; padding:0 6px; }
+.shiftLine b { font-weight:600; }
+.shiftLate { color:var(--danger-text); }
 .dueCell .dueLink:global(.button) { padding:0 6px; margin-left:-6px; }
 .planBox :global(.field) > label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
 .planBox :global(.picker-trigger) { min-height:28px; border-color:transparent; background:transparent; padding:2px 6px; font-size:12px; white-space:nowrap; }

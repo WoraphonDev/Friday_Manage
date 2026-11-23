@@ -25342,6 +25342,9 @@
                                       null
                                     ]
                                   },
+                                  "dueShift": {
+                                    "type": "number"
+                                  },
                                   "id": {
                                     "type": "string"
                                   },
@@ -25683,6 +25686,9 @@
                                       "dev",
                                       null
                                     ]
+                                  },
+                                  "dueShift": {
+                                    "type": "number"
                                   },
                                   "id": {
                                     "type": "string"
@@ -26022,6 +26028,9 @@
                             null
                           ]
                         },
+                        "dueShift": {
+                          "type": "number"
+                        },
                         "id": {
                           "type": "string"
                         },
@@ -26336,6 +26345,9 @@
                                       "dev",
                                       null
                                     ]
+                                  },
+                                  "dueShift": {
+                                    "type": "number"
                                   },
                                   "id": {
                                     "type": "string"
@@ -26678,6 +26690,9 @@
                                       "dev",
                                       null
                                     ]
+                                  },
+                                  "dueShift": {
+                                    "type": "number"
                                   },
                                   "id": {
                                     "type": "string"
@@ -27076,6 +27091,9 @@
                             "dev",
                             null
                           ]
+                        },
+                        "dueShift": {
+                          "type": "number"
                         },
                         "id": {
                           "type": "string"
@@ -27433,6 +27451,9 @@
                             null
                           ]
                         },
+                        "dueShift": {
+                          "type": "number"
+                        },
                         "id": {
                           "type": "string"
                         },
@@ -27781,6 +27802,9 @@
                             "dev",
                             null
                           ]
+                        },
+                        "dueShift": {
+                          "type": "number"
                         },
                         "id": {
                           "type": "string"
@@ -28851,6 +28875,9 @@
                             null
                           ]
                         },
+                        "dueShift": {
+                          "type": "number"
+                        },
                         "id": {
                           "type": "string"
                         },
@@ -29199,6 +29226,9 @@
                             "dev",
                             null
                           ]
+                        },
+                        "dueShift": {
+                          "type": "number"
                         },
                         "id": {
                           "type": "string"
@@ -31451,6 +31481,9 @@
                                   null
                                 ]
                               },
+                              "dueShift": {
+                                "type": "number"
+                              },
                               "id": {
                                 "type": "string"
                               },
@@ -31792,6 +31825,9 @@
                                   "dev",
                                   null
                                 ]
+                              },
+                              "dueShift": {
+                                "type": "number"
                               },
                               "id": {
                                 "type": "string"
@@ -33363,6 +33399,9 @@
                             null
                           ]
                         },
+                        "dueShift": {
+                          "type": "number"
+                        },
                         "id": {
                           "type": "string"
                         },
@@ -33711,6 +33750,9 @@
                             "dev",
                             null
                           ]
+                        },
+                        "dueShift": {
+                          "type": "number"
                         },
                         "id": {
                           "type": "string"
@@ -34100,6 +34142,9 @@
                             null
                           ]
                         },
+                        "dueShift": {
+                          "type": "number"
+                        },
                         "id": {
                           "type": "string"
                         },
@@ -34441,6 +34486,9 @@
                             "dev",
                             null
                           ]
+                        },
+                        "dueShift": {
+                          "type": "number"
                         },
                         "id": {
                           "type": "string"
@@ -34798,6 +34846,9 @@
                             null
                           ]
                         },
+                        "dueShift": {
+                          "type": "number"
+                        },
                         "id": {
                           "type": "string"
                         },
@@ -35139,6 +35190,9 @@
                             "dev",
                             null
                           ]
+                        },
+                        "dueShift": {
+                          "type": "number"
                         },
                         "id": {
                           "type": "string"
@@ -36455,6 +36509,9 @@
                             null
                           ]
                         },
+                        "dueShift": {
+                          "type": "number"
+                        },
                         "id": {
                           "type": "string"
                         },
@@ -36827,6 +36884,9 @@
                             "dev",
                             null
                           ]
+                        },
+                        "dueShift": {
+                          "type": "number"
                         },
                         "id": {
                           "type": "string"
@@ -37276,6 +37336,9 @@
                             null
                           ]
                         },
+                        "dueShift": {
+                          "type": "number"
+                        },
                         "id": {
                           "type": "string"
                         },
@@ -37648,6 +37711,9 @@
                             "dev",
                             null
                           ]
+                        },
+                        "dueShift": {
+                          "type": "number"
                         },
                         "id": {
                           "type": "string"
@@ -49550,6 +49616,15 @@
                                   "type": "number"
                                 },
                                 "qaDue": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "dueShift": {
+                                  "type": "number"
+                                },
+                                "dueDate": {
                                   "type": [
                                     "string",
                                     "null"
@@ -62193,6 +62268,9 @@
                             null
                           ]
                         },
+                        "dueShift": {
+                          "type": "number"
+                        },
                         "id": {
                           "type": "string"
                         },
@@ -62541,6 +62619,9 @@
                             "dev",
                             null
                           ]
+                        },
+                        "dueShift": {
+                          "type": "number"
                         },
                         "id": {
                           "type": "string"

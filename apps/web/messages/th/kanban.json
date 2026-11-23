@@ -62,6 +62,7 @@
   "dueDate": "ครบกำหนด {date}",
   "qaDueDate": "QA ต้องทดสอบเสร็จ {date}",
   "qaDuePrefix": "QA · {text}",
+  "dueShiftHint": "Due ของ Dev {date} · เลื่อน {days} วันที่งานอยู่กับ QA",
   "completed": "เสร็จแล้ว",
   "cancelled": "ยกเลิกแล้ว",
   "confirmTitle": "Sub-task ยังไม่เสร็จ",

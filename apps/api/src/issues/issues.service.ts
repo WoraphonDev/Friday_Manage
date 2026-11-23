@@ -8,7 +8,7 @@ import { today } from '../common/dates.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { planEndFor, WorkCalendar } from '../projects/calendar.js';
-import { dueOf, loadDueRule, qaDueOf } from '../projects/due-stage.js';
+import { devShiftOf, dueOf, loadDueRule, qaDueOf } from '../projects/due-stage.js';
 import { canMoveIssue, type ProjectAccess, requireMovable, requirePerm, usersWithPerm } from '../projects/permissions.js';
 import { loadPeople } from '../common/people.js';
 import { type DomainEvent, EventBus, type EventType } from '../core/events.js';
@@ -1234,7 +1234,7 @@ export class IssuesService {
         planStart: i.planStart,
         planEnd: i.planEnd,
         qaEnd: i.qaEnd,
-        ...(dueRule.split ? { qaDue: qaDueOf(dueRule, i), dueDate: dueOf(dueRule, i, m.statusCategory).date, dueStage: dueOf(dueRule, i, m.statusCategory).stage } : {}),
+        ...(dueRule.split ? { qaDue: qaDueOf(dueRule, i), dueDate: dueOf(dueRule, i, m.statusCategory).date, dueStage: dueOf(dueRule, i, m.statusCategory).stage, dueShift: devShiftOf(dueRule, i, m.statusCategory) } : {}),
         actualStart: i.actualStart,
         actualEnd: i.actualEnd,
         reopenCount: i.reopenCount,

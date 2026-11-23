@@ -81,6 +81,15 @@ export function devDueOf(rule: DueRule, i: DueIssue): string | null {
   return addDays(i.planEnd, i.qaHoldDays);
 }
 
+/**
+ * จำนวนวันที่ Due ของ Dev ถูกเลื่อนเพราะงานเคยอยู่กับ QA (หน้าเว็บแสดง "Due ของ Dev เลื่อน N วัน")
+ * 0 = ไม่ต้องแสดง: โปรเจกต์ไม่แยก Dev / QA, งานอยู่ช่วง QA, ปิดแล้ว หรือไม่มี Plan End
+ */
+export function devShiftOf(rule: DueRule, i: DueIssue, category: string): number {
+  if (!rule.split || !i.planEnd || inQaStage(rule, category) || category === 'done' || category === 'cancelled') return 0;
+  return i.qaHoldDays;
+}
+
 /** งานที่ Dev ส่งให้ QA แล้วแต่ยังไม่ Done */
 export const inQaStage = (rule: DueRule, category: string) => rule.split && category === 'review';
 

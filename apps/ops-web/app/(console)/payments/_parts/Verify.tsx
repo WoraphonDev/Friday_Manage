@@ -13,6 +13,7 @@ import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import { useShortcuts, useStableRows } from "@/lib/shortcuts";
 import { SlipRun } from "./SlipRun";
+import { fetchReview, StatementReviewCard, statementReviewKey } from "./Statement";
 import { Kbd } from "@/components/shortcut-help";
 import { usePresence } from "@/lib/presence";
 import { NewItemsBar } from "@/components/new-items";
@@ -54,6 +55,8 @@ export function VerifyTab() {
   const [excOffset, setExcOffset] = useState(0);
   const [slipOffset, setSlipOffset] = useState(0);
   const q = useQuery({ queryKey: [...exceptionsKey, excOffset], queryFn: () => api.get<{ items: ExceptionItem[]; payments30d: number; total: number }>(`/payments/exceptions?limit=${PAGE}&offset=${excOffset}`), placeholderData: keepPreviousData, refetchInterval: 30_000 });
+  // เงินเข้าจาก statement ที่จับคู่ไม่ได้ (O03 เฟส 2) · นับรวมตอนบอกว่าไม่มีงาน
+  const stmt = useQuery({ queryKey: [...statementReviewKey, 0], queryFn: () => fetchReview(0), refetchInterval: 30_000 });
   const slips = useQuery({ queryKey: ["ops", "payments", "pending", slipOffset], queryFn: () => api.get<{ items: SlipItem[]; total: number }>(`/payments?status=pending_review&queue=slips&limit=${PAGE}&offset=${slipOffset}`), placeholderData: keepPreviousData, refetchInterval: 30_000 });
   // ช่วง 2: รายการใหม่ไม่แทรกเอง · รอกด "แสดง"
   const excStable = useStableRows(q.data?.items, `exc:${excOffset}`);
@@ -77,7 +80,7 @@ export function VerifyTab() {
       ) : error ? (
         <ErrorBlock error={error} retry={() => (void q.refetch(), void slips.refetch())} />
       ) : (
-        !(q.data?.total ?? exceptions.length) && !(slips.data?.total ?? normal.length) && !excStable.fresh && !slipStable.fresh ? (
+        !(q.data?.total ?? exceptions.length) && !(slips.data?.total ?? normal.length) && !stmt.data?.total && !excStable.fresh && !slipStable.fresh ? (
           <Empty ok title={t("verify.empty")} description={t("verify.emptyDesc")} />
         ) : (
           <>
@@ -111,6 +114,7 @@ export function VerifyTab() {
                 </div>
               </TodoCard>
             )}
+            <StatementReviewCard canDecide={decide} />
             {!!normal.length && (
               <TodoCard
                 title={t("verify.slipsTitle")}

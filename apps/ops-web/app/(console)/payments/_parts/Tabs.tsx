@@ -19,6 +19,7 @@ import { ViewsBar } from "@/components/views-bar";
 import { planLabel, useFmt } from "../../workspaces/_parts/format";
 import { useDelivery } from "./Accounting";
 import { ClosePeriodDialog, EtaxDrawer, useEtaxDetail, useTaxFmt } from "./Tax";
+import { StatementImportButton } from "./Statement";
 
 const todayBkk = () => new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10);
 const thisMonth = () => todayBkk().slice(0, 7);
@@ -50,12 +51,14 @@ export function IncomingTab() {
   const fmt = useFmt();
   const [date, setDate] = useState(todayBkk());
   const q = useQuery({ queryKey: ["ops", "payments", "incoming", date], queryFn: () => api.get<Incoming>(`/payments/incoming?date=${date}`), placeholderData: keepPreviousData });
+  const finance = hasAny(useMe().data, "finance");
   return (
     <section className="card">
       <div className="card-head">
         <h2 className="card-title">{t("tabs.incoming")}</h2>
         {q.data && <span className="card-sub">{t("incoming.total", { amount: fmt.money(q.data.totalSatang) })}</span>}
         <span className="spacer" />
+        {finance && <StatementImportButton />}
         <input type="date" className="input" style={{ width: "auto" }} aria-label={t("incoming.date")} value={date} onChange={(e) => setDate(e.target.value || todayBkk())} />
       </div>
       <p className="muted small">{t("incoming.note")}</p>

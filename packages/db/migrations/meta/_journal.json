@@ -449,6 +449,13 @@
       "when": 1795185109666,
       "tag": "0063_private_coupons",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1795427457708,
+      "tag": "0064_bank_statements",
+      "breakpoints": true
     }
   ]
 }

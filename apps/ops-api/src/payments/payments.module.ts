@@ -4,6 +4,8 @@ import { type OpsRequest, Roles } from '../auth/auth.guard.js';
 import { parse } from '../errors.js';
 import { WHT_REJECT_REASONS } from '../billing/wht.service.js';
 import { ConfirmBody, CreditBody, ExceptionsQuery, FlagBody, IncomingQuery, MatchBody, OpsPaymentsService, PaymentsQuery, RejectBody, WhtRejectBody } from './ops-payments.service.js';
+import { LineActionBody, LineMatchBody, LinesQuery, StatementsService } from './statements.service.js';
+import { AppError } from '../errors.js';
 
 /** ชนิดที่ API ลูกค้ารับตอนแนบ (ตรวจจากไบต์แรกแล้ว จึงเชื่อนามสกุลที่บันทึกไว้ได้) · นอกนี้ให้ดาวน์โหลดอย่างเดียว */
 const VIEWABLE: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', pdf: 'application/pdf' };
@@ -21,10 +23,57 @@ const stream = (res: Response, f: { stream: NodeJS.ReadableStream; size: number;
   return new StreamableFile(f.stream as never);
 };
 
+/** body ของไฟล์ต้องมาเป็น Buffer (Content-Type: application/octet-stream) */
+const fileBody = (body: unknown) => {
+  if (!Buffer.isBuffer(body) || !body.length) throw new AppError(400, 'file_required', 'แนบไฟล์ statement (ส่งเป็น application/octet-stream)');
+  return body;
+};
+
 /** ตรวจการชำระเงินและคิวกรณีผิดปกติ (O03) · ดูได้: การเงิน, Owner, ผู้ตรวจ · ตัดสิน: การเงิน */
 @Controller('ops')
 export class PaymentsController {
-  constructor(private readonly payments: OpsPaymentsService) {}
+  constructor(
+    private readonly payments: OpsPaymentsService,
+    private readonly statements: StatementsService,
+  ) {}
+
+  // ------------------------------------------------ statement ธนาคาร (O03 เฟส 2)
+  // ไฟล์ส่งเป็น application/octet-stream ตรง ๆ · ชื่อไฟล์ใน X-File-Name แบบ encodeURIComponent (แบบเดียวกับไฟล์สัญญา)
+
+  @Roles('finance', 'owner', 'auditor')
+  @Get('bank-statements')
+  recentStatements() {
+    return this.statements.recent();
+  }
+  @Roles('finance')
+  @Post(['bank-statements/preview', 'bank-statements\\:preview'])
+  @HttpCode(200)
+  previewStatement(@Body() body: unknown) {
+    return this.statements.preview(fileBody(body));
+  }
+  @Roles('finance')
+  @Post('bank-statements')
+  importStatement(@Req() req: OpsRequest, @Body() body: unknown) {
+    const raw = req.headers['x-file-name'];
+    return this.statements.commit(req.staff!, fileBody(body), typeof raw === 'string' ? decodeURIComponent(raw) : 'statement');
+  }
+  @Roles('finance', 'owner', 'auditor')
+  @Get('bank-statement-lines')
+  statementLines(@Query() q: unknown) {
+    return this.statements.lines(parse(LinesQuery, q));
+  }
+  @Roles('finance')
+  @Post(['bank-statement-lines/:id/match', 'bank-statement-lines/:id\\:match'])
+  @HttpCode(200)
+  matchLine(@Req() req: OpsRequest, @Param('id') id: string, @Body() body: unknown) {
+    return this.statements.matchLine(req.staff!, id, parse(LineMatchBody, body));
+  }
+  @Roles('finance')
+  @Post(['bank-statement-lines/:id/ignore', 'bank-statement-lines/:id\\:ignore'])
+  @HttpCode(200)
+  ignoreLine(@Req() req: OpsRequest, @Param('id') id: string, @Body() body: unknown) {
+    return this.statements.ignoreLine(req.staff!, id, parse(LineActionBody, body));
+  }
 
   @Roles('finance', 'owner', 'auditor')
   @Get('payments')
@@ -97,5 +146,5 @@ export class PaymentsController {
   }
 }
 
-@Module({ controllers: [PaymentsController], providers: [OpsPaymentsService], exports: [OpsPaymentsService] })
+@Module({ controllers: [PaymentsController], providers: [OpsPaymentsService, StatementsService], exports: [OpsPaymentsService] })
 export class PaymentsModule {}

@@ -4,6 +4,7 @@ import type { INestApplication } from '@nestjs/common';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { OPENAPI_FILE } from '../src/openapi/openapi.controller.js';
 import { buildOpenApi, listRoutes, type OpenApiDoc } from '../src/openapi/openapi.js';
+import { responseTypes } from '../src/openapi/response-types.js';
 import { client, startApp, type TestApp } from './helpers.js';
 
 let t: TestApp;
@@ -25,8 +26,9 @@ function expressRoutes(app: INestApplication) {
 
 beforeAll(async () => {
   t = await startApp();
-  doc = await buildOpenApi(t.app);
-});
+  // อ่านชนิดผลลัพธ์ด้วย TypeScript ทั้งโปรเจกต์ (ราว 1 นาที)
+  doc = await buildOpenApi(t.app, { responses: responseTypes() });
+}, 300_000);
 afterAll(() => t.close());
 
 describe('OpenAPI 3.1', () => {
@@ -89,6 +91,24 @@ describe('OpenAPI 3.1', () => {
     expect(find('post', '/api/v1/w/{ws}/teams').op.parameters.some((p) => p.$ref === '#/components/parameters/CsrfToken')).toBe(true);
     expect(find('get', '/api/v1/w/{ws}/teams').op.responses).toHaveProperty('403');
     expect(Object.keys(doc.components.securitySchemes)).toEqual(['cookieAuth', 'bearerAuth']);
+  });
+
+  it('schema ของผลลัพธ์มาจากชนิดที่ handler คืนค่า · ทุก $ref มีใน components · ดาวน์โหลดไฟล์เป็น octet-stream', () => {
+    const ok = (o: ReturnType<typeof ops>[number]) => Object.entries(o.op.responses).find(([code]) => code.startsWith('2'))![1] as { content: Record<string, { schema: Record<string, unknown> }> };
+    const json = ops().filter((o) => ok(o).content['application/json']);
+    const typed = json.filter((o) => Object.keys(ok(o).content['application/json'].schema).length);
+    expect(typed.length / json.length, 'สัดส่วน operation ที่มี schema ของผลลัพธ์').toBeGreaterThan(0.9);
+
+    const teams = ok(find('get', '/api/v1/w/{ws}/teams')).content['application/json'].schema as { properties: { items: { type: string; items: { properties: Record<string, unknown>; required: string[] } } } };
+    expect(teams.properties.items.type).toBe('array');
+    expect(teams.properties.items.items.required).toEqual(expect.arrayContaining(['id', 'name']));
+    // MFA = ผลลัพธ์อีกแบบของ login
+    expect(JSON.stringify(ok(find('post', '/api/v1/auth/login')).content['application/json'].schema)).toContain('mfaToken');
+    expect(ok(find('get', '/api/v1/w/{ws}/projects/{key}/export.xlsx')).content).toHaveProperty('application/octet-stream');
+
+    const refs = [...JSON.stringify(doc).matchAll(/"#\/components\/schemas\/([^"]+)"/g)].map((m) => m[1]);
+    expect(refs.length).toBeGreaterThan(0);
+    for (const r of new Set(refs)) expect(doc.components.schemas, r).toHaveProperty(r);
   });
 
   it('คำอธิบาย operation มาจากคอมเมนต์ในโค้ด', () => {

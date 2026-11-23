@@ -78,9 +78,10 @@ export async function openWork(tx: Tx, projectId: string, userIds?: string[]) {
   const where = [eq(s.issues.projectId, projectId), isNull(s.issues.deletedAt), openStatus()];
   if (userIds) where.push(inArray(s.issueAssignees.userId, userIds));
   // โปรเจกต์แยก Dev / QA: งานที่ส่ง QA แล้วไม่นับเป็น Overdue ของ Dev (ผู้ใช้ขอ 2026-11-13)
+  // และวันที่อยู่กับ QA ไม่นับเป็นความช้าของ Dev เมื่อถูกตีกลับ (2026-11-23 · due-stage.ts devDueOf)
   const [p] = await tx.select({ progressSplit: s.projects.progressSplit }).from(s.projects).where(eq(s.projects.id, projectId));
   const late = p?.progressSplit
-    ? sql`${s.workflowStatuses.category} <> 'review' and ${s.issues.planEnd} < ${today()}`
+    ? sql`${s.workflowStatuses.category} <> 'review' and ${s.issues.planEnd} + ${s.issues.qaHoldDays} < ${today()}`
     : sql`${s.issues.planEnd} < ${today()}`;
   const rows = await tx
     .select({

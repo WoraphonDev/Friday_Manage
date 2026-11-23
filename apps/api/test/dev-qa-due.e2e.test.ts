@@ -1,5 +1,6 @@
 // วันครบกำหนดแยก Dev / QA (ผู้ใช้ขอ 2026-11-13) · ข้อมูลสมมติเท่านั้น
 // งานที่ Dev ส่งให้ QA แล้วต้องไม่ขึ้นเลยกำหนดตาม Plan End · ตัดสินด้วย QA Due แทน
+// QA ตีกลับ: นับความช้าของ Dev ต่อจากเดิม ไม่รวมวันที่อยู่กับ QA (2026-11-23)
 // โปรเจกต์ที่ไม่ได้แยก Dev / QA ต้องได้ผลเหมือนเดิมทุกอย่าง
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { seedTeam, startApp, type TestApp } from './helpers.js';
@@ -138,6 +139,82 @@ describe('โปรเจกต์ Development + QA: งานที่ส่ง
     expect(off.kpis.overdue).toBe(4);
     expect(off.lists.overdue[0].dueStage).toBeUndefined();
     expect((await lead.get(`${ws}/issues/${k.waitingQa}`)).body.dueStage).toBeUndefined();
+  });
+});
+
+describe('โปรเจกต์ Development + QA: หยุดนาฬิกาของ Dev ระหว่างอยู่กับ QA (ผู้ใช้ขอ 2026-11-23)', () => {
+  const k: Record<string, string> = {};
+  let st: (name: string) => string;
+  const issueRow = async (key: string) => (await t.owner.query(
+    `SELECT i.id, i.qa_hold_days AS "holdDays", to_char(i.qa_since, 'YYYY-MM-DD') AS "since" FROM issues i JOIN projects p ON p.id = i.project_id WHERE p.key || '-' || i.number = $1`,
+    [key],
+  )).rows[0] as { id: string; holdDays: number; since: string | null };
+  // จำลองว่างานเข้าช่วง QA มาแล้ว n วัน (เวลาจริงในการทดสอบผ่านไม่ถึงวัน)
+  const inQaFor = (id: string, days: number) => t.owner.query(`UPDATE issues SET qa_since = $2 WHERE id = $1`, [id, addDays(now, -days)]);
+  const move = (key: string, status: string) => team.lead.post(`${team.ws}/issues/${key}/move`, { statusId: st(status) });
+
+  beforeAll(async () => {
+    const { ws, lead } = team;
+    expect((await lead.post(`${ws}/projects`, { name: 'Dev QA Rework', key: 'DQR', startDate: addDays(now, -60), goliveDate: addDays(now, 60), builtinTemplate: 'development_qa', modules: ['Core'] })).status).toBe(201);
+    const p = (await lead.get(`${ws}/projects/DQR`)).body;
+    st = (name: string) => p.statuses.find((s: St) => s.name === name && !s.boardColumnId).id;
+    const mk = async (title: string, planEnd: string) => {
+      const r = await lead.post(`${ws}/projects/DQR/issues`, { title, moduleId: p.modules[0].id, size: 'S', planStart: addDays(now, -45), planEnd, reviewerId: team.leadId });
+      expect(r.status, JSON.stringify(r.body)).toBe(201);
+      expect((await move(r.body.key, 'In progress')).status).toBe(200);
+      return r.body.key as string;
+    };
+    // ส่ง QA ช้าไป 1 วัน · อยู่กับ QA 4 วัน · ตีกลับ = ยังช้า 1 วันเท่าเดิม (ไม่ใช่ 5)
+    k.lateBefore = await mk('ส่ง QA ช้า แล้วถูกตีกลับ', addDays(now, -5));
+    // ส่ง QA ก่อนกำหนด 1 วัน · อยู่กับ QA 4 วัน · ตีกลับ = ยังเหลือเวลา 1 วัน
+    k.early = await mk('ส่ง QA ก่อนกำหนด แล้วถูกตีกลับ', addDays(now, -3));
+    k.never = await mk('ยังไม่เคยส่ง QA', yesterday);
+  });
+
+  it('เข้าช่วง QA เริ่มนับ · ย้ายภายในช่วง QA ไม่รีเซ็ต · QA ตีกลับ = เลื่อน Due ของ Dev ตามวันที่อยู่กับ QA', async () => {
+    for (const key of [k.lateBefore, k.early]) {
+      expect((await move(key, 'Ready for QA')).status).toBe(200);
+      const r = await issueRow(key);
+      expect(r).toMatchObject({ holdDays: 0, since: now });
+      await inQaFor(r.id, 4);
+      expect((await move(key, 'Testing')).status).toBe(200);
+      expect((await issueRow(key)).since).toBe(addDays(now, -4));
+      expect((await move(key, 'Rework')).status).toBe(200);
+      expect(await issueRow(key)).toMatchObject({ holdDays: 4, since: null });
+    }
+
+    const { ws, lead } = team;
+    expect((await lead.get(`${ws}/issues/${k.lateBefore}`)).body).toMatchObject({ dueStage: 'dev', dueDate: yesterday, planEnd: addDays(now, -5) });
+    expect((await lead.get(`${ws}/issues/${k.early}`)).body).toMatchObject({ dueStage: 'dev', dueDate: addDays(now, 1) });
+
+    const table = (await lead.get(`${ws}/projects/DQR/issues?overdue=true`)).body;
+    expect(keys(table.items)).toEqual([k.lateBefore, k.never].sort());
+    const ov = (await lead.get(`${ws}/projects/DQR/overview`)).body;
+    expect(keys(ov.lists.overdue)).toEqual([k.lateBefore, k.never].sort());
+    expect(ov.lists.overdue.find((x: Keyed) => x.key === k.lateBefore).lateDays).toBe(1);
+
+    const tl = (await lead.get(`${ws}/projects/DQR/timeline`)).body;
+    const rows = tl.modules.flatMap((m: { groups: { tasks: (Keyed & { lateDays: number })[] }[] }) => m.groups.flatMap((g) => g.tasks));
+    const late = (key: string) => rows.find((r: Keyed) => r.key === key)?.lateDays ?? null;
+    expect(late(k.lateBefore)).toBe(1);
+    expect(late(k.early)).toBe(0);
+  });
+
+  it('ส่ง QA รอบสองแล้วถูกตีกลับอีก = วันที่อยู่กับ QA สะสมต่อ', async () => {
+    expect((await move(k.lateBefore, 'Ready for QA')).status).toBe(200);
+    await inQaFor((await issueRow(k.lateBefore)).id, 2);
+    expect((await move(k.lateBefore, 'In progress')).status).toBe(200);
+    expect(await issueRow(k.lateBefore)).toMatchObject({ holdDays: 6, since: null });
+    // Plan End -5 + 6 วัน = พรุ่งนี้ · ไม่เลยกำหนดแล้ว
+    expect((await team.lead.get(`${team.ws}/issues/${k.lateBefore}`)).body.dueDate).toBe(addDays(now, 1));
+  });
+
+  it('ปิดแยก Dev / QA = กลับเป็น Plan End เดิม (ไม่เลื่อน)', async () => {
+    const { ws, lead } = team;
+    const p = (await lead.get(`${ws}/projects/DQR`)).body;
+    expect((await lead.patch(`${ws}/projects/DQR`, { progressSplit: false }, p.version)).status).toBe(200);
+    const table = (await lead.get(`${ws}/projects/DQR/issues?overdue=true`)).body;
+    expect(keys(table.items)).toEqual([k.lateBefore, k.early, k.never].sort());
   });
 });
 

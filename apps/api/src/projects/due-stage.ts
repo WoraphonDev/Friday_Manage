@@ -7,6 +7,8 @@ import { addDays, WorkCalendar } from './calendar.js';
  * โปรเจกต์ที่แยก Dev / QA (progress_split): งานหมวด Review / QA ตัดสินด้วย QA Due ไม่ใช่ Plan End
  * เพราะ Dev ส่งงานแล้ว ถ้ายังใช้ Plan End งานจะขึ้นเลยกำหนดและโทษ Dev ทั้งที่รอ QA อยู่
  * โปรเจกต์อื่นได้ผลเหมือนเดิมทุกอย่าง (Plan End)
+ * ช่วง Dev: หยุดนาฬิการะหว่างงานอยู่กับ QA แล้วนับต่อเมื่อ QA ตีกลับ (ผู้ใช้ขอ 2026-11-23)
+ * = Due ของ Dev คือ Plan End + จำนวนวันที่เคยอยู่ช่วง QA (issues.qa_hold_days ที่ trigger นับให้)
  */
 export type DueStage = 'dev' | 'qa';
 
@@ -32,6 +34,8 @@ export interface DueProject {
 export interface DueIssue {
   planEnd: string | null;
   qaEnd?: string | null;
+  /** บังคับส่งเพื่อไม่ให้ผู้เรียกลืมแล้วได้ Due ของ Dev ผิดแบบเงียบ ๆ */
+  qaHoldDays: number;
 }
 
 /** อ่านปฏิทินเฉพาะโปรเจกต์ที่แยก Dev / QA · โปรเจกต์อื่นไม่ต้องอ่านอะไรเพิ่ม · ส่ง cal มาได้ถ้าผู้เรียกอ่านไว้แล้ว */
@@ -71,6 +75,12 @@ export function qaDueOf(rule: DueRule, i: DueIssue): string | null {
   return d;
 }
 
+/** Due ของ Dev: Plan End เลื่อนออกตามวันที่งานเคยอยู่กับ QA (โปรเจกต์อื่น = Plan End) */
+export function devDueOf(rule: DueRule, i: DueIssue): string | null {
+  if (!rule.split || !i.planEnd || !i.qaHoldDays) return i.planEnd;
+  return addDays(i.planEnd, i.qaHoldDays);
+}
+
 /** งานที่ Dev ส่งให้ QA แล้วแต่ยังไม่ Done */
 export const inQaStage = (rule: DueRule, category: string) => rule.split && category === 'review';
 
@@ -81,7 +91,7 @@ export const inQaStage = (rule: DueRule, category: string) => rule.split && cate
 export function dueOf(rule: DueRule, i: DueIssue, category: string): { date: string | null; stage: DueStage | null } {
   if (!rule.split) return { date: i.planEnd, stage: null };
   if (inQaStage(rule, category)) return { date: qaDueOf(rule, i), stage: 'qa' };
-  return { date: i.planEnd, stage: 'dev' };
+  return { date: devDueOf(rule, i), stage: 'dev' };
 }
 
 /** วันครบกำหนดที่ใช้ตัดสิน (ย่อของ dueOf().date) */
@@ -104,11 +114,11 @@ export function autoQaLateCutoff(rule: DueRule, now: string): string {
 
 /**
  * เงื่อนไข SQL "งานค้างที่เลยกำหนด" ตามกฎของโปรเจกต์ · ต้อง join workflow_statuses ไว้แล้ว
- * โปรเจกต์อื่นได้เงื่อนไขเดิม: plan_end < วันนี้
+ * โปรเจกต์อื่นได้เงื่อนไขเดิม: plan_end < วันนี้ · ช่วง Dev ของโปรเจกต์แยก Dev / QA บวกวันที่เคยอยู่กับ QA (devDueOf)
  */
 export function lateSql(rule: DueRule, now: string): SQL {
   const { issues, workflowStatuses } = schema;
   if (!rule.split) return sql`${issues.planEnd} < ${now}`;
   const qaLate = sql`(case when ${issues.qaEnd} is not null then greatest(${issues.qaEnd}, ${issues.planEnd}) < ${now} else ${issues.planEnd} <= ${autoQaLateCutoff(rule, now)} end)`;
-  return sql`(case when ${workflowStatuses.category} = 'review' then ${qaLate} else ${issues.planEnd} < ${now} end)`;
+  return sql`(case when ${workflowStatuses.category} = 'review' then ${qaLate} else ${issues.planEnd} + ${issues.qaHoldDays} < ${now} end)`;
 }

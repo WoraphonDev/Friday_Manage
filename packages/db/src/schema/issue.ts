@@ -124,6 +124,14 @@ export const issues = pgTable(
      * null = Plan End + projects.qa_buffer_days วันทำการ · โปรเจกต์อื่นไม่ใช้ค่านี้
      */
     qaEnd: date(),
+    /**
+     * จำนวนวัน (ปฏิทิน) ที่งานเคยอยู่ช่วง QA (หมวด review) แล้วถูกย้ายออก (ผู้ใช้ขอ 2026-11-23)
+     * โปรเจกต์ที่แยก Dev / QA เลื่อน Due ของ Dev ออกไปเท่านี้ = หยุดนาฬิกาของ Dev ระหว่างรอ QA แล้วนับต่อเมื่อ QA ตีกลับ
+     * trigger app.track_qa_hold ดูแลค่านี้และ qa_since ทุกครั้งที่สถานะเปลี่ยน (ครอบทุกเส้นทางที่แก้ status_id)
+     */
+    qaHoldDays: integer().notNull().default(0),
+    /** วันที่เข้าช่วง QA รอบปัจจุบัน (เวลาไทย) · null = ไม่ได้อยู่ช่วง QA */
+    qaSince: date(),
     actualStart: date(),
     actualEnd: date(),
     completedAt: tstz(),

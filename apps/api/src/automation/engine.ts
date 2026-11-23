@@ -274,7 +274,7 @@ export class AutomationEngine implements OnModuleInit {
       // โปรเจกต์แยก Dev / QA: งานที่รอ QA เลยกำหนดตาม QA Due (projects/due-stage.ts) · dedupe ตามวันนั้นแทน Plan End
       const due = (await this.sys.transaction((tx) => loadDueRules(tx, [rule.projectId]))).get(rule.projectId) ?? PLAIN_DUE;
       const issues = (await this.sys
-        .select({ id: s.issues.id, planEnd: s.issues.planEnd, qaEnd: s.issues.qaEnd, category: s.workflowStatuses.category })
+        .select({ id: s.issues.id, planEnd: s.issues.planEnd, qaEnd: s.issues.qaEnd, qaHoldDays: s.issues.qaHoldDays, category: s.workflowStatuses.category })
         .from(s.issues)
         .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
         .where(and(eq(s.issues.projectId, rule.projectId), isNull(s.issues.deletedAt), openStatus(), lateSql(due, today())))

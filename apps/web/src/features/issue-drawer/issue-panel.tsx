@@ -332,6 +332,11 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted, onClose }: 
             <span className="muted">{t('end')}</span>
             <span>{canEdit ? <DatePicker compact label={t('fields.planEnd')} value={issue.planEnd ?? undefined} yearFormat={scope.yearFormat} onValueChange={(value) => { if (disabled) return; if (value && issue.planEnd && value > issue.planEnd && !scope.access.permissions.includes('issue.change_due_directly')) setDue(value); else void patch({ planEnd: value || null }); }} /> : formatDate(issue.planEnd, scope.yearFormat)}</span>
             {show('actual') && <span>{issue.actualEnd ? formatDate(issue.actualEnd, scope.yearFormat) : '—'}</span>}
+            {/* QA เคยตีกลับ: Due ของ Dev = Plan End + วันที่อยู่กับ QA (API คิดให้ใน dueDate) · Plan End คงเดิมและแก้ได้เหมือนเดิม */}
+            {!!issue.dueShift && issue.dueDate && <><span /><span className={styles.shiftLine} title={t('devDueShiftHint')}>
+              <b className={issue.dueDate < todayIso ? styles.shiftLate : undefined}>{t('devDueShifted', { date: formatDate(issue.dueDate, scope.yearFormat) })}</b>
+              <span className="muted">{t('devDueShiftDays', { days: issue.dueShift })}</span>
+            </span></>}
             {/* โปรเจกต์แยก Dev / QA: Plan End = วันที่ Dev ส่ง QA · QA Due = วันที่ QA ต้องทดสอบเสร็จ (ไม่กรอก = อัตโนมัติ) */}
             {issue.qaDue !== undefined && <>
               <span className="muted">{t('qaDue')}</span>

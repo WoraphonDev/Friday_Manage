@@ -178,6 +178,7 @@
     "listLabel": "รายการงาน",
     "unassigned": "ยังไม่มีผู้รับผิดชอบ",
     "dueShort": "ครบ {date}",
+    "dueShiftHint": "Due ของ Dev {date} · เลื่อน {days} วันที่งานอยู่กับ QA",
     "groupBy": "Group by",
     "groups": {
       "module": "Module",

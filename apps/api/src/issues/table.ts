@@ -105,7 +105,7 @@ export async function listIssues<T extends { id: string; key: string; number: nu
   }
   if (q.fields) {
     const requested = new Set(q.fields.split(',').filter(Boolean));
-    const allowed = new Set(['id', 'key', 'number', 'projectKey', 'type', 'parentKey', 'title', 'description', 'remark', 'status', 'priority', 'moduleId', 'phaseId', 'sprintId', 'size', 'estimateMd', 'progressPct', 'planStart', 'planEnd', 'qaEnd', 'qaDue', 'dueDate', 'dueStage', 'actualStart', 'actualEnd', 'reopenCount', 'severity', 'environment', 'details', 'sharedWithGuests', 'version', 'createdAt', 'updatedAt', 'assigneeIds', 'baId', 'baIds', 'saId', 'reviewerId', 'reviewerIds', 'testerId', 'reporterId', 'canMove', 'assignees', 'ba', 'bas', 'attachments', 'sa', 'reviewer', 'reviewers', 'labels', 'requirements', 'screens', 'customFields']);
+    const allowed = new Set(['id', 'key', 'number', 'projectKey', 'type', 'parentKey', 'title', 'description', 'remark', 'status', 'priority', 'moduleId', 'phaseId', 'sprintId', 'size', 'estimateMd', 'progressPct', 'planStart', 'planEnd', 'qaEnd', 'qaDue', 'dueDate', 'dueStage', 'dueShift', 'actualStart', 'actualEnd', 'reopenCount', 'severity', 'environment', 'details', 'sharedWithGuests', 'version', 'createdAt', 'updatedAt', 'assigneeIds', 'baId', 'baIds', 'saId', 'reviewerId', 'reviewerIds', 'testerId', 'reporterId', 'canMove', 'assignees', 'ba', 'bas', 'attachments', 'sa', 'reviewer', 'reviewers', 'labels', 'requirements', 'screens', 'customFields']);
     if ([...requested].some((key) => !allowed.has(key))) throw new AppError(400, 'invalid_fields', 'ชื่อฟิลด์ที่ขอไม่ถูกต้อง');
     requested.add('key');
     items = items.map((item) => Object.fromEntries(Object.entries(item).filter(([key]) => requested.has(key))));

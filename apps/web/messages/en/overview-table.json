@@ -178,6 +178,7 @@
     "listLabel": "Task list",
     "unassigned": "Unassigned",
     "dueShort": "Due {date}",
+    "dueShiftHint": "Dev due {date} · moved {days, plural, one {# day} other {# days}} spent with QA",
     "groupBy": "Group by",
     "groups": {
       "module": "Module",

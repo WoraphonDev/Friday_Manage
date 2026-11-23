@@ -184,8 +184,13 @@ describe('โปรเจกต์ Development + QA: หยุดนาฬิก
     }
 
     const { ws, lead } = team;
-    expect((await lead.get(`${ws}/issues/${k.lateBefore}`)).body).toMatchObject({ dueStage: 'dev', dueDate: yesterday, planEnd: addDays(now, -5) });
-    expect((await lead.get(`${ws}/issues/${k.early}`)).body).toMatchObject({ dueStage: 'dev', dueDate: addDays(now, 1) });
+    expect((await lead.get(`${ws}/issues/${k.lateBefore}`)).body).toMatchObject({ dueStage: 'dev', dueDate: yesterday, planEnd: addDays(now, -5), dueShift: 4 });
+    expect((await lead.get(`${ws}/issues/${k.early}`)).body).toMatchObject({ dueStage: 'dev', dueDate: addDays(now, 1), dueShift: 4 });
+    expect((await lead.get(`${ws}/issues/${k.never}`)).body.dueShift).toBe(0);
+    // หน้าเว็บแสดง "Due ของ Dev เลื่อน N วัน" จาก dueShift · การ์ด Board ส่งวันที่ใช้ตัดสินมาด้วย
+    const board = (await lead.get(`${ws}/projects/DQR/board`)).body;
+    const card = board.columns.flatMap((c: { cards: (Keyed & { dueShift?: number; dueDate?: string })[] }) => c.cards).find((c: Keyed) => c.key === k.lateBefore);
+    expect(card).toMatchObject({ dueShift: 4, dueDate: yesterday, due: { state: 'overdue', days: 1, stage: 'dev' } });
 
     const table = (await lead.get(`${ws}/projects/DQR/issues?overdue=true`)).body;
     expect(keys(table.items)).toEqual([k.lateBefore, k.never].sort());

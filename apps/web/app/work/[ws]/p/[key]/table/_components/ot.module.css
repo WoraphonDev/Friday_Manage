@@ -207,6 +207,7 @@
 .subAddCancel { border:0; background:transparent; color:var(--muted); font:inherit; font-size:12px; cursor:pointer; padding:0 8px; min-height:32px; border-radius:6px; }
 .subAddCancel:hover { background:var(--subtle); }
 .dueLate { color:var(--danger-text); font-weight:600; } .dueToday { color:var(--warning-text); font-weight:600; }
+.shiftChip { display:inline-block; margin-left:5px; padding:0 6px; border-radius:999px; font-size:10.5px; font-weight:600; line-height:16px; background:var(--accent-teal-soft); color:var(--accent-teal-text); cursor:help; vertical-align:1px; }
 .refs { display:block; font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .prog { display:flex; align-items:center; gap:8px; }
 .prog > span:first-child { flex:1; height:6px; background:var(--subtle); border-radius:99px; overflow:hidden; }

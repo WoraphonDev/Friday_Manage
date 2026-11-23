@@ -492,9 +492,11 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
     toast({ message: t("structure.saved") });
   }
   const groupIds = display.filter((d) => d.kind === "module" || d.kind === "phase").map((d) => d.id);
-  const tableMinW = NAME_MIN_W + cols.reduce((n, c) => n + colWidth(c) + 10, 0) + (cols.length ? 9 : 0);
+  // โปรเจกต์แยก Dev / QA: วันจบอาจมีชิป "+N" (Due ของ Dev เลื่อนเพราะ QA ตีกลับ) จึงกว้างขึ้นเฉพาะโปรเจกต์นี้
+  const width = (c: Col) => colWidth(c) + (split && c === "end" ? 28 : 0);
+  const tableMinW = NAME_MIN_W + cols.reduce((n, c) => n + width(c) + 10, 0) + (cols.length ? 9 : 0);
   // คอลัมน์แรกถัดจากชื่อเว้นซ้ายเพิ่ม 9px (CSS nth-child(2)) จึงกว้างขึ้นเท่ากัน ไม่ให้เนื้อหาเบียด
-  const colgroup = <colgroup><col />{cols.map((c, i) => <col key={c} style={{ width: colWidth(c) + 10 + (i === 0 ? 9 : 0) }} />)}</colgroup>;
+  const colgroup = <colgroup><col />{cols.map((c, i) => <col key={c} style={{ width: width(c) + 10 + (i === 0 ? 9 : 0) }} />)}</colgroup>;
   const stuckModule = ctx.module !== null ? display[ctx.module] : undefined;
   const stuckPhase = ctx.phase !== null ? display[ctx.phase] : undefined;
   const ctxModule = stuckModule?.kind === "module" ? stuckModule : null;
@@ -969,7 +971,7 @@ function MobileList({ display, collapsed, onToggle, ws, projectKey, year, canCre
             <span className={`${styles.mTitle} ${done ? styles.mDone : ""}`}>{r.title}</span>
             <span className={styles.mMeta}>
               {r.assignees?.length ? <AvatarStack people={r.assignees} max={3} /> : <span className={styles.muted}>{t("unassigned")}</span>}
-              {r.planEnd && <span className={late ? styles.dueLate : styles.muted}>{t("dueShort", { date: formatDate(r.planEnd, year) })}</span>}
+              {r.planEnd && <span className={late ? styles.dueLate : styles.muted}>{t("dueShort", { date: formatDate(r.planEnd, year) })}{r.dueShift && r.dueDate ? <span className={styles.shiftChip} title={t("dueShiftHint", { date: formatDate(r.dueDate, year), days: r.dueShift })}>+{r.dueShift}</span> : null}</span>}
               {r.progressPct !== null && r.progressPct > 0 && <span className={styles.muted}>{r.progressPct}%</span>}
             </span>
           </Link>
@@ -994,6 +996,8 @@ function IssueRow({ index, row, statusColor, sub, cols, profile, customFields, w
   // โปรเจกต์แยก Dev / QA: งานที่ส่ง QA แล้วตัดสินเลยกำหนดด้วย QA Due ไม่ใช่วันจบของ Dev
   const due = row.dueDate !== undefined ? row.dueDate : row.planEnd;
   const dueCls = !done && due ? (due < today ? styles.dueLate : due === today ? styles.dueToday : "") : "";
+  // QA เคยตีกลับ: วันจบแสดง Plan End เดิม + ชิปจำนวนวันที่เลื่อน (สีและตัวกรองเลยกำหนดใช้ dueDate ที่เลื่อนแล้ว)
+  const shiftChip = row.dueShift && row.dueDate ? <span className={styles.shiftChip} title={t("dueShiftHint", { date: formatDate(row.dueDate, year), days: row.dueShift })}>+{row.dueShift}</span> : null;
   const actualLate = !!(row.actualEnd && row.planEnd && row.actualEnd > row.planEnd);
   // นับเป็นวันปฏิทินจากวันที่ในแผน (YYYY-MM-DD) เพื่อบอกว่าเสร็จช้ากว่าแผนเท่าไร
   const lateBy = actualLate ? Math.round((Date.parse(row.actualEnd!) - Date.parse(row.planEnd!)) / 86400000) : 0;
@@ -1041,8 +1045,8 @@ function IssueRow({ index, row, statusColor, sub, cols, profile, customFields, w
     ) : <span className={`${styles.pill} ${pillClass(row.status.category, row.status.name)}`} style={statusColorStyle(statusColor)}>{row.status.name}</span>,
     size: canEdit ? <SizeCell label={edit(t("cols.size"))} size={row.size} md={row.estimateMd} onChange={onPatch}>{sizeView}</SizeCell> : sizeView,
     start: canEdit ? <DateCell label={edit(t("cols.start"))} value={row.planStart} onChange={(v) => onPatch({ planStart: v })}>{row.planStart ? formatDate(row.planStart, year) : "—"}</DateCell> : formatDate(row.planStart, year),
-    end: canEdit ? <DateCell label={edit(t("cols.end"))} value={row.planEnd} className={dueCls} onChange={(v) => onPatch({ planEnd: v })}>{row.planEnd ? formatDate(row.planEnd, year) : "—"}</DateCell>
-      : <span className={dueCls}>{formatDate(row.planEnd, year)}</span>,
+    end: canEdit ? <DateCell label={edit(t("cols.end"))} value={row.planEnd} className={dueCls} onChange={(v) => onPatch({ planEnd: v })}>{row.planEnd ? formatDate(row.planEnd, year) : "—"}{shiftChip}</DateCell>
+      : <span className={dueCls}>{formatDate(row.planEnd, year)}{shiftChip}</span>,
     // Actual Start แก้เองได้ (เริ่มก่อนกดสถานะ) · Actual End ระบบตั้งเมื่อสถานะเป็น Done
     actualStart: canEdit ? <DateCell label={edit(t("cell.actualStart"))} value={row.actualStart} max={row.actualEnd ?? today} onChange={(v) => onPatch({ actualStart: v })}>
         {row.actualStart ? formatDate(row.actualStart, year) : "—"}

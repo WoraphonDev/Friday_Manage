@@ -16,6 +16,9 @@ export interface BoardCard {
   /** stage มาเฉพาะโปรเจกต์แยก Dev / QA · qa = งานรอ QA ตัดสินด้วย QA Due */
   due: { state: "overdue" | "today" | "soon"; days: number; stage?: "dev" | "qa" } | null;
   qaDue?: string | null;
+  /** QA เคยตีกลับ: จำนวนวันที่ Due ของ Dev เลื่อน และวันที่ใช้ตัดสิน */
+  dueShift?: number;
+  dueDate?: string | null;
   assignees: Person[];
   /** BA ของงาน (หลายคนได้) · โปรเจกต์ที่ซ่อนช่อง BA ได้รายการว่าง */
   bas?: Person[];

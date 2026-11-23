@@ -10,7 +10,7 @@ import { attachmentCounts, attachmentsOf } from '../files/attachment-counts.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { addDays, WorkCalendar } from '../projects/calendar.js';
-import { dueOf, loadDueRule, qaDueOf, type DueRule } from '../projects/due-stage.js';
+import { devShiftOf, dueOf, loadDueRule, qaDueOf, type DueRule } from '../projects/due-stage.js';
 import { canMoveIssue } from '../projects/permissions.js';
 import { ProjectsService } from '../projects/projects.service.js';
 import { withChecklistPart } from '../issues/table.js';
@@ -144,7 +144,7 @@ export class ViewsService {
           priority: i.priority,
           planStart: i.planStart,
           planEnd: i.planEnd,
-          ...(dueRule.split ? { qaDue: qaDueOf(dueRule, i) } : {}),
+          ...(dueRule.split ? { qaDue: qaDueOf(dueRule, i), dueShift: devShiftOf(dueRule, i, st.category), dueDate: dueOf(dueRule, i, st.category).date } : {}),
           due: dueState(dueRule, i, st, now),
           assigneeIds: d.assignees.get(i.id) ?? [],
           // ซ่อนช่อง BA ในชุดฟิลด์ของโปรเจกต์ = ไม่แสดง BA บนการ์ดระดับนั้น

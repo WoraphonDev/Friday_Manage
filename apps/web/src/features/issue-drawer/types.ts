@@ -22,6 +22,8 @@ export interface Issue {
   planStart: string | null; planEnd: string | null; actualStart: string | null; actualEnd: string | null;
   /** โปรเจกต์แยก Dev / QA: QA Due ที่กรอก (null = อัตโนมัติ) · qaDue / dueDate / dueStage ส่งมาเฉพาะโปรเจกต์ที่แยก */
   qaEnd?: string | null; qaDue?: string | null; dueDate?: string | null; dueStage?: 'dev' | 'qa' | null;
+  /** วันที่ Due ของ Dev ถูกเลื่อนเพราะงานเคยอยู่กับ QA (0 = ไม่ได้เลื่อน) */
+  dueShift?: number;
   severity: string | null; environment: string | null; details: Record<string, unknown>; reopenCount: number;
   sharedWithGuests: boolean; version: number; createdAt: string; updatedAt: string;
   requirements?: string[]; screens?: string[]; labels?: Named[];

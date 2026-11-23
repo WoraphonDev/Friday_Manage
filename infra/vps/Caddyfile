@@ -30,3 +30,7 @@
 	# ops-web proxy /ops-api → ops-api เอง (cookie fm_ops เป็น SameSite=Strict ต้องอยู่ origin เดียว)
 	reverse_proxy ops-web:4000
 }
+
+# ระบบอื่นที่ใช้เครื่องเดียวกัน (เช่น ระบบร้านเช่า /opt/moto) วาง site ของตัวเองไว้ที่ /opt/friday/sites/*.caddy
+# deploy ของ Friday ไม่แตะโฟลเดอร์ sites · ไม่มีไฟล์ = ไม่มีผล
+import /etc/caddy/sites/*.caddy

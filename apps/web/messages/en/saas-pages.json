@@ -187,7 +187,7 @@
       },
       "cookie": {
         "intro": "Cookies used on the website and in the app",
-        "sections": [["What are cookies", ""], ["Necessary cookies", "Sign-in, security"], ["Analytics cookies", "Turned on with consent"], ["Managing cookies", "Change your consent anytime with the cookie settings button at the bottom of the website"]]
+        "sections": [["What are cookies", ""], ["Necessary cookies", "Sign-in (fm_session) · request forgery protection (fm_csrf) · Google / Microsoft sign-in (fm_oauth, 10 minutes) · trusted 2FA device (fm_mfa_trust, 30 days) · chosen language and theme (NEXT_LOCALE, fm-theme, 1 year)"], ["Analytics cookies", "Only with consent · fm_attr keeps where your first visit came from (UTM, referring site, landing page) for 30 days and is used at sign-up to learn which channel brought you · deleted as soon as you withdraw consent"], ["Managing cookies", "Change your consent anytime with the cookie settings button at the bottom of the website"]]
       },
       "subprocessors": {
         "intro": "External services that process customer data on our behalf",

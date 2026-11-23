@@ -15,6 +15,10 @@ import { ForgotPasswordFlow } from "../../app/(auth)/forgot-password/_components
 import { JoinInvite } from "../../app/(auth)/join/[token]/_components/join-invite";
 import { OnboardingWizard, slugify } from "../../app/(auth)/onboarding/_components/onboarding-wizard";
 import AfterLoginPage from "../../app/work/page";
+import SignupPage from "../../app/(auth)/signup/page";
+import LoginPage from "../../app/(auth)/login/page";
+import ForgotPage from "../../app/(auth)/forgot-password/page";
+import saasMessages from "../../messages/th/saas-pages.json";
 
 const render = (ui: React.ReactElement) => renderWithProviders(ui, { messages: { "auth-onboarding": messages } });
 const apiError = (status: number, code: string, message: string, details: Record<string, unknown> = {}, requestId = "req_test01") =>
@@ -683,5 +687,31 @@ describe("J5 · Onboarding", () => {
     render(<OnboardingWizard />);
     expect(await screen.findByText(/req_me500/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /ลองอีกครั้ง/ })).toBeInTheDocument();
+  });
+});
+
+describe("แบนเนอร์คุกกี้ในหน้าเข้าสู่ระบบ (A34 · ผู้ใช้เลือกแบบ A 23 พ.ย.)", () => {
+  const withBanner = (ui: React.ReactElement) => renderWithProviders(ui, { messages: { "auth-onboarding": messages, "saas-pages": saasMessages } });
+
+  it("หน้าสมัคร / Login / ลืมรหัสผ่าน มีแบนเนอร์เดียวกับหน้าสาธารณะ · ตอบแล้วไม่ถามซ้ำ", async () => {
+    const user = userEvent.setup();
+    const signup = withBanner(<SignupPage />);
+    const region = await screen.findByRole("region", { name: "การใช้คุกกี้" });
+    expect(within(region).getByRole("button", { name: "ยอมรับทั้งหมด" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "สร้างบัญชี" })).toBeInTheDocument();
+    await user.click(within(region).getByRole("button", { name: "ปฏิเสธที่ไม่จำเป็น" }));
+    expect(screen.queryByRole("region", { name: "การใช้คุกกี้" })).not.toBeInTheDocument();
+    signup.unmount();
+    withBanner(<LoginPage />);
+    await screen.findByRole("button", { name: "เข้าสู่ระบบ" });
+    expect(screen.queryByRole("region", { name: "การใช้คุกกี้" })).not.toBeInTheDocument();
+  });
+
+  it("ยังไม่ตอบ: หน้า Login และลืมรหัสผ่านก็ถาม", async () => {
+    const login = withBanner(<LoginPage />);
+    expect(await screen.findByRole("region", { name: "การใช้คุกกี้" })).toBeInTheDocument();
+    login.unmount();
+    withBanner(<ForgotPage />);
+    expect(await screen.findByRole("region", { name: "การใช้คุกกี้" })).toBeInTheDocument();
   });
 });

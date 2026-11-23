@@ -23,6 +23,19 @@
 | `workspace_acquisitions` | ที่มาของ Workspace (คัดลอกจากผู้สร้างตอนสร้าง) | workspace_id (PK), source, medium, campaign, referrer_host, via (signup · invited_user · sales · ops_created), referring_workspace_id (เมื่อผู้สร้างเคยถูกชวนเข้า Workspace อื่น) | ระบบ |
 
 - เว็บเก็บ UTM / referrer ของการเข้าครั้งแรกไว้ใน cookie ของโดเมนเราเอง (`fm_attr` · first-party, อายุ 30 วัน) **เมื่อผู้เข้าชมยินยอมคุกกี้วิเคราะห์** (แบนเนอร์ R4) · cookie ไปกับ `POST auth/signup` และ `auth/oauth/:provider/start` แล้ว API อ่านเอง (body `attribution` ส่งเองได้และมาก่อน)
+- แบนเนอร์ขอความยินยอมอยู่ในหน้าสาธารณะ และหน้าสมัคร / Login / ลืมรหัสผ่าน / รับคำเชิญ (คนที่ลงตรงหน้าสมัครจากโฆษณาตอบได้ก่อนสมัคร)
+- คุกกี้ทั้งหมดของเว็บลูกค้า (ใช้เขียนนโยบายคุกกี้):
+
+  | คุกกี้ | หมวด | ใช้ทำอะไร | อายุ |
+  |---|---|---|---|
+  | `fm_session` | จำเป็น | session หลังเข้าสู่ระบบ (httpOnly) | จนปิดเบราว์เซอร์ หรือ 30 วันเมื่อเลือกจำการเข้าสู่ระบบ |
+  | `fm_csrf` | จำเป็น | กันการปลอมคำขอ (double submit) | จนปิดเบราว์เซอร์ |
+  | `fm_oauth` | จำเป็น | state ของการเข้าสู่ระบบด้วย Google / Microsoft (httpOnly) | 10 นาที |
+  | `fm_mfa_trust` | จำเป็น | จำอุปกรณ์ที่ยืนยัน 2FA แล้ว (httpOnly) | 30 วัน |
+  | `NEXT_LOCALE` · `fm-theme` | จำเป็น (ค่าที่ผู้ใช้เลือก) | ภาษาและธีม | 1 ปี |
+  | `fm_attr` | วิเคราะห์ (ต้องยินยอม) | ที่มาของการเข้าครั้งแรก | 30 วัน |
+
+  ความยินยอมเก็บใน localStorage `fm_cookie_consent` (ไม่ใช่คุกกี้) · ก่อนยินยอมจำหน้าแรกใน sessionStorage ของแท็บนั้น (ไม่ส่งออก)
 - เก็บ `referrer_host` เท่านั้น ไม่เก็บ URL เต็ม เพราะ URL อาจมีข้อมูลส่วนตัว
 - `via = invited` ใช้วัด "ถูกชวนแล้วไปเปิด Workspace เอง" (การโตที่ไม่ต้องจ่ายค่าโฆษณา)
 

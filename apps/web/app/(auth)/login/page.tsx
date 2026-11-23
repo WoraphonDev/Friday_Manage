@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+import { CookieConsent } from "../../(public)/_components/cookie-consent";
 import { LoginForm } from "./_components/login-form";
 
 // ชื่อแท็บตามภาษาของคำขอ (W21)
@@ -12,8 +13,12 @@ export async function generateMetadata(): Promise<Metadata> {
 // useSearchParams ต้องอยู่ใต้ Suspense เพื่อให้ build แบบ static ได้
 export default function Page() {
   return (
-    <Suspense>
-      <LoginForm />
-    </Suspense>
+    <>
+      <Suspense>
+        <LoginForm />
+      </Suspense>
+      {/* คนที่ลงตรงหน้านี้จากโฆษณาต้องยินยอมคุกกี้วิเคราะห์ได้ ไม่งั้นไม่ได้ที่มา (A34) */}
+      <CookieConsent />
+    </>
   );
 }

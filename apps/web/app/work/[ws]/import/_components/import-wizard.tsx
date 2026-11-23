@@ -11,6 +11,7 @@ import { api } from "@/lib/api";
 import { formatDate, type YearFormat } from "@/lib/format";
 import { useSlidingIndicator } from "@/lib/motion";
 import { queryKeys } from "@/lib/query";
+import { trackFeature } from "@/lib/track";
 import { cn } from "@/lib/utils";
 import type { List, Permissions } from "@/lib/types";
 import { type CommitResult, type Finding, type ImportJob, type JobPerson, type Member, personKey, type UpdateKind } from "./types";
@@ -120,6 +121,7 @@ export function ImportWizard({ ws, projectKey, changesHref }: { ws: string; proj
     const done = await run("commit", () => api.post<CommitResult>(`${w}/import-jobs/${job.id}/commit`));
     if (done) {
       setResult(done);
+      trackFeature(ws, "import");
       void cache.invalidateQueries({ queryKey: queryKeys.projects(ws) });
       // อัปเดตแผนจาก Popup ใน Table: แถวในตารางเปลี่ยนตามทันที
       if (projectKey) void cache.invalidateQueries({ queryKey: ["table", ws, projectKey] });

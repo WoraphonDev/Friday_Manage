@@ -5,6 +5,7 @@ import type { Db } from '@friday/db';
 import { AppError } from '../common/errors.js';
 import { SYSTEM_DB } from '../db/db.module.js';
 import { PlanLimits } from '../core/plan-limits.js';
+import { AnalyticsService } from '../analytics/analytics.service.js';
 import { assertTokenAllowed, findApiToken } from './api-tokens.js';
 import { type AppRequest, IS_PUBLIC } from '../common/request.js';
 import { CSRF_COOKIE, SESSION_COOKIE, SessionService } from './sessions.js';
@@ -23,6 +24,7 @@ export class AuthGuard implements CanActivate {
     // อ่าน api_tokens ก่อนรู้ว่าเป็น Workspace ไหน จึงใช้ SYSTEM_DB (งาน A28)
     @Inject(SYSTEM_DB) private readonly db: Db,
     private readonly limits: PlanLimits,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   async canActivate(ctx: ExecutionContext) {
@@ -52,6 +54,8 @@ export class AuthGuard implements CanActivate {
           if (retry) res.setHeader('Retry-After', String(retry));
           throw e;
         }
+        // การใช้ฟีเจอร์ API (05 › 1.2) · เฉพาะคำขอที่ผ่าน rate limit
+        this.analytics.apiTokenUsed(id.workspaceId, id.userId);
       }
       req.auth = { userId: id.userId, sessionId: `token:${id.tokenId}` };
       return true;

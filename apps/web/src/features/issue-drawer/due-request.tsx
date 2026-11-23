@@ -1,4 +1,5 @@
 'use client';
+import { trackFeature } from '@/lib/track';
 import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
@@ -25,7 +26,7 @@ export function DueRequest({ scope, issue, initialDue, onClose }: { scope: Scope
     event.preventDefault();
     if (lock.current || !valid || !impact.data || impact.isFetching || impact.error || !impact.data.approvers.length) return;
     lock.current = true; setPending(true); setError(null);
-    try { await api.post(`${endpoint}/due-requests`, { requestedDue: due, reasonCode: reason, detail }); await cache.invalidateQueries({ queryKey: issueQuery(scope.ws, issue.key) }); toast({ message: t('dueRequested') }); onClose(); }
+    try { await api.post(`${endpoint}/due-requests`, { requestedDue: due, reasonCode: reason, detail }); trackFeature(scope.ws, 'due_request'); await cache.invalidateQueries({ queryKey: issueQuery(scope.ws, issue.key) }); toast({ message: t('dueRequested') }); onClose(); }
     catch (failure) { setError(failure); }
     finally { lock.current = false; setPending(false); }
   }

@@ -1,5 +1,5 @@
 import { Body, Controller, Get, HttpCode, Inject, Post, Query, Req, Res } from '@nestjs/common';
-import { AnalyticsService, AttributionBody } from '../analytics/analytics.service.js';
+import { AnalyticsService, ATTRIBUTION_COOKIE, AttributionBody, attributionFromCookie } from '../analytics/analytics.service.js';
 import { hash, verify } from '@node-rs/argon2';
 import { type Db, schema } from '@friday/db';
 import { eq, sql } from 'drizzle-orm';
@@ -34,7 +34,7 @@ const SignupBody = z.object({
   password,
   displayName: z.string().trim().min(1).max(80),
   acceptTerms: z.literal(true),
-  /** ที่มาของผู้ใช้ (A34) · เว็บส่งจาก cookie ของการเข้าครั้งแรก */
+  /** ที่มาของผู้ใช้ (A34) · ไม่ส่ง = อ่านจาก cookie fm_attr ที่เว็บเขียนไว้ตอนเข้าครั้งแรก */
   attribution: AttributionBody.optional(),
 });
 const LoginBody = z.object({ email: z.email(), password: z.string().min(1).max(200), remember: z.boolean().default(false) });
@@ -85,7 +85,7 @@ export class AuthController {
       if (exists) throw new AppError(409, 'email_taken', 'อีเมลนี้มีบัญชีแล้ว · เข้าสู่ระบบแทน');
       const [user] = await tx.insert(users).values({ email, displayName: input.displayName, passwordHash, passwordChangedAt: new Date() }).returning({ id: users.id });
       await tx.insert(userIdentities).values({ userId: user.id, provider: 'password', providerSubject: user.id });
-      await this.analytics.recordSignup(tx, user.id, input.attribution, clientIp(req.ip));
+      await this.analytics.recordSignup(tx, user.id, input.attribution ?? attributionFromCookie(req.cookies?.[ATTRIBUTION_COOKIE]), clientIp(req.ip));
       return user.id;
     });
 

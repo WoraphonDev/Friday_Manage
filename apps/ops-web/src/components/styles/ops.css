@@ -1588,8 +1588,43 @@ textarea.input {
   }
 }
 
+/* ปุ่มเมนู (☰) แสดงเฉพาะจอเล็ก · กฎนี้ต้องอยู่ก่อน media query ข้างล่าง ไม่งั้นซ่อนทุกขนาดจอ */
+.ops-menu-btn {
+  display: none !important;
+}
+/* พื้นหลังของลิ้นชักเมนู · แตะเพื่อปิด */
+.ops-side-scrim {
+  display: none;
+}
+
 /* ---------------------------------------------------------------- จอเล็ก (390 px) */
 @media (max-width: 960px) {
+  .ops-side-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 44;
+    border: 0;
+    padding: 0;
+    background: var(--overlay);
+    animation: motion-fade var(--motion-dur) ease;
+  }
+  /* แถบบน: breadcrumb ยอมย่อ (ตัดท้ายด้วย …) เพื่อให้ไอคอนอยู่แถวเดียวกันชิดขวา · ช่องค้นหาขึ้นแถวใหม่เต็มกว้าง */
+  .ops-crumbs {
+    flex: 1 1 0;
+    overflow: hidden;
+  }
+  .ops-crumbs > * {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .ops-crumbs [aria-current="page"] {
+    flex-shrink: 1;
+    min-width: 0;
+  }
+  .ops-tools {
+    margin-left: auto;
+  }
   .ops-app {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1627,9 +1662,6 @@ textarea.input {
     flex-basis: 100%;
     max-width: none;
   }
-}
-.ops-menu-btn {
-  display: none !important;
 }
 .sr-only {
   position: absolute;
@@ -2949,7 +2981,7 @@ input[type="checkbox"]:checked:focus { animation: motion-check var(--motion-dur-
 }
 .list-bar-tabs { flex: 1 1 auto; min-width: 0; }
 .list-bar-tabs > .tabs { border-bottom: 0; }
-.list-bar-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-bottom: 6px; }
+.list-bar-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-bottom: 6px; min-width: 0; max-width: 100%; }
 .list-bar-tools .field { min-width: 240px; }
 .tab-count {
   display: inline-block;

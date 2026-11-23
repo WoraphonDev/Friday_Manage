@@ -1,5 +1,6 @@
 "use client";
 
+import { trackFeature } from "@/lib/track";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -237,8 +238,9 @@ function LinePanel({ ws, status }: { ws: string; status: LineStatus | undefined 
       // ผูกสำเร็จแล้ว รหัสใช้ไม่ได้อีก จึงไม่แสดงต่อ
       setCode(null);
       toast({ message: t("linkedToast") });
+      trackFeature(ws, "line");
     }
-  }, [linked, code, baseline, status?.boundAt, toast, t]);
+  }, [linked, code, baseline, status?.boundAt, toast, t, ws]);
   async function newCode() {
     setBusy(true);
     try {
@@ -255,6 +257,7 @@ function LinePanel({ ws, status }: { ws: string; status: LineStatus | undefined 
     setBusy(true);
     try {
       await api.post("/me/line/test", { workspace: ws });
+      trackFeature(ws, "line");
       toast({ message: t("testSent") });
     } catch (e) {
       toast({ message: errorText(e, tc("unknownError")) });

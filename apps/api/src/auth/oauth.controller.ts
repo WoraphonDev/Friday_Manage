@@ -7,7 +7,7 @@ import { AppError } from '../common/errors.js';
 import { type AppRequest, Public } from '../common/request.js';
 import { config } from '../config.js';
 import { SYSTEM_DB } from '../db/db.module.js';
-import { AnalyticsService } from '../analytics/analytics.service.js';
+import { AnalyticsService, ATTRIBUTION_COOKIE, type Attribution, attributionFromCookie } from '../analytics/analytics.service.js';
 import { clientIp, signupBlocked } from './abuse-blocks.js';
 import { apiPublicUrl, authTimes, type OAuthProvider, oauthProvider, webUrl } from './auth.config.js';
 import { pkceChallenge, signToken, verifyToken } from './crypto.js';
@@ -27,6 +27,8 @@ interface OAuthState {
   u?: string;
   r: boolean;
   n: string;
+  /** ที่มาของผู้ใช้ (A34) อ่านจาก cookie ตอนเริ่ม เพราะ callback มาจาก provider ซึ่งอาจอยู่คนละ host กับเว็บ */
+  a?: Attribution;
 }
 
 const UserInfo = z.object({
@@ -38,6 +40,9 @@ const UserInfo = z.object({
 
 /** next ต้องเป็น path ภายในเว็บเท่านั้น (กัน open redirect) */
 const safeNext = (next: unknown) => (typeof next === 'string' && /^\/(?![/\\])[^\s]*$/.test(next) ? next : '/');
+
+/** state ลงลายมือชื่อแล้ว แต่ตรวจรูปแบบซ้ำเพื่อให้ชนิดข้อมูลตรงก่อนเขียนฐานข้อมูล */
+const attributionFromState = (a: unknown) => (a ? attributionFromCookie(JSON.stringify(a)) : undefined);
 
 class OAuthFail extends Error {
   constructor(readonly code: string) {
@@ -72,6 +77,7 @@ export class OAuthController {
     const mode = q.mode === 'link' ? 'link' : 'login';
     if (mode === 'link' && !req.auth) throw new AppError(401, 'unauthenticated', 'กรุณาเข้าสู่ระบบ');
     const state: OAuthState = { p: p.name, s: newToken(), v: newToken(), m: mode, u: req.auth?.userId, r: q.remember === 'true', n: safeNext(q.next) };
+    if (mode === 'login') state.a = attributionFromCookie(req.cookies?.[ATTRIBUTION_COOKIE]);
     res.cookie(OAUTH_COOKIE, signToken('oauth', { ...state }, authTimes.oauthStateMinutes * 60), {
       httpOnly: true,
       sameSite: 'lax',
@@ -120,7 +126,7 @@ export class OAuthController {
         return res.redirect(302, to.toString());
       }
 
-      const user = await this.resolveUser(p.name, info, req);
+      const user = await this.resolveUser(p.name, info, req, attributionFromState(state.a));
       const result = await this.login.complete(user, state.r, req, res);
       if ('mfaRequired' in result) {
         // ส่ง mfaToken ใน fragment (#) ซึ่งเบราว์เซอร์ไม่ส่งต่อให้เซิร์ฟเวอร์และไม่ติดใน log
@@ -177,7 +183,7 @@ export class OAuthController {
    * บัญชีของผู้ที่ล็อกอินด้วย provider: เคยผูกแล้ว → บัญชีนั้น · อีเมลตรงบัญชีเดิม → ผูกเพิ่ม · ไม่มี → สมัครให้
    * provider ที่บอกชัดว่าอีเมลยังไม่ยืนยัน (email_verified = false) ห้ามผูกกับบัญชีเดิม กันการยึดบัญชีด้วยอีเมลปลอม
    */
-  private async resolveUser(provider: OAuthProvider['name'], info: { sub: string; email: string; emailVerified: boolean | null; name?: string }, req: AppRequest) {
+  private async resolveUser(provider: OAuthProvider['name'], info: { sub: string; email: string; emailVerified: boolean | null; name?: string }, req: AppRequest, attribution?: Attribution) {
     const cols = { id: users.id, email: users.email, disabledAt: users.disabledAt };
     const [byIdentity] = await this.db
       .select(cols)
@@ -202,7 +208,7 @@ export class OAuthController {
             .values({ email: info.email, displayName: (info.name?.trim() || info.email.split('@')[0]).slice(0, 80), emailVerifiedAt: info.emailVerified === false ? null : new Date() })
             .returning(cols);
           await tx.insert(userIdentities).values({ userId: u.id, provider, providerSubject: info.sub });
-          await this.analytics.recordSignup(tx, u.id, undefined, clientIp(req.ip));
+          await this.analytics.recordSignup(tx, u.id, attribution, clientIp(req.ip));
           return u;
         });
       }

@@ -17,6 +17,8 @@ export const handlers = [
   ),
   // ข้อมูล Workspace (shell อ่านสถานะระงับ C6)
   http.get("*/api/v1/w/:ws", () => HttpResponse.json({ suspension: null })),
+  // เหตุการณ์การใช้งาน (A34) · หน้าเว็บส่งแบบไม่รอผล · test ที่ต้องตรวจเนื้อหาใช้ server.use ทับ
+  http.post("*/api/v1/w/:ws/events", () => HttpResponse.json({ accepted: 0 }, { status: 202 })),
   // ระบบติดตามงานภายนอก (หมายเหตุ) · ค่าเริ่มต้น = ยังไม่ได้ตั้ง
   http.get("*/api/v1/w/:ws/issue-trackers", () => HttpResponse.json({ items: [] })),
   // แบนเนอร์ประกาศจากทีม Friday (O24) · Owner / Admin เรียกจาก shell

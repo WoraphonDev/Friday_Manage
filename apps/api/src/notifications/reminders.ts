@@ -195,6 +195,7 @@ export class Reminders {
         title: s.issues.title,
         planEnd: s.issues.planEnd,
         qaEnd: s.issues.qaEnd,
+        qaHoldDays: s.issues.qaHoldDays,
         category: s.workflowStatuses.category,
         parentId: s.issues.parentId,
         reviewerId: s.issues.reviewerId,

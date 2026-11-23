@@ -45,11 +45,19 @@
 
 ### ข้อจำกัดที่รู้
 
-- **schema ของผลลัพธ์ยังไม่ระบุ** (ตอบ JSON ทั่วไป) — โค้ดปัจจุบันไม่มี schema ของ response ให้ดึง · ถ้าจะให้ละเอียดต้องเพิ่ม zod schema ของ response ที่ service (งานต่อเนื่อง)
+- ~~schema ของผลลัพธ์ยังไม่ระบุ~~ ทำแล้ว 23 พ.ย. 2569 (ดูหัวข้อถัดไป)
 - route ที่ตรวจข้อมูลในชั้น **service** แทนที่จะเรียก `parse()` ใน controller จะแสดง request body เป็น object ทั่วไป · route ที่ `parse(schema, { ...body, x })` (ไม่ส่ง body ตรง ๆ) ก็เช่นกัน
 - คำอธิบายภาษาไทยมีเฉพาะ handler ที่มี JSDoc (ตอนนี้น้อย) — เพิ่มคอมเมนต์เหนือ method ใน controller ได้เรื่อย ๆ แล้วรัน `pnpm --filter @friday/api openapi`
 
-### test (`apps/api/test/openapi.e2e.test.ts` 7 ข้อ)
+### schema ของผลลัพธ์ (งานต่อ 23 พ.ย. 2569)
+
+- `src/openapi/response-types.ts` อ่านชนิดที่ handler ของ controller คืนค่าด้วย TypeScript compiler API (`getReturnTypeOfSignature` → `getAwaitedType`) แล้วแปลงเป็น JSON Schema · ไม่ต้องเขียน schema ของ response ซ้ำและตรงกับโค้ดเสมอ
+- ชนิดที่ตั้งชื่อในโค้ด (interface / type) ไปอยู่ `components.schemas` และอ้างด้วย `$ref` · `Date` = ข้อความ date-time · union ของข้อความ = `enum` · `| null` = nullable · `StreamableFile` = `application/octet-stream`
+- handler ที่มี `@Res()` แบบไม่ passthrough (redirect / เขียน response เอง) ไม่มี schema · ตอนนี้มี schema 445 จาก 460 operation (ที่เหลือคือ redirect, ดาวน์โหลด และ DELETE ที่ไม่ส่งเนื้อหา)
+- อ่านเฉพาะตอนสร้างเอกสาร (test / `pnpm --filter @friday/api openapi`) ใช้เวลาราว 1 นาทีเพราะ TypeScript ตรวจชนิดทั้งโปรเจกต์ · production ไม่ import ไฟล์นี้
+- ข้อจำกัด: ผลลัพธ์ที่ตัดช่องของ Guest ตามสิทธิ์ยังแสดงช่องครบ · handler ที่คืน `Record<string, unknown>` ได้ object ทั่วไป · `openapi.json` ใหญ่ขึ้นเป็นราว 3 MB
+
+### test (`apps/api/test/openapi.e2e.test.ts` 8 ข้อ)
 
 - **ทุก route ที่ Express ลงทะเบียนจริงมีเอกสาร** (เทียบ `router.stack` กับ spec) และไม่มีเอกสารของ route ที่ไม่มีจริง — เพิ่ม endpoint ใหม่โดยไม่ได้อัปเดต `openapi.json` แล้ว CI ล้ม (ข้อ drift ด้านล่างด้วย)
 - โครงเอกสาร: 3.1.0, operationId ไม่ซ้ำ, path param ครบทุกตัว, ทุก operation มี summary/responses
@@ -61,7 +69,7 @@
 ### คำขอนอก lane
 
 - **D99**: ให้ README ชี้ไป `apps/api/openapi.json` และ `/api/v1/docs`; ตั้งธรรมเนียมใน `AGENTS.md` ว่า "เพิ่ม/แก้ endpoint แล้วรัน `pnpm --filter @friday/api openapi`"
-- **W (ทุกหน้า)**: สร้าง type ของ client จาก `openapi.json` ได้ (เช่น `openapi-typescript`) — ตอนนี้ได้ type ของ request ครบ ส่วน response ยังเป็น `unknown`
+- **W (ทุกหน้า)**: สร้าง type ของ client จาก `openapi.json` ได้ (เช่น `openapi-typescript`) — ได้ทั้ง request และ response แล้ว
 - ไม่ได้ทำ: เอกสาร API ของหลังบ้าน `apps/ops-api` (แอปแยก; ใช้สเปก 03-api › 3.12 และบันทึกผล A32)
 
 `pnpm typecheck` ผ่านทั้ง monorepo · `pnpm test` ผ่านทุกแพ็กเกจ (API 529, ops-api 17)

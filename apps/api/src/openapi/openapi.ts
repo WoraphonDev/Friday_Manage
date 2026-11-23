@@ -127,6 +127,8 @@ const ERROR_REF = { $ref: '#/components/responses/Error' };
 export interface BuildOptions {
   title?: string;
   version?: string;
+  /** schema ของผลลัพธ์จากชนิดที่ handler คืนค่า (`responseTypes()` ใน response-types.ts) · ไม่ส่ง = ผลลัพธ์เป็น JSON ทั่วไป */
+  responses?: { responses: Record<string, Json>; schemas: Record<string, Json> };
 }
 
 /** สร้าง OpenAPI 3.1 จาก route ที่ Nest ลงทะเบียน + zod schema ที่ handler ส่งเข้า `parse` */
@@ -162,6 +164,7 @@ export async function buildOpenApi(app: INestApplication, opts: BuildOptions = {
       const documented = src ? docOf(src.text, src.at, handler) : undefined;
       const httpCode = (Reflect.getMetadata(HTTP_CODE_METADATA, fn) as number | undefined) ?? (method === 'post' ? 201 : 200);
       const write = method !== 'get' && method !== 'head';
+      const result = opts.responses?.responses[`${cls.name}.${handler}`] ?? {};
 
       for (const c of asList(Reflect.getMetadata(PATH_METADATA, cls))) {
         for (const p of asList(Reflect.getMetadata(PATH_METADATA, fn))) {
@@ -188,7 +191,7 @@ export async function buildOpenApi(app: INestApplication, opts: BuildOptions = {
             tags: [tag],
             parameters,
             responses: {
-              [String(httpCode)]: { description: 'สำเร็จ', content: { 'application/json': { schema: {} } } },
+              [String(httpCode)]: { description: 'สำเร็จ', content: result.format === 'binary' ? { 'application/octet-stream': { schema: result } } : { 'application/json': { schema: result } } },
               ...(isPublic ? {} : { '401': ERROR_REF, '403': ERROR_REF }),
               ...(body || query ? { '400': ERROR_REF } : {}),
               ...(pathParams(path).length ? { '404': ERROR_REF } : {}),
@@ -211,7 +214,7 @@ export async function buildOpenApi(app: INestApplication, opts: BuildOptions = {
     info: {
       title: opts.title ?? 'Friday Work Management API',
       version: opts.version ?? '1.0.0',
-      description: 'API ของ Friday Work Management (สร้างอัตโนมัติจาก route ของ NestJS และ zod schema ที่ handler ใช้ตรวจข้อมูลขาเข้า) · รูปแบบ error และข้อตกลงอื่น ๆ ดู docs/spec/03-api.md\n\nข้อควรรู้: schema ของ **ผลลัพธ์** ยังไม่ระบุ (ตอบเป็น JSON) และ route ที่ตรวจข้อมูลในชั้น service แทน controller จะแสดง request body แบบ object ทั่วไป',
+      description: 'API ของ Friday Work Management (สร้างอัตโนมัติจาก route ของ NestJS, zod schema ที่ handler ใช้ตรวจข้อมูลขาเข้า และชนิด TypeScript ที่ handler คืนค่า) · รูปแบบ error และข้อตกลงอื่น ๆ ดู docs/spec/03-api.md\n\nข้อควรรู้: วันที่ในผลลัพธ์เป็นข้อความ ISO 8601 · route ที่เขียน response เอง (redirect / ไฟล์) ไม่มี schema ของผลลัพธ์ · route ที่ตรวจข้อมูลในชั้น service แทน controller จะแสดง request body แบบ object ทั่วไป · ข้อมูลของ Guest ถูกตัดบางช่องตาม 04-permissions',
     },
     servers: [{ url: '/' }],
     tags: [...tags].sort().map((name) => ({ name })),
@@ -222,6 +225,7 @@ export async function buildOpenApi(app: INestApplication, opts: BuildOptions = {
         cookieAuth: { type: 'apiKey', in: 'cookie', name: 'fm_session', description: 'Session cookie ของผู้ใช้ · คำขอที่เขียนต้องส่ง x-csrf-token ด้วย' },
         bearerAuth: { type: 'http', scheme: 'bearer', description: 'API token (ขึ้นต้น fm_) · ไม่ต้องใช้ CSRF' },
       },
+      schemas: opts.responses?.schemas ?? {},
       parameters: { CsrfToken: { name: 'x-csrf-token', in: 'header', required: true, description: 'ได้จาก GET /api/v1/auth/csrf (เฉพาะ Session cookie)', schema: { type: 'string' } } },
       responses: {
         Error: {

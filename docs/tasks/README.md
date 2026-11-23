@@ -86,7 +86,7 @@
 - **A35b** ต่อ Gateway จริง: รอผู้ใช้เลือกผู้ให้บริการ
 - ~~**ส่วนลดเฉพาะรายจาก Ops (C3)** ไม่ถูกหักใน checkout~~ แก้แล้วใน #274: C3 สร้างคูปองเฉพาะราย (`coupons.workspace_id` · migration 0063)
 - ~~**A34 ที่มาของลูกค้า**~~ ทำแล้ว 23 พ.ย.: cookie `fm_attr` (เมื่อยินยอมคุกกี้วิเคราะห์) ใช้ทุกทางสมัครรวม Google / Microsoft · เว็บส่ง `feature.used` 13 ฟีเจอร์ + API นับ `api` · `api_calls` จาก `api_usage_hours`
-- **A40 OpenAPI**: ผลลัพธ์ทุก endpoint ยังเป็น schema ว่าง `{}`
+- ~~**A40 OpenAPI**: ผลลัพธ์ทุก endpoint ยังเป็น schema ว่าง~~ ทำแล้ว 23 พ.ย.: อ่านจากชนิด TypeScript ที่ handler คืนค่า (445 / 460 operation)
 - **ค่าตั้งที่ต้องหามาใส่ (staging ยังว่าง)**: `BOT_API_CLIENT_ID` (ดึงวันหยุด ธปท. ของ O43) · `OPS_ACCOUNTING_EMAIL` (ส่งรายงานให้สำนักงานบัญชีวันที่ 5) · `SNS_VERIFY` + Topic เปิดตอนขึ้น AWS (I01)
 - **O43** ทดสอบ Web Push บนมือถือจริงผ่าน staging
 - เฟส 2 ตามแผน: นำเข้า statement ธนาคาร / Bill Payment (O03)

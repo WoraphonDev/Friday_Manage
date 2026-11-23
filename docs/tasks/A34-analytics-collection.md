@@ -53,7 +53,7 @@
 - ~~หน้าเว็บยังไม่ส่ง `attribution` ตอนสมัคร และยังไม่ส่ง `feature.used`~~ ทำแล้ว (ดูหัวข้อ "งานต่อ 23 พ.ย. 2569")
 - ~~`api_calls` ใน `daily_usages` ยังเป็น 0~~ ทำแล้ว
 - ~~สมัครด้วย Google / Microsoft ยังไม่เก็บที่มา~~ ทำแล้ว
-- ops-api เปลี่ยนแพ็กเกจเองยังไม่บันทึก `subscription_changes` (เพิ่มใน O02)
+- ~~ops-api เปลี่ยนแพ็กเกจเองยังไม่บันทึก `subscription_changes`~~ ทำแล้ว: Ops เปลี่ยนแพ็กเกจ (`workspaces.service.ts` · actor = staff) และลดแพ็กเกจตอนจบรอบบิล (`billing.service.ts` · actor = system) บันทึกแล้ว
 
 ### งานต่อ 23 พ.ย. 2569
 

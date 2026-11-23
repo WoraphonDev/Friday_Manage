@@ -354,6 +354,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         e.preventDefault();
         setSearchOpen(true);
       }
+      // ปิดลิ้นชักเมนูของจอเล็ก
+      if (e.key === "Escape") setMenu(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -384,6 +386,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       <ApprovalFlowProvider>
         <div className="ops-app">
           <Sidebar staff={staff} pathname={pathname} search={search} open={menu} onNavigate={() => setMenu(false)} />
+          {/* จอเล็ก: ลิ้นชักบังปุ่ม ☰ จึงต้องมีพื้นหลังให้แตะปิด (Esc ก็ปิดได้) */}
+          {menu && <button type="button" className="ops-side-scrim" aria-label={t("top.closeMenu")} onClick={() => setMenu(false)} />}
           <div className="ops-content">
             <Topbar
               staff={staff}

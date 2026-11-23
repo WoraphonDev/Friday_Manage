@@ -8,6 +8,8 @@ import { mySessionId, openSessions, staff } from "@/test/fixtures";
 import { renderWithProviders } from "@/test/render";
 import { navigation, router } from "@/test/router";
 import { asRole, OPS, opsError, server } from "@/test/server";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { AppShell } from "./AppShell";
 
 const side = () => within(screen.getByRole("complementary", { name: "เมนูหลักของ Friday Ops" }));
@@ -63,6 +65,32 @@ describe("เมนูซ้ายตามบทบาท", () => {
     expect(await screen.findByText("เกิดข้อผิดพลาดภายในระบบ")).toBeInTheDocument();
     expect(screen.getByText(/req-me-500/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /คัดลอก/ })).toBeInTheDocument();
+  });
+});
+
+describe("จอเล็ก ≤ 960 px (O10)", () => {
+  it("ปุ่ม ☰ เปิดลิ้นชักเมนู · แตะพื้นหลังหรือกด Esc เพื่อปิด", async () => {
+    shell();
+    await screen.findByText("เนื้อหาของหน้า");
+    const drawer = screen.getByRole("complementary", { name: "เมนูหลักของ Friday Ops" });
+    expect(drawer).toHaveAttribute("data-open", "false");
+    await userEvent.click(screen.getByRole("button", { name: "เปิดเมนู" }));
+    expect(drawer).toHaveAttribute("data-open", "true");
+    await userEvent.click(screen.getByRole("button", { name: "ปิดเมนู" }));
+    expect(drawer).toHaveAttribute("data-open", "false");
+    expect(screen.queryByRole("button", { name: "ปิดเมนู" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "เปิดเมนู" }));
+    await userEvent.keyboard("{Escape}");
+    expect(drawer).toHaveAttribute("data-open", "false");
+  });
+
+  it("CSS: กฎซ่อนปุ่ม ☰ อยู่ก่อน media query ที่แสดงปุ่ม (ไม่งั้น !important ตัวหลังชนะและซ่อนทุกขนาดจอ)", () => {
+    const css = readFileSync(join(__dirname, "../styles/ops.css"), "utf8");
+    const hide = css.search(/\.ops-menu-btn \{\s*display: none !important;/);
+    const show = css.search(/@media \(max-width: 960px\) \{[^@]*\.ops-menu-btn \{\s*display: inline-flex !important;/);
+    expect(hide).toBeGreaterThan(-1);
+    expect(show).toBeGreaterThan(hide);
+    expect(css.match(/\.ops-menu-btn \{\s*display: none !important;/g)).toHaveLength(1);
   });
 });
 

@@ -47,8 +47,8 @@ export class ImportTemplateController {
   constructor(private readonly imports: ImportsService) {}
 
   @Get('import-template.xlsx')
-  async template(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Res({ passthrough: true }) res: Response) {
-    const file = await this.imports.templateXlsx(auth, tenant);
+  async template(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Query('project') project: string | undefined, @Res({ passthrough: true }) res: Response) {
+    const file = await this.imports.templateXlsx(auth, tenant, typeof project === 'string' && project ? project : undefined);
     res.set({ 'Content-Type': XLSX, 'Content-Disposition': `attachment; filename="${file.filename}"` });
     return new StreamableFile(file.buffer);
   }

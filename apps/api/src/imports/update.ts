@@ -8,6 +8,7 @@ import { insertRows, openSprints } from './insert.js';
 import { type ChecklistEntry, checklistMatchKey, type Field, personKey, type PlanCheck, type PlanRow } from './plan.js';
 import { baList, reviewerList } from '../issues/rules.js';
 import { syncChecklistProgress } from '../issues/checklist-progress.js';
+import type { Level as FieldLevel, ProfileField, ResolvedProfile } from '../projects/field-profile.js';
 
 const s = schema;
 
@@ -65,6 +66,14 @@ const COLUMN: Record<DiffField, Field> = {
 /** ชื่อฟิลด์ใน activities / plan_changes */
 const ACTIVITY_FIELD: Partial<Record<DiffField, string>> = { group: 'phaseId', sprint: 'sprintId', devs: 'assigneeIds', ba: 'baIds', sa: 'saId', reviewer: 'reviewerIds', parent: 'parentKey', labels: 'labelIds' };
 const PLAN_FIELDS = new Set<DiffField>(['planStart', 'planEnd', 'estimateMd', 'devs']);
+/** ฟิลด์ใน diff → ฟิลด์ในชุดฟิลด์ของโปรเจกต์ (ฟิลด์แกนกลางไม่อยู่ในนี้ ซ่อน / บังคับไม่ได้) */
+const PROFILE_OF: Partial<Record<DiffField, ProfileField>> = { ba: 'ba', sa: 'sa', reviewer: 'reviewer', priority: 'priority', size: 'size', actualStart: 'actual', actualEnd: 'actual', labels: 'labels', remark: 'remark' };
+/** คีย์ภายในของ customOf: ฟิลด์บังคับที่ค่าในไฟล์ว่าง (ไม่เขียน) */
+const REQUIRED_EMPTY = '!required:';
+/** คีย์ภายในของ customOf: ค่าในคอลัมน์ที่ซ่อนในระดับนี้ (ไม่เขียน · เตือนเมื่อต่างจากค่าเดิม) */
+const HIDDEN = '!hidden:';
+const LEVEL_LABEL: Record<FieldLevel, string> = { task: 'Task', subtask: 'Sub-task' };
+const filled = (v: unknown) => v !== undefined && v !== null && v !== '' && !(Array.isArray(v) && v.length === 0);
 
 export interface FieldChange {
   /** ฟิลด์มาตรฐาน หรือ `cf:<id>` (Custom field) */
@@ -230,7 +239,11 @@ export function syncChecklist(current: ChecklistItem[], file: ChecklistEntry[]):
   return { add, remove: left.filter((c) => !c.done).map((c) => c.id), keptDone: left.filter((c) => c.done).length, nextSort };
 }
 
-export async function computeUpdate(tx: Tx, project: { id: string; key: string }, check: PlanCheck, matchById: boolean, customDefs: CustomFieldDef[] = [], mode: UpdateMode = 'sync'): Promise<UpdatePlan> {
+/**
+ * profile = ชุดฟิลด์ของโปรเจกต์ (ตรวจแบบเดียวกับการแก้งานผ่าน API แต่ไม่บล็อกทั้งไฟล์):
+ * ฟิลด์ที่ซ่อนในระดับของแถว = ไม่แตะค่าเดิม / งานใหม่ไม่ได้ค่านั้น · ฟิลด์บังคับ: ไฟล์ล้างค่า = คงค่าเดิม, งานใหม่ที่ว่าง = เตือน
+ */
+export async function computeUpdate(tx: Tx, project: { id: string; key: string }, check: PlanCheck, matchById: boolean, customDefs: CustomFieldDef[] = [], mode: UpdateMode = 'sync', profile?: ResolvedProfile): Promise<UpdatePlan> {
   const append = mode === 'append';
   const wipe = mode === 'replace';
   // ทุกแถวเป็นงานใหม่ ไม่จับคู่กับงานเดิม
@@ -267,10 +280,59 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
         check.findings.push({ level: 'warn', no: check.keyed ? null : row.no, rowNo: row.rowNo, module: row.module, title: row.title, problem: `${d.name}: ${p.problem}`, fix: 'ไม่แก้ฟิลด์นี้ · แก้ใน Excel แล้วนำเข้าใหม่' });
         continue;
       }
-      if ((level === 'task' ? d.taskMode : d.subtaskMode) === 'hidden') continue; // ฟิลด์ที่ซ่อนในระดับนี้ไม่แตะ
+      const mode = level === 'task' ? d.taskMode : d.subtaskMode;
+      // ฟิลด์ที่ซ่อนในระดับนี้ไม่แตะ
+      if (mode === 'hidden') {
+        if (filled(p.value)) out[HIDDEN + d.id] = p.value;
+        continue;
+      }
+      if (mode === 'required' && !filled(p.value)) {
+        out[REQUIRED_EMPTY + d.id] = true;
+        continue;
+      }
       out[d.id] = p.value;
     }
     return out;
+  };
+  // สรุปตามฟิลด์ + ระดับ (ไม่เตือนทีละแถวทั้งไฟล์): ค่าในคอลัมน์ที่ซ่อน / งานใหม่ที่ฟิลด์บังคับว่าง
+  type Seen = Map<string, { label: string; level: FieldLevel; count: number; row: PlanRow }>;
+  const hiddenSeen: Seen = new Map();
+  const requiredNew: Seen = new Map();
+  function note(seen: Seen, field: string, label: string, level: FieldLevel, row: PlanRow) {
+    const k = `${field}|${level}`;
+    const cur = seen.get(k);
+    if (cur) cur.count++;
+    else seen.set(k, { label, level, count: 1, row });
+  }
+  const rule = (f: DiffField, level: FieldLevel) => {
+    const pf = PROFILE_OF[f];
+    return pf && profile ? profile.fields[pf][level] : 'optional';
+  };
+  /** งานใหม่: ล้างค่าของฟิลด์ที่ซ่อนในระดับนั้น + จดฟิลด์บังคับที่ว่าง (Priority ว่าง = Medium จึงไม่นับ) */
+  const NEW_VALUES: [DiffField | 'requirements' | 'screens', (r: PlanRow) => unknown, (r: PlanRow) => void][] = [
+    ['ba', (r) => r.bas, (r) => (r.bas = [])],
+    ['sa', (r) => r.sa, (r) => (r.sa = null)],
+    ['reviewer', (r) => r.reviewers, (r) => (r.reviewers = [])],
+    ['priority', (r) => r.priority, (r) => (r.priority = null)],
+    ['size', (r) => r.size, (r) => (r.size = null)],
+    ['actualStart', (r) => r.actualStart, (r) => (r.actualStart = null)],
+    ['actualEnd', (r) => r.actualEnd, (r) => (r.actualEnd = null)],
+    ['labels', (r) => r.labels, (r) => (r.labels = [])],
+    ['remark', (r) => r.remark, (r) => (r.remark = null)],
+    ['requirements', (r) => [...r.requirements, ...(r.requirementText ? [r.requirementText] : [])], (r) => ((r.requirements = []), (r.requirementText = null))],
+    ['screens', (r) => r.screens, (r) => (r.screens = [])],
+  ];
+  const stripForNew = (row: PlanRow, level: FieldLevel) => {
+    if (!profile) return;
+    for (const [f, get, clear] of NEW_VALUES) {
+      const pf: ProfileField = f === 'requirements' || f === 'screens' ? f : PROFILE_OF[f]!;
+      const mode = profile.fields[pf][level];
+      const label = f === 'requirements' ? 'Requirement' : f === 'screens' ? 'Screen' : LABELS[f];
+      if (mode === 'hidden' && filled(get(row))) {
+        note(hiddenSeen, pf, label, level, row);
+        clear(row);
+      } else if (mode === 'required' && f !== 'priority' && !filled(get(row))) note(requiredNew, pf, label, level, row);
+    }
   };
   const cfShown = (d: CustomFieldDef, v: unknown) => (d.fieldType === 'user' ? (typeof v === 'string' ? (ex.userName.get(v) ?? v) : null) : displayValue(d, v));
   const has = (f: DiffField) => check.mapped.has(COLUMN[f]);
@@ -303,8 +365,21 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
       if (has('sprint') && row.sprint && row.parentNumber === null && !ex.sprints.open.has(row.sprint.trim().toLowerCase())) {
         check.findings.push({ level: 'warn', no: check.keyed ? null : row.no, rowNo: row.rowNo, module: row.module, title: row.title, problem: `ไม่พบ Sprint "${row.sprint}" ที่ยังเปิดอยู่ในโปรเจกต์`, fix: 'งานใหม่นี้จะยังไม่เข้า Sprint · สร้าง Sprint ก่อนหรือแก้ชื่อใน Excel' });
       }
+      const level: FieldLevel = row.parentNumber === null ? 'task' : 'subtask';
+      stripForNew(row, level);
       adds.push(row);
-      if (defs.length) addCustom.set(row, customOf(row, row.parentNumber === null ? 'task' : 'subtask'));
+      if (defs.length) {
+        const values = customOf(row, level);
+        for (const k of Object.keys(values).filter((x) => x.startsWith('!'))) {
+          delete values[k];
+          const hidden = k.startsWith(HIDDEN);
+          const id = k.slice((hidden ? HIDDEN : REQUIRED_EMPTY).length);
+          note(hidden ? hiddenSeen : requiredNew, `cf:${id}`, defs.find((d) => d.id === id)!.name, level, row);
+        }
+        addCustom.set(row, values);
+      }
+      // ฟิลด์บังคับของ Custom field ที่ไม่มีคอลัมน์ในไฟล์ = งานใหม่ยังไม่มีค่า
+      for (const d of customDefs) if (!check.customMapped.includes(d.id) && (level === 'task' ? d.taskMode : d.subtaskMode) === 'required') note(requiredNew, `cf:${d.id}`, d.name, level, row);
       // เพิ่มเติม / แทนที่แผนออกเลขงานใหม่ทั้งหมด เลขในไฟล์จึงไม่ใช่เลขที่จะได้
       diff.added.push({ no: row.no, number: fresh ? null : row.number, title: row.title, module: row.module });
       continue;
@@ -318,7 +393,20 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
     const oldDevs = (ex.assignees.get(issue.id) ?? []).map((u) => ex.userName.get(u) ?? '');
     const oldLabels = (ex.labels.get(issue.id) ?? []).map((l) => ex.labelName.get(l) ?? '').sort((a, b) => a.localeCompare(b));
     const fields: FieldChange[] = [];
-    const add = (field: DiffField, oldV: unknown, newV: unknown) => has(field) && fields.push({ field, label: LABELS[field], old: oldV ?? null, new: newV ?? null });
+    // มีคอลัมน์ Parent = ใช้ค่าในไฟล์ (ว่าง = เลื่อนเป็น Task) · ไม่มีคอลัมน์ = ระดับเดิม
+    const level: FieldLevel = (has('parent') ? row.parentNumber : (oldParent?.number ?? null)) === null ? 'task' : 'subtask';
+    const add = (field: DiffField, oldV: unknown, newV: unknown) => {
+      if (!has(field)) return;
+      const mode = rule(field, level);
+      // ฟิลด์ที่ซ่อนในระดับนี้: ไม่แตะค่าเดิม (ค่าเดิมยังเก็บไว้ตามกติกาของชุดฟิลด์)
+      if (mode === 'hidden') return note(hiddenSeen, PROFILE_OF[field]!, LABELS[field], level, row);
+      // ฟิลด์บังคับ: ไฟล์ล้างค่า = คงค่าเดิม
+      if (mode === 'required' && !filled(newV) && filled(oldV)) {
+        check.findings.push({ level: 'warn', no: check.keyed ? null : row.no, rowNo: row.rowNo, module: row.module, title: row.title, problem: `${LABELS[field]} เป็นฟิลด์บังคับของ ${LEVEL_LABEL[level]} แต่ในไฟล์ว่าง`, fix: 'คงค่าเดิมไว้ · ใส่ค่าใน Excel ถ้าต้องการเปลี่ยน' });
+        return;
+      }
+      fields.push({ field, label: LABELS[field], old: oldV ?? null, new: newV ?? null });
+    };
     const keyOf = (n: number | null | undefined) => (n ? `${project.key}-${n}` : null);
     if (issue.title !== row.title) add('title', issue.title, row.title);
     if (!eq0(oldParent?.number, row.parentNumber)) add('parent', keyOf(oldParent?.number), keyOf(row.parentNumber));
@@ -365,7 +453,18 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
     const custom: Record<string, unknown> = {};
     if (defs.length) {
       const cur = currentCustom.get(issue.id) ?? {};
-      for (const [id, v] of Object.entries(customOf(row, (row.parentNumber ?? oldParent?.number ?? null) === null ? 'task' : 'subtask'))) {
+      for (const [id, v] of Object.entries(customOf(row, level))) {
+        if (id.startsWith(HIDDEN)) {
+          const d = defs.find((x) => x.id === id.slice(HIDDEN.length))!;
+          if (JSON.stringify(cur[d.id] ?? null) !== JSON.stringify(v) && !(d.fieldType === 'user' && personKey(String(cfShown(d, cur[d.id] ?? null) ?? '')) === personKey(String(v)))) note(hiddenSeen, `cf:${d.id}`, d.name, level, row);
+          continue;
+        }
+        if (id.startsWith(REQUIRED_EMPTY)) {
+          // ฟิลด์บังคับ: ไฟล์ล้างค่า = คงค่าเดิม
+          const d = defs.find((x) => x.id === id.slice(REQUIRED_EMPTY.length))!;
+          if (filled(cur[d.id])) check.findings.push({ level: 'warn', no: check.keyed ? null : row.no, rowNo: row.rowNo, module: row.module, title: row.title, problem: `${d.name} เป็นฟิลด์บังคับของ ${LEVEL_LABEL[level]} แต่ในไฟล์ว่าง`, fix: 'คงค่าเดิมไว้ · ใส่ค่าใน Excel ถ้าต้องการเปลี่ยน' });
+          continue;
+        }
         const d = defs.find((x) => x.id === id)!;
         const old = cur[id] ?? null;
         const same = d.fieldType === 'user' ? personKey(String(cfShown(d, old) ?? '')) === personKey(String(v ?? '')) : JSON.stringify(old) === JSON.stringify(v);
@@ -385,6 +484,13 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
     edits.push({ issue, row, fields, custom, checklist });
     diff.changed.push({ no: row.no, key: `${project.key}-${issue.number}`, title: issue.title, fields });
   }
+
+  // ผลตรวจชุดฟิลด์แบบสรุป: 1 คำเตือนต่อฟิลด์ต่อระดับ (ชี้แถวแรกที่พบ)
+  const summary = (seen: Seen, problem: (x: { label: string; level: string; count: number }) => string, fix: string) => {
+    for (const x of seen.values()) check.findings.push({ level: 'warn', no: check.keyed ? null : x.row.no, rowNo: x.row.rowNo, module: x.row.module, title: x.row.title, problem: problem({ ...x, level: LEVEL_LABEL[x.level] }), fix });
+  };
+  summary(hiddenSeen, (x) => `${x.label} ถูกซ่อนใน ${x.level} ของโปรเจกต์นี้ (${x.count} แถวมีค่าในไฟล์)`, 'ไม่นำเข้าค่านี้ · ค่าเดิมในระบบยังอยู่ · เปิดฟิลด์ได้ที่ Settings › ชุดฟิลด์');
+  summary(requiredNew, (x) => `${x.label} เป็นฟิลด์บังคับของ ${x.level} แต่งานใหม่ ${x.count} งานยังไม่มีค่า`, 'สร้างงานให้ก่อน · กรอกค่าในระบบหรือใน Excel แล้วนำเข้าใหม่');
 
   // งานที่อยู่ในระบบแต่ไม่อยู่ในไฟล์ (ทุกแถวในไฟล์ รวมแถวที่ต้องแก้ ถือว่ายังอยู่) · เพิ่มเติมแผนไม่แตะงานเดิมจึงไม่มีรายการนี้
   if (wipe) {

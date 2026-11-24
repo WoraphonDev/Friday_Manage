@@ -77,19 +77,20 @@
 - **Wave 2** รอ T00 หรืองานที่ระบุ
 - **Wave 3** ปิดท้าย: OpenAPI, Deploy, รวมเอกสาร, ภาษาอังกฤษ
 
-ยังไม่วางเป็นงาน (รอผู้ใช้สั่ง): SSO / SAML, เชื่อมระบบ HR (`/hooks/hr`), Gantt PDF, ค้นหาข้อความในไฟล์, GitLab
+ยังไม่วางเป็นงาน (ผู้ใช้สั่งเลื่อนออกไปก่อน 24 พ.ย. 2569): SSO / SAML, เชื่อมระบบ HR (`/hooks/hr`), Gantt PDF, ค้นหาข้อความในไฟล์, GitLab
 
 ### งานต่อที่ยังค้างจริง (ไล่จากหัวข้อ "ยังไม่ทำ" ของทุกไฟล์งานเทียบกับโค้ดใน main d42078d · 20 พ.ย. 2569)
 
 ข้อที่ไฟล์งานเขียนว่า "ยังไม่ทำ" แต่งานหลังทำแล้ว ไม่อยู่ในรายการนี้ (เช่น O42 / O43 ปิดของ O01–O05, O22–O25 ไปเกือบหมด)
 
-- **A35b** ต่อ Gateway จริง: รอผู้ใช้เลือกผู้ให้บริการ
+- ~~**A35b** ต่อ Gateway จริง~~ ทำแล้ว 24 พ.ย. (#286 · ผู้ใช้เลือก **Stripe**) · ยังไม่ทดสอบกับ Stripe test mode จริง (รอผู้ใช้ใส่ `sk_test_` / `whsec_`) · ก่อนเปิดจริง: เปิด PromptPay + ตั้ง Webhook `/api/v1/hooks/stripe` ใน Stripe · ต่อ: หน้าชำระเงิน (W22) สถานะ QR หมดอายุ + ยืนยันบัตรด้วย Stripe.js · แจ้ง Ops เมื่อ Workspace ไม่มี Owner (ต้องเพิ่มชนิดใน `system_alerts`)
 - ~~**ส่วนลดเฉพาะรายจาก Ops (C3)** ไม่ถูกหักใน checkout~~ แก้แล้วใน #274: C3 สร้างคูปองเฉพาะราย (`coupons.workspace_id` · migration 0063)
 - ~~**A34 ที่มาของลูกค้า**~~ ทำแล้ว 23 พ.ย.: cookie `fm_attr` (เมื่อยินยอมคุกกี้วิเคราะห์) ใช้ทุกทางสมัครรวม Google / Microsoft · เว็บส่ง `feature.used` 13 ฟีเจอร์ + API นับ `api` · `api_calls` จาก `api_usage_hours`
 - ~~**A40 OpenAPI**: ผลลัพธ์ทุก endpoint ยังเป็น schema ว่าง~~ ทำแล้ว 23 พ.ย.: อ่านจากชนิด TypeScript ที่ handler คืนค่า (445 / 460 operation)
-- **ค่าตั้งที่ต้องหามาใส่ (staging ยังว่าง)**: `BOT_API_CLIENT_ID` (ดึงวันหยุด ธปท. ของ O43) · `OPS_ACCOUNTING_EMAIL` (ส่งรายงานให้สำนักงานบัญชีวันที่ 5) · `SNS_VERIFY` + Topic เปิดตอนขึ้น AWS (I01)
+- **ค่าตั้งที่ต้องหามาใส่ (staging ยังว่าง)**: `BOT_API_CLIENT_ID` (ดึงวันหยุด ธปท. ของ O43) · `OPS_ACCOUNTING_EMAIL` (ส่งรายงานให้สำนักงานบัญชีวันที่ 5) · `SNS_VERIFY` + Topic เปิดตอนขึ้น AWS (I01 · ผู้ใช้แจ้ง 24 พ.ย. ว่าอาจไม่ใช้ AWS ใช้ VPS ทั่วไปแทน) · ผู้ใช้ยังไม่ได้หาค่าเหล่านี้
 - **O43** ทดสอบ Web Push บนมือถือจริงผ่าน staging
-- ~~เฟส 2: นำเข้า statement ธนาคาร (O03)~~ ทำแล้ว 23 พ.ย. (กสิกรไทย · migration 0064) · **ต้องตรวจกับไฟล์ statement จริงของ KBank** · Bill Payment รอผู้ใช้เปิดบริการกับธนาคาร
+- ~~เฟส 2: นำเข้า statement ธนาคาร (O03)~~ ทำแล้ว 23 พ.ย. (กสิกรไทย · migration 0064) · **ต้องตรวจกับไฟล์ statement จริงของ KBank** · Bill Payment รอผู้ใช้เปิดบริการกับธนาคาร (ยังไม่ได้ทำ 24 พ.ย.)
+- **F01** ส่วนที่เหลือทำแล้ว 24 พ.ย. (#285: Template Excel ตามชุดฟิลด์ของโปรเจกต์ + ตรวจชุดฟิลด์ตอนนำเข้า) · Template ในตัวของหมวดอื่นรอผู้ใช้ตัดสินว่าแต่ละหมวดใช้ฟิลด์ / Workflow อะไร · `docs/spec/03-api.md` ยังไม่มี `?project=` (D99)
 
 ## งานทั้งหมด
 
@@ -152,7 +153,7 @@
 | [A33](A33-payments.md) | ชำระเงิน: บัตร, PromptPay, โอน, ใบกำกับภาษี, 50 ทวิ | 2 | A29 | `apps/api/src/payments/**` · `apps/api/test/payments.e2e.test.ts` |
 | [A40](A40-openapi.md) | OpenAPI ของทุก endpoint | 3 | ทุกงาน A | ทุก controller ใน `apps/api/src/**` (ทำตอนไม่มีงาน API อื่นเปิดอยู่) |
 | [D99](D99-docs-sync.md) | รวมบันทึกผลเข้าเอกสาร | 3 | ทุกงาน | `apps/api/README.md` · `docs/spec/**` |
-| [I01](I01-deploy-aws.md) | Deploy บน AWS + GlitchTip | 3 | T01 | `infra/**` · `Dockerfile*` |
+| [I01](I01-deploy-aws.md) | Deploy บน AWS + GlitchTip · **ผู้ใช้แจ้ง 24 พ.ย. 2569 ว่าอาจใช้ VPS ทั่วไปแทน AWS** (staging ปัจจุบันอยู่บน VPS) | 3 | T01 | `infra/**` · `Dockerfile*` |
 | [W21](W21-english.md) | ภาษาอังกฤษ (EN) | 3 | W00, ทุกงาน W | `apps/web/messages/en/**` · `apps/web/src/features/locale-switch/**` |
 
 ## Friday Ops เฟส 1 (ออกแบบใหม่ 9 พ.ย. 2569)
@@ -167,7 +168,7 @@
 | [O01](O01-ops-roles-approvals.md) | ops-api: แยก module, บทบาท, วงเงิน, อนุมัติ, สิทธิ์ฉุกเฉิน, พนักงาน | O-1 | O00 | `apps/ops-api/src/{auth,staff,approvals}` + `ops.controller.ts` |
 | [A34](A34-analytics-collection.md) | API: เก็บข้อมูลธุรกิจตั้งแต่วันแรก | O-1 | O00 | `apps/api/src/analytics/**` |
 | [A35a](A35a-payments-core.md) | API: แกนการชำระเงิน · VAT เป็นการตั้งค่า · สลิปให้ทีมตรวจ · ตัวจำลองผู้ให้บริการ | O-1 | O00 | `apps/api/src/payments/**` (ยกเว้น `providers/`) |
-| [A35b](A35b-payments-gateway.md) | API: ต่อ Gateway จริง · **รอเลือก Opn หรือ Stripe** | O-1 | A35a | `apps/api/src/payments/providers/**` |
+| [A35b](A35b-payments-gateway.md) | API: ต่อ Gateway จริง · **Stripe** (เลือก 24 พ.ย. 2569) | O-1 | A35a | `apps/api/src/payments/providers/**` |
 | [W22](W22-checkout.md) | เว็บ: หน้าชำระเงินฝั่งลูกค้าและแบบสอบถามตอนยกเลิก | O-1 | A35a | `apps/web/app/work/[ws]/billing/checkout/**` |
 | [O02](O02-ops-customers.md) | ops-api: ลูกค้าและผู้ใช้ | O-2 | O01 | `apps/ops-api/src/{workspaces,users}` |
 | [O03](O03-ops-money.md) | ops-api: เงิน | O-2 | O01, A35a | `apps/ops-api/src/{payments,billing}` |

@@ -178,8 +178,12 @@ export class GatewayJobs implements OnModuleInit {
       this.log.warn(`ต่ออายุบัตรไม่ได้: Workspace ${sub.workspaceId} ไม่มี Owner`);
       // ยังไม่มีช่องแจ้งเตือนทีม Ops จาก API ลูกค้า (system_alerts รับเฉพาะ error_rate) จึงบันทึกใน Audit ของ Workspace รอบละครั้ง
       const summary = JSON.stringify({ renewal: rawKey, reason: 'no_owner' });
-      const [logged] = await this.sys.select({ id: s.auditLogs.id }).from(s.auditLogs).where(and(eq(s.auditLogs.workspaceId, sub.workspaceId), eq(s.auditLogs.action, 'billing.card_renewal_blocked'), eq(s.auditLogs.summary, summary)));
-      if (!logged) await this.sys.insert(s.auditLogs).values({ workspaceId: sub.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: 'billing.card_renewal_blocked', targetType: 'subscription', targetId: sub.id, summary });
+      // งานซ้อนกันสองรอบ (หลาย instance) ต่อคิวต่อ Workspace + รอบ ก่อนตรวจว่าบันทึกแล้วหรือยัง ไม่ให้ได้สองแถว
+      await this.sys.transaction(async (tx) => {
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`card_renewal_blocked:${sub.workspaceId}:${rawKey}`}, 0))`);
+        const [logged] = await tx.select({ id: s.auditLogs.id }).from(s.auditLogs).where(and(eq(s.auditLogs.workspaceId, sub.workspaceId), eq(s.auditLogs.action, 'billing.card_renewal_blocked'), eq(s.auditLogs.summary, summary)));
+        if (!logged) await tx.insert(s.auditLogs).values({ workspaceId: sub.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: 'billing.card_renewal_blocked', targetType: 'subscription', targetId: sub.id, summary });
+      });
       result.errors++;
       return null;
     }

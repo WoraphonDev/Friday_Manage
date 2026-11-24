@@ -2242,6 +2242,21 @@
                         "received": {
                           "type": "boolean"
                         },
+                        "ignored": {},
+                        "unknown": {},
+                        "duplicate": {},
+                        "exception": {}
+                      },
+                      "required": [
+                        "received"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "received": {
+                          "type": "boolean"
+                        },
                         "duplicate": {
                           "type": "boolean"
                         },
@@ -2270,21 +2285,6 @@
                       "required": [
                         "received",
                         "exception"
-                      ]
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "received": {
-                          "type": "boolean"
-                        },
-                        "ignored": {},
-                        "unknown": {},
-                        "duplicate": {},
-                        "exception": {}
-                      },
-                      "required": [
-                        "received"
                       ]
                     },
                     {

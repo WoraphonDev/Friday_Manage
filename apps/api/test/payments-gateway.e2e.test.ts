@@ -239,6 +239,39 @@ const signed = (e: object, opts: { secret?: string; timestamp?: number } = {}) =
   return hook(payload, sdk.webhooks.generateTestHeaderString({ payload, secret: opts.secret ?? WEBHOOK_SECRET, ...(opts.timestamp ? { timestamp: opts.timestamp } : {}) }));
 };
 
+/** หยุด settle ครั้งถัดไปไว้หลังเขียน "ยืนยันแล้ว" แต่ก่อน commit (ยังถือล็อก settle: ของใบ) จนกว่าจะเรียก release */
+function holdSettle() {
+  let release!: () => void;
+  let entered!: () => void;
+  const gate = new Promise<void>((r) => (release = r));
+  const inSettle = new Promise<void>((r) => (entered = r));
+  const analytics = payments['analytics'];
+  const original = analytics.subscriptionChanged.bind(analytics);
+  const spy = vi.spyOn(analytics, 'subscriptionChanged').mockImplementationOnce(async (...args) => {
+    entered();
+    await gate;
+    return original(...args);
+  });
+  return { inSettle, release, restore: () => spy.mockRestore() };
+}
+/** รอจนอีกคำขอติดล็อกของ settle จริง (ไม่งั้นการทดสอบไม่ได้ทดสอบการแย่งล็อก) */
+async function waitForLockWaiter() {
+  for (let i = 0; i < 100; i++) {
+    if (Number((await t.owner.query('SELECT count(*) FROM pg_locks WHERE NOT granted')).rows[0].count) > 0) return;
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  throw new Error('ไม่มีคำขอรอล็อกของ settle');
+}
+/** แทรกงานก่อนเมธอดภายในของ PaymentsService ครั้งถัดไป (จำลองคำขออื่น commit ระหว่างอ่านรายการกับต่อคิว) */
+function before(method: 'settle' | 'flag', run: () => Promise<void>) {
+  const target = payments as unknown as Record<typeof method, (...a: unknown[]) => Promise<unknown>>;
+  const original = target[method].bind(payments);
+  return vi.spyOn(target, method).mockImplementationOnce(async (...args) => {
+    await run();
+    return original(...args);
+  });
+}
+
 /** Workspace ที่จ่ายรอบแรกด้วยบัตรแล้ว (มีบัตรเก็บไว้) · รอบบิลจบแล้วพร้อมตัดรอบใหม่ */
 async function cardCustomer(slug: string) {
   const w = await workspace(slug);
@@ -402,6 +435,72 @@ describe('PromptPay', () => {
     expect(await taxDocs(c.invoice.id)).toBe(1);
   });
 
+  it('สร้าง QR ใหม่ขณะ settle ของ QR เดิมถือล็อกอยู่ → รอคิวจน settle commit แล้ว 409 invoice_closed · ปิด QR ใหม่ที่ Stripe', async () => {
+    const w = await workspace('gw-renew-race-lock');
+    const c = await checkout(w, 'promptpay');
+    stub.pay(c.ref);
+    const hold = holdSettle();
+    const success = signed(event('payment_intent.succeeded', c.ref)).then((r) => r);
+    await hold.inSettle;
+    const renew = post(w, `/billing/invoices/${c.invoice.id}/pay`, { renew: true }).then((r) => r);
+    await waitForLockWaiter();
+    hold.release();
+    const [ok, r] = await Promise.all([success, renew]);
+    hold.restore();
+    expect(ok.body).toEqual({ received: true });
+    expect(r.status, JSON.stringify(r.body)).toBe(409);
+    expect(r.body.error.code).toBe('invoice_closed');
+    expect(await rows(c.invoice.id)).toEqual([expect.objectContaining({ provider_ref: c.ref, status: 'confirmed', exception_reason: null })]);
+    const fresh = [...stub.intents.values()].filter((x) => x.metadata.invoice_id === c.invoice.id && x.id !== c.ref);
+    expect(fresh).toHaveLength(1);
+    expect(fresh[0]).toMatchObject({ status: 'canceled', cancellation_reason: 'duplicate' });
+    expect(await auditCount(c.invoice.id, 'billing.qr_renewed')).toBe(0);
+    expect(await taxDocs(c.invoice.id)).toBe(1);
+  });
+
+  it('Webhook ของ QR เดิมอ่านรายการแล้ว แต่สร้าง QR ใหม่ commit ก่อนได้ล็อก settle → ยืนยันเงินเป็นรายการของ QR เดิม ไม่ยืนยัน QR ใหม่ที่ยังไม่จ่าย', async () => {
+    const w = await workspace('gw-renew-inverse');
+    const c = await checkout(w, 'promptpay');
+    stub.pay(c.ref);
+    const spy = before('settle', async () => {
+      expect((await post(w, `/billing/invoices/${c.invoice.id}/pay`, { renew: true })).status).toBe(200);
+    });
+    const r = await signed(event('payment_intent.succeeded', c.ref));
+    spy.mockRestore();
+    expect(r.body).toEqual({ received: true });
+    const all = await rows(c.invoice.id);
+    expect(all).toHaveLength(2);
+    const current = all[0].provider_ref as string;
+    expect(current).not.toBe(c.ref);
+    expect(all[0]).toMatchObject({ status: 'pending_review', exception_reason: null });
+    expect(all[1]).toMatchObject({ provider_ref: c.ref, status: 'confirmed', exception_reason: null, amount: String(c.invoice.amountDue) });
+    expect((await invoiceRow(c.invoice.id)).status).toBe('paid');
+    // QR ใหม่ที่ยังไม่จ่ายถูกปิดที่ Stripe ไม่ให้ลูกค้าจ่ายซ้ำ
+    expect(stub.intents.get(current)).toMatchObject({ status: 'canceled', cancellation_reason: 'duplicate' });
+    expect(await auditCount(c.invoice.id, 'billing.payment_adopted')).toBe(1);
+    expect(await auditCount(c.invoice.id, 'billing.payment_confirmed')).toBe(1);
+    expect(await taxDocs(c.invoice.id)).toBe(1);
+  });
+
+  it('ยอดไม่ตรงจาก QR เดิม แต่สร้าง QR ใหม่ commit ก่อนติดธง → ติดธงรายการของ QR เดิม · QR ใหม่ยังจ่ายได้', async () => {
+    const w = await workspace('gw-renew-inverse-flag');
+    const c = await checkout(w, 'promptpay');
+    stub.pay(c.ref).amount_received = c.invoice.amountDue - 100;
+    const spy = before('flag', async () => {
+      expect((await post(w, `/billing/invoices/${c.invoice.id}/pay`, { renew: true })).status).toBe(200);
+    });
+    const r = await signed(event('payment_intent.succeeded', c.ref));
+    spy.mockRestore();
+    expect(r.body).toEqual({ received: true, exception: 'amount_mismatch' });
+    const all = await rows(c.invoice.id);
+    expect(all).toHaveLength(2);
+    const current = all[0].provider_ref as string;
+    expect(all[0]).toMatchObject({ status: 'pending_review', exception_reason: null });
+    expect(all[1]).toMatchObject({ provider_ref: c.ref, exception_reason: 'amount_mismatch' });
+    expect((await invoiceRow(c.invoice.id)).status).toBe('open');
+    expect(stub.intents.get(current)!.status).toBe('requires_action');
+  });
+
   it('กดสร้าง QR ใหม่ซ้ำพร้อมกัน: ทั้งสองคำขอสำเร็จ · เหลือ QR ที่จ่ายได้ชุดเดียวคือชุดที่ใบชี้อยู่', async () => {
     const w = await workspace('gw-renew-twice');
     const c = await checkout(w, 'promptpay');
@@ -494,29 +593,15 @@ describe('Webhook', () => {
     const c = await checkout(w, 'card');
     const failed = event('payment_intent.payment_failed', c.ref);
     stub.pay(c.ref);
-    // หยุด settle ไว้หลังเขียน "ยืนยันแล้ว" แต่ก่อน commit แล้วให้ Webhook ล้มเหลว (อ่านสถานะเก่า) มาถึงระหว่างนั้น
-    let release!: () => void;
-    let entered!: () => void;
-    const gate = new Promise<void>((r) => (release = r));
-    const inSettle = new Promise<void>((r) => (entered = r));
-    const analytics = payments['analytics'];
-    const original = analytics.subscriptionChanged.bind(analytics);
-    const spy = vi.spyOn(analytics, 'subscriptionChanged').mockImplementationOnce(async (...args) => {
-      entered();
-      await gate;
-      return original(...args);
-    });
+    // หยุด settle ไว้ก่อน commit แล้วให้ Webhook ล้มเหลว (อ่านสถานะเก่า) มาถึงและติดล็อกระหว่างนั้น
+    const hold = holdSettle();
     const success = signed(event('payment_intent.succeeded', c.ref)).then((r) => r);
-    await inSettle;
+    await hold.inSettle;
     const failure = signed(failed).then((r) => r);
-    // รอจน Webhook ล้มเหลวติดล็อกของ settle
-    for (let i = 0; i < 100; i++) {
-      if (Number((await t.owner.query('SELECT count(*) FROM pg_locks WHERE NOT granted')).rows[0].count) > 0) break;
-      await new Promise((r) => setTimeout(r, 20));
-    }
-    release();
+    await waitForLockWaiter();
+    hold.release();
     const [ok, fail] = await Promise.all([success, failure]);
-    spy.mockRestore();
+    hold.restore();
     expect(ok.body).toEqual({ received: true });
     expect(fail.body).toEqual({ received: true, ignored: true });
     expect((await rows(c.invoice.id))[0]).toMatchObject({ status: 'confirmed' });

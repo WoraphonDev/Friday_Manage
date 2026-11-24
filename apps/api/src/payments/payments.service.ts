@@ -72,6 +72,8 @@ export const PayBody = z.object({ renew: z.boolean().default(false) }).strict();
 
 type Invoice = typeof s.invoices.$inferSelect;
 type Payment = typeof s.payments.$inferSelect;
+/** เงินเข้าที่ผู้ให้บริการแจ้ง (Webhook สำเร็จ / รายการจากกระทบยอด) */
+type SettledEvent = Pick<GatewayEvent, 'providerRef' | 'invoiceId' | 'amount' | 'currency' | 'method'>;
 
 /** ยอด / สกุลที่ผู้ให้บริการรับไม่ตรงกับที่ควรได้ → ข้อความให้ทีมตรวจ · ไม่ส่งยอด / สกุลมา (ตัวปลอม) = ไม่ตรวจส่วนนั้น */
 function moneyMismatch(expected: number, amount: number | undefined, currency: string | null | undefined) {
@@ -125,32 +127,51 @@ export class PaymentsService implements OnModuleInit {
         continue;
       }
       if (payment.status === 'confirmed' || payment.exceptionReason) continue;
-      const wrong = moneyMismatch(payment.amount, p.amount, p.currency);
-      if (wrong) {
-        await this.flag(payment, 'amount_mismatch', wrong);
-        result.exceptions++;
-        continue;
-      }
-      const outcome = await this.succeed(payment);
-      if (outcome === 'settled') result.settled++;
+      const r = await this.receive(payment, p);
+      if (r.outcome === 'settled') result.settled++;
       else result.exceptions++;
     }
     if (result.settled || result.exceptions || result.unmatched.length) this.log.warn(`กระทบยอด: ยืนยันเพิ่ม ${result.settled} · ผิดปกติ ${result.exceptions} · ไม่รู้จัก ${result.unmatched.length}`);
     return result;
   }
 
-  /** รับเงินสำเร็จ: ใบแจ้งหนี้ชำระด้วยรายการอื่นไปแล้ว = จ่ายซ้ำ (ไม่เปิดสิทธิ์ซ้ำ รอทีมตัดสินว่าเก็บเป็นเครดิตหรือคืน) */
-  private async succeed(payment: Payment): Promise<'settled' | 'double_payment' | 'duplicate'> {
-    const outcome = await this.settle(payment);
-    if (outcome === 'double_payment') await this.flag(payment, 'double_payment', 'ใบแจ้งหนี้นี้ชำระด้วยรายการอื่นแล้ว');
-    return outcome;
+  /**
+   * รับเงินสำเร็จจากผู้ให้บริการ (Webhook / กระทบยอด) ของรายการที่อ่านไว้ก่อนต่อคิว settle
+   * ยอดไม่ตรง → คิวผิดปกติ · ใบชำระด้วยรายการอื่นไปแล้ว = จ่ายซ้ำ (ไม่เปิดสิทธิ์ซ้ำ รอทีมตัดสินว่าเก็บเป็นเครดิตหรือคืน)
+   * ลูกค้าสร้าง QR ใหม่แทรกก่อนได้ล็อก (แถวเดิมถูกเขียนเลขอ้างอิงใหม่) → เงินนี้เป็นของ QR เดิม: ผูกเป็นรายการของใบ (adopt) แล้วทำใหม่
+   * ไม่ยืนยัน / ติดธงรายการของ QR ใหม่ที่ลูกค้ายังไม่ได้จ่าย
+   */
+  private async receive(payment: Payment, ev: SettledEvent): Promise<{ outcome: 'settled' } | { outcome: 'duplicate' } | { outcome: 'exception'; reason: string }> {
+    if (payment.status === 'confirmed') return { outcome: 'duplicate' };
+    if (payment.exceptionReason) return { outcome: 'exception', reason: payment.exceptionReason };
+    const wrong = moneyMismatch(payment.amount, ev.amount, ev.currency);
+    if (wrong) {
+      if (await this.flag(payment, 'amount_mismatch', wrong, ev.providerRef)) return { outcome: 'exception', reason: 'amount_mismatch' };
+    } else {
+      const outcome = await this.settle(payment, ev.providerRef);
+      if (outcome === 'settled' || outcome === 'duplicate') return { outcome };
+      if (outcome === 'double_payment' && (await this.flag(payment, 'double_payment', 'ใบแจ้งหนี้นี้ชำระด้วยรายการอื่นแล้ว', ev.providerRef))) return { outcome: 'exception', reason: 'double_payment' };
+    }
+    const adopted = await this.adopt({ ...ev, invoiceId: ev.invoiceId ?? payment.invoiceId });
+    if (!adopted || adopted.id === payment.id) {
+      // ไม่ควรเกิด (แถวเดิมมีใบและวิธีชำระที่ถูกต้อง) · ไม่ยืนยันอะไร ให้กระทบยอดรอบถัดไปลองใหม่
+      this.log.error(`ผูกรายการ ${ev.providerRef} กับใบ ${payment.invoiceId} ไม่สำเร็จหลังเลขอ้างอิงถูกเปลี่ยน`);
+      return { outcome: 'exception', reason: 'unmatched' };
+    }
+    return this.receive(adopted, ev);
   }
 
-  /** ส่งเข้าคิวกรณีผิดปกติของ Friday Ops (O03) */
-  async flag(payment: Payment, reason: 'amount_mismatch' | 'double_payment' | 'duplicate_slip' | 'wht_not_declared' | 'unmatched', note: string) {
-    await this.sys.transaction(async (tx) => {
-      await tx.update(s.payments).set({ status: 'pending_review', exceptionReason: reason, updatedAt: new Date() }).where(eq(s.payments.id, payment.id));
+  /**
+   * ส่งเข้าคิวกรณีผิดปกติของ Friday Ops (O03)
+   * `providerRef` = เลขอ้างอิงของเหตุการณ์: ต่อคิวเดียวกับ settle / สร้าง QR ใหม่ แล้วเขียนเฉพาะเมื่อแถวยังเป็นรายการนั้น · false = ถูกเปลี่ยนเป็น QR ใหม่แล้ว ไม่ได้เขียน
+   */
+  async flag(payment: Payment, reason: 'amount_mismatch' | 'double_payment' | 'duplicate_slip' | 'wht_not_declared' | 'unmatched', note: string, providerRef: string) {
+    return this.sys.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${'settle:' + payment.invoiceId}, 0))`);
+      const [row] = await tx.update(s.payments).set({ status: 'pending_review', exceptionReason: reason, updatedAt: new Date() }).where(and(eq(s.payments.id, payment.id), eq(s.payments.providerRef, providerRef))).returning({ id: s.payments.id });
+      if (!row) return false;
       await tx.insert(s.auditLogs).values({ workspaceId: payment.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: 'billing.payment_exception', targetType: 'invoice', targetId: payment.invoiceId, summary: `${reason} · ${note}` });
+      return true;
     });
   }
 
@@ -423,14 +444,16 @@ export class PaymentsService implements OnModuleInit {
   }
 
   /** ชำระสำเร็จ (Stripe หรือเจ้าหน้าที่ยืนยัน) → ปิดใบแจ้งหนี้, เปิดแพ็กเกจ, ขอออกใบกำกับภาษี */
-  private async settle(payment: Payment): Promise<'settled' | 'double_payment' | 'duplicate'> {
+  private async settle(payment: Payment, providerRef: string): Promise<'settled' | 'double_payment' | 'duplicate' | 'moved'> {
     const paidAt = new Date();
-    let outcome: 'settled' | 'double_payment' | 'duplicate' = 'settled';
+    let outcome: 'settled' | 'double_payment' | 'duplicate' | 'moved' = 'settled';
     const created = await this.sys.transaction(async (tx) => {
       // Webhook ซ้ำ / Webhook กับงานกระทบยอดมาพร้อมกัน: ต่อคิวต่อใบแจ้งหนี้ แล้วอ่านสถานะใหม่ในธุรกรรม ไม่ออกเอกสารหรือเปิดแพ็กเกจซ้ำ (A35b)
       await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${'settle:' + payment.invoiceId}, 0))`);
-      const [fresh] = await tx.select({ status: s.payments.status }).from(s.payments).where(eq(s.payments.id, payment.id));
-      if (fresh?.status === 'confirmed') return void (outcome = 'duplicate');
+      const [fresh] = await tx.select({ status: s.payments.status, providerRef: s.payments.providerRef }).from(s.payments).where(eq(s.payments.id, payment.id));
+      // สร้าง QR ใหม่ commit ก่อนได้ล็อก: แถวนี้เป็นของ QR ใหม่ที่ยังไม่จ่ายแล้ว → ผู้เรียกผูกเงินนี้เป็นรายการของ QR เดิม (adopt)
+      if (fresh?.providerRef !== providerRef) return void (outcome = 'moved');
+      if (fresh.status === 'confirmed') return void (outcome = 'duplicate');
       const [invoice] = await tx.select().from(s.invoices).where(eq(s.invoices.id, payment.invoiceId));
       if (invoice.status === 'paid') return void (outcome = 'double_payment');
       const meta = await this.meta(invoice.id);
@@ -460,7 +483,7 @@ export class PaymentsService implements OnModuleInit {
    * เช่น QR เดิมที่ถูกแทนด้วย QR ใหม่ · บันทึกเป็นรายการชำระของใบนั้น แล้วยืนยันตามปกติ (ใบชำระแล้ว = จ่ายซ้ำเข้าคิว)
    * ใบยังเปิด: ปิดรายการปัจจุบันที่ยังไม่จ่ายที่ผู้ให้บริการ ไม่ให้ลูกค้าจ่ายซ้ำ
    */
-  private async adopt(ev: Pick<GatewayEvent, 'providerRef' | 'invoiceId' | 'amount' | 'currency' | 'method'>): Promise<Payment | null> {
+  private async adopt(ev: SettledEvent): Promise<Payment | null> {
     if (!ev.invoiceId || !z.uuid().safeParse(ev.invoiceId).success || !ev.providerRef) return null;
     const [invoice] = await this.sys.select().from(s.invoices).where(eq(s.invoices.id, ev.invoiceId));
     if (!invoice) return null;
@@ -505,18 +528,11 @@ export class PaymentsService implements OnModuleInit {
     if (!payment) return { received: true, unknown: true };
 
     if (ev.type === 'payment.succeeded') {
-      if (payment.status === 'confirmed') return { received: true, duplicate: true };
-      if (payment.exceptionReason) return { received: true, exception: payment.exceptionReason };
-      // ยอดที่ผู้ให้บริการรับต่างจากที่สร้าง (ไม่ควรเกิด) → ไม่เปิดแพ็กเกจ ให้ทีมตรวจ
-      const wrong = moneyMismatch(payment.amount, ev.amount, ev.currency);
-      if (wrong) {
-        await this.flag(payment, 'amount_mismatch', wrong);
-        return { received: true, exception: 'amount_mismatch' };
-      }
-      const outcome = await this.succeed(payment);
+      // ยอดที่ผู้ให้บริการรับต่างจากที่สร้าง (ไม่ควรเกิด) → ไม่เปิดแพ็กเกจ ให้ทีมตรวจ (ใน receive)
+      const r = await this.receive(payment, ev);
       // บัตร: เก็บลูกค้าที่ผูกบัตรไว้ ใช้ตัดรอบถัดไป (A35b)
-      if (outcome === 'settled' && payment.method === 'card' && ev.customerRef) await this.sys.update(s.subscriptions).set({ stripeCustomerId: ev.customerRef, updatedAt: new Date() }).where(eq(s.subscriptions.workspaceId, payment.workspaceId));
-      return outcome === 'settled' ? { received: true } : outcome === 'duplicate' ? { received: true, duplicate: true } : { received: true, exception: outcome };
+      if (r.outcome === 'settled' && payment.method === 'card' && ev.customerRef) await this.sys.update(s.subscriptions).set({ stripeCustomerId: ev.customerRef, updatedAt: new Date() }).where(eq(s.subscriptions.workspaceId, payment.workspaceId));
+      return r.outcome === 'settled' ? { received: true } : r.outcome === 'duplicate' ? { received: true, duplicate: true } : { received: true, exception: r.reason };
     }
     // ล้มเหลว / ยกเลิก: ไม่ย้อนการชำระที่ยืนยันแล้ว
     if (payment.status === 'confirmed') return { received: true, ignored: true };

@@ -2,7 +2,7 @@
 import ExcelJS from 'exceljs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { EventBus } from '../src/core/events.js';
-import { type Client, seedTeam, startApp, type TestApp } from './helpers.js';
+import { addMember, type Client, client, seedTeam, signup, startApp, type TestApp } from './helpers.js';
 
 let t: TestApp;
 let team: Awaited<ReturnType<typeof seedTeam>>;
@@ -552,6 +552,19 @@ describe('ชุดฟิลด์ตอนนำเข้า และ Template
     expect((await download(team.lead, `${team.ws}/import-template.xlsx?project=NOPE`)).status).toBe(404);
   });
 
+  it('GET import-template.xlsx?project=: สมาชิก Workspace ที่ไม่อยู่ในโปรเจกต์ = 404 (RLS ซ่อนโปรเจกต์) · Guest = 403', async () => {
+    // Member ของ Workspace ที่ไม่อยู่ในโปรเจกต์ IMP · ตอบเหมือน Key ที่ไม่มี (เหมือน Export)
+    const outsider = await client(t.app);
+    await addMember(t.owner, team.slug, await signup(outsider, `outsider@${team.slug}.example.com`, 'Outsider สมมติ'), 'member');
+    expect((await download(outsider, `${team.ws}/import-template.xlsx?project=IMP`)).status).toBe(404);
+    expect((await download(outsider, `${team.ws}/import-template.xlsx`)).status).toBe(200);
+    const guest = await client(t.app);
+    const guestId = await signup(guest, `guest@${team.slug}.example.com`, 'Guest สมมติ');
+    await addMember(t.owner, team.slug, guestId, 'guest', { key: 'IMP', role: 'viewer' });
+    expect((await download(guest, `${team.ws}/import-template.xlsx?project=IMP`)).status).toBe(403);
+    expect((await download(guest, `${team.ws}/import-template.xlsx`)).status).toBe(403);
+  });
+
   it('อัปเดตแผน: ฟิลด์ที่ซ่อนไม่แตะ · ฟิลด์บังคับที่ไฟล์ล้างค่าคงค่าเดิม · งานใหม่ที่ขาดฟิลด์บังคับเตือน', async () => {
     const before = (await team.lead.get(`${team.ws}/issues/IMP-1`)).body;
     const file = await edit(await exportOf('IMP'), (ws) => {
@@ -576,6 +589,35 @@ describe('ชุดฟิลด์ตอนนำเข้า และ Template
     expect(after.customFields[contract]).toBe('CT-001');
     const fresh = (await t.owner.query(`SELECT i.remark FROM issues i JOIN projects p ON p.id = i.project_id WHERE p.key = 'IMP' AND i.title = 'งานใหม่ไม่มีรหัสสัญญา'`)).rows[0];
     expect(fresh.remark).toBeNull();
+  });
+
+  it('Sub-task ใหม่: ค่าในคอลัมน์ที่ซ่อนใน Sub-task ไม่ถูกเขียน · ฟิลด์ที่ซ่อนเฉพาะ Task ยังเขียนได้', async () => {
+    const file = await edit(await exportOf('IMP'), (ws) => {
+      ws.addRow(heads(ws).map((x) => ({ 'Parent Key': 'IMP-1', Title: 'Sub-task ใหม่มีรหัสสัญญา', รหัสสัญญา: 'CT-SUB', Remark: 'Remark ของ Sub-task' })[x] ?? null));
+    });
+    const job = await updateJob('IMP', file);
+    expect(job.diff.added.map((a: { title: string }) => a.title)).toEqual(['Sub-task ใหม่มีรหัสสัญญา']);
+    expect(problems(job)).toEqual(expect.arrayContaining([expect.stringMatching(/^warn:รหัสสัญญา ถูกซ่อนใน Sub-task/)]));
+    await commit(job.id);
+    const sub = (await t.owner.query(`SELECT i.id, i.remark, par.number AS parent FROM issues i JOIN projects p ON p.id = i.project_id LEFT JOIN issues par ON par.id = i.parent_id WHERE p.key = 'IMP' AND i.title = 'Sub-task ใหม่มีรหัสสัญญา'`)).rows[0];
+    expect(sub).toMatchObject({ parent: 1, remark: 'Remark ของ Sub-task' });
+    expect((await t.owner.query(`SELECT count(*)::int AS n FROM issue_custom_values WHERE issue_id = $1 AND field_id = $2`, [sub.id, contract])).rows[0].n).toBe(0);
+  });
+
+  it('ล้าง Parent Key (เลื่อน Sub-task เป็น Task) = ใช้กติกาของ Task: Remark ที่ซ่อนใน Task ไม่ถูกเขียน', async () => {
+    const before = (await t.owner.query(`SELECT i.number, i.remark FROM issues i JOIN projects p ON p.id = i.project_id WHERE p.key = 'IMP' AND i.title = 'Sub-task ใหม่มีรหัสสัญญา'`)).rows[0];
+    const file = await edit(await exportOf('IMP'), (ws) => {
+      const r = heads(ws).indexOf('Key') + 1;
+      let n = 0;
+      ws.eachRow((row, i) => void (row.getCell(r).value === `IMP-${before.number}` && (n = i)));
+      cellOf(ws, n, 'Parent Key').value = null;
+      cellOf(ws, n, 'Remark').value = 'แก้ตอนเลื่อนเป็น Task';
+    });
+    const job = await updateJob('IMP', file);
+    const ch = job.diff.changed.find((c: { key: string }) => c.key === `IMP-${before.number}`);
+    expect(ch.fields.map((f: { field: string }) => f.field)).toEqual(expect.arrayContaining(['parent']));
+    expect(ch.fields.map((f: { field: string }) => f.field)).not.toContain('remark');
+    expect(problems(job)).toEqual(expect.arrayContaining([expect.stringMatching(/^warn:Remark ถูกซ่อนใน Task/)]));
   });
 });
 

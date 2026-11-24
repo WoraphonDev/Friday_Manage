@@ -331,7 +331,7 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
       if (mode === 'hidden' && filled(get(row))) {
         note(hiddenSeen, pf, label, level, row);
         clear(row);
-      } else if (mode === 'required' && !filled(get(row))) note(requiredNew, pf, label, level, row);
+      } else if (mode === 'required' && f !== 'priority' && !filled(get(row))) note(requiredNew, pf, label, level, row);
     }
   };
   const cfShown = (d: CustomFieldDef, v: unknown) => (d.fieldType === 'user' ? (typeof v === 'string' ? (ex.userName.get(v) ?? v) : null) : displayValue(d, v));
@@ -393,7 +393,8 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
     const oldDevs = (ex.assignees.get(issue.id) ?? []).map((u) => ex.userName.get(u) ?? '');
     const oldLabels = (ex.labels.get(issue.id) ?? []).map((l) => ex.labelName.get(l) ?? '').sort((a, b) => a.localeCompare(b));
     const fields: FieldChange[] = [];
-    const level: FieldLevel = (row.parentNumber ?? oldParent?.number ?? null) === null ? 'task' : 'subtask';
+    // มีคอลัมน์ Parent = ใช้ค่าในไฟล์ (ว่าง = เลื่อนเป็น Task) · ไม่มีคอลัมน์ = ระดับเดิม
+    const level: FieldLevel = (has('parent') ? row.parentNumber : (oldParent?.number ?? null)) === null ? 'task' : 'subtask';
     const add = (field: DiffField, oldV: unknown, newV: unknown) => {
       if (!has(field)) return;
       const mode = rule(field, level);

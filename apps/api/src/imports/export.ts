@@ -84,6 +84,57 @@ interface SheetData {
   sprints?: string[];
   /** ไฟล์มีงานบางส่วน (ตาม Sprint / ตัวกรอง) · ข้อความบอกขอบเขต */
   partial?: string | null;
+  /** รายการเลือกของคอลัมน์ Custom field · values null = รายชื่อสมาชิก */
+  customLists?: { header: string; values: string[] | null }[];
+  /** แถวคำแนะนำของคอลัมน์ Custom field */
+  customGuide?: [string, string, string][];
+}
+
+/**
+ * คอลัมน์ของไฟล์ตามชุดฟิลด์ของโปรเจกต์ (Export และ Template ของโปรเจกต์ใช้ร่วมกัน)
+ * ฟิลด์ที่ซ่อนทั้ง Task และ Sub-task ไม่มีคอลัมน์ · Custom field ชื่อชนกับคอลัมน์มาตรฐานต่อท้าย (Custom) · plan.ts จับคู่ทั้งสองแบบ
+ */
+function projectColumns(project: { progressSplit?: boolean }, profile?: ResolvedProfile, customFields: CustomFieldDef[] = []) {
+  const shown = (h: Header) => {
+    // QA Due มีเฉพาะโปรเจกต์แยก Dev / QA · โปรเจกต์อื่นได้ไฟล์แบบเดิม
+    if (h === 'QA Due') return !!project.progressSplit;
+    const f = HEADER_FIELD[h];
+    const rule = f ? profile?.fields[f] : undefined;
+    return !rule || rule.task !== 'hidden' || rule.subtask !== 'hidden';
+  };
+  const standard = EXPORT_HEADERS.filter(shown);
+  const customs = customFields.filter((f) => f.taskMode !== 'hidden' || f.subtaskMode !== 'hidden');
+  const taken = new Set(EXPORT_HEADERS.map((h) => h.toLowerCase()));
+  const customHeaders = customs.map((f) => (taken.has(f.name.toLowerCase()) ? `${f.name} (Custom)` : f.name));
+  return { standard, shown, customs, customHeaders };
+}
+
+/** ตัวเลือกของ Custom field ชนิดเลือกค่า → รายการเลือกในเซลล์ (ชนิดคนใช้รายชื่อสมาชิก) */
+function customLists(customs: CustomFieldDef[], headers: string[]): NonNullable<SheetData['customLists']> {
+  return customs.flatMap((f, n): NonNullable<SheetData['customLists']> => {
+    if (f.fieldType === 'user') return [{ header: headers[n], values: null }];
+    if (f.fieldType === 'select') return [{ header: headers[n], values: (f.options?.choices ?? []).map((c) => c.label) }];
+    return [];
+  });
+}
+
+const CUSTOM_HINT: Record<CustomFieldDef['fieldType'], string> = {
+  text: 'ข้อความ',
+  number: 'ตัวเลข',
+  date: 'วันที่ YYYY-MM-DD',
+  select: 'ชื่อตัวเลือก 1 ค่า (ดูชีตค่าที่ใช้ได้)',
+  multi_select: 'ชื่อตัวเลือก หลายค่าคั่นด้วย ,',
+  user: 'ชื่อที่แสดงของสมาชิก 1 คน',
+};
+const MODE_HINT = { hidden: 'ซ่อน', optional: 'ไม่บังคับ', required: 'บังคับ' } as const;
+
+/** แถวในชีตคำแนะนำของ Custom field: ชนิดค่า + โหมดของ Task / Sub-task */
+function customGuide(customs: CustomFieldDef[], headers: string[]): [string, string, string][] {
+  return customs.map((f, n) => {
+    const choices = f.fieldType === 'multi_select' && f.options?.choices.length ? ` (${f.options.choices.map((c) => c.label).join(', ')})` : '';
+    const need = f.taskMode === 'required' || f.subtaskMode === 'required';
+    return [headers[n], `Custom field: ${CUSTOM_HINT[f.fieldType]}${choices} · Task ${MODE_HINT[f.taskMode]} · Sub-task ${MODE_HINT[f.subtaskMode]} · ว่าง = ล้างค่า`, need ? 'ใช่' : '—'];
+  });
 }
 
 /** แผนงานของโปรเจกต์เป็น .xlsx: Task + Sub-task (ไม่รวม Bug) เรียง Task แล้วตามด้วย Sub-task ของมัน */
@@ -96,19 +147,7 @@ export async function buildPlanXlsx(
     only?: { ids: Set<string>; label: string };
   } = {},
 ): Promise<Buffer> {
-  const shown = (h: Header) => {
-    // QA Due มีเฉพาะโปรเจกต์แยก Dev / QA · โปรเจกต์อื่นได้ไฟล์แบบเดิม
-    if (h === 'QA Due') return !!project.progressSplit;
-    const f = HEADER_FIELD[h];
-    const rule = f ? options.profile?.fields[f] : undefined;
-    return !rule || rule.task !== 'hidden' || rule.subtask !== 'hidden';
-  };
-  // Sprint อยู่ในไฟล์ของโปรเจกต์เสมอ (ว่าง = ยังไม่เข้า Sprint) ให้กรอกใน Excel แล้วนำเข้าได้ · Template เปล่าไม่มี (render)
-  const standard = EXPORT_HEADERS.filter(shown);
-  // Custom field ที่ซ่อนทั้งสองระดับไม่ส่งออก · ชื่อชนกับคอลัมน์มาตรฐานต่อท้าย (Custom)
-  const customs = (options.customFields ?? []).filter((f) => f.taskMode !== 'hidden' || f.subtaskMode !== 'hidden');
-  const taken = new Set(EXPORT_HEADERS.map((h) => h.toLowerCase()));
-  const customHeaders = customs.map((f) => (taken.has(f.name.toLowerCase()) ? `${f.name} (Custom)` : f.name));
+  const { standard, shown, customs, customHeaders } = projectColumns(project, options.profile, options.customFields);
   const [taskType] = await tx.select({ id: s.issueTypes.id, workflowId: s.issueTypes.workflowId }).from(s.issueTypes).where(and(eq(s.issueTypes.projectId, project.id), eq(s.issueTypes.name, 'Task')));
   const all = await tx
     .select()
@@ -238,16 +277,39 @@ export async function buildPlanXlsx(
   }
   return render({
     headers: [...standard, ...customHeaders], rows, subRows, checklistRows, statuses: sts.map((x) => x.name), modules: mods.map((m) => m.name), people: await memberNames(tx), holidays,
+    customLists: customLists(customs, customHeaders), customGuide: customGuide(customs, customHeaders),
     sprints: sps.filter((x) => x.status !== 'completed').map((x) => x.name), partial: only?.label ?? null,
     timeline: { projectName: project.name, today: options.today ?? today(), from: project.startDate, to: project.goliveDate, scale: options.scale ?? 'day', holidays: new Set(holidays.map((h) => h.date)), rows: timelineRows },
   });
 }
 
-/** Template เปล่าสำหรับเริ่มแผนใหม่ (สร้างโปรเจกต์จากไฟล์) · มีรายชื่อสมาชิกและวันหยุดของ Workspace ให้เลือก */
-export async function buildTemplateXlsx(tx: Tx, workspaceId: string): Promise<Buffer> {
+/**
+ * Template เปล่าสำหรับเริ่มแผนใหม่ (สร้างโปรเจกต์จากไฟล์) · มีรายชื่อสมาชิกและวันหยุดของ Workspace ให้เลือก
+ * ระบุโปรเจกต์ = Template สำหรับอัปเดตแผนของโปรเจกต์นั้น: คอลัมน์ตามชุดฟิลด์ + คอลัมน์ Custom field, สถานะ / Module / Sprint ของโปรเจกต์
+ */
+export async function buildTemplateXlsx(
+  tx: Tx,
+  workspaceId: string,
+  project?: { id: string; holidayCalendarId: string | null; progressSplit?: boolean; profile: ResolvedProfile; customFields: CustomFieldDef[] },
+): Promise<Buffer> {
   const [ws0] = await tx.select({ cal: s.workspaceSettings.holidayCalendarId }).from(s.workspaceSettings).where(eq(s.workspaceSettings.workspaceId, workspaceId));
-  const holidays = ws0?.cal ? await tx.select({ date: s.holidays.date, name: s.holidays.name }).from(s.holidays).where(eq(s.holidays.calendarId, ws0.cal)) : [];
-  return render({ rows: [], subRows: new Set(), statuses: DEFAULT_STATUSES, modules: [], people: await memberNames(tx), holidays });
+  const calendarId = project?.holidayCalendarId ?? ws0?.cal ?? null;
+  const holidays = calendarId ? await tx.select({ date: s.holidays.date, name: s.holidays.name }).from(s.holidays).where(eq(s.holidays.calendarId, calendarId)) : [];
+  if (!project) return render({ rows: [], subRows: new Set(), statuses: DEFAULT_STATUSES, modules: [], people: await memberNames(tx), holidays });
+  const { standard, customs, customHeaders } = projectColumns(project, project.profile, project.customFields);
+  const [taskType] = await tx.select({ workflowId: s.issueTypes.workflowId }).from(s.issueTypes).where(and(eq(s.issueTypes.projectId, project.id), eq(s.issueTypes.name, 'Task')));
+  const [sts, mods, sps, extra] = await Promise.all([
+    taskType ? tx.select({ name: s.workflowStatuses.name }).from(s.workflowStatuses).where(eq(s.workflowStatuses.workflowId, taskType.workflowId)).orderBy(asc(s.workflowStatuses.sort)) : Promise.resolve([]),
+    tx.select({ name: s.modules.name }).from(s.modules).where(eq(s.modules.projectId, project.id)).orderBy(asc(s.modules.sort)),
+    tx.select({ name: s.sprints.name, status: s.sprints.status }).from(s.sprints).where(eq(s.sprints.projectId, project.id)).orderBy(asc(s.sprints.number)),
+    tx.select({ date: s.projectHolidays.date, name: s.projectHolidays.name }).from(s.projectHolidays).where(eq(s.projectHolidays.projectId, project.id)),
+  ]);
+  return render({
+    headers: [...standard, ...customHeaders], rows: [], subRows: new Set(), statuses: sts.length ? sts.map((x) => x.name) : DEFAULT_STATUSES,
+    modules: mods.map((m) => m.name), people: await memberNames(tx), holidays: [...holidays, ...extra],
+    sprints: sps.filter((x) => x.status !== 'completed').map((x) => x.name),
+    customLists: customLists(customs, customHeaders), customGuide: customGuide(customs, customHeaders),
+  });
 }
 
 /** สมาชิกที่จับคู่ได้ตอนนำเข้า (ไม่รวม Guest) */
@@ -322,10 +384,27 @@ async function render(d: SheetData): Promise<Buffer> {
   pick(COL.Module, 3);
   for (const c of [COL['Business Analyst'], COL['System Analyst'], COL['QA / Reviewer']]) pick(c, 4);
   pick(COL.Sprint, 5);
+  // Custom field ชนิดเลือกค่า / คน: รายการเลือกในเซลล์ (หลายค่าพิมพ์เองคั่นด้วย , จึงไม่ใส่รายการ)
+  for (const c of d.customLists ?? []) {
+    const col = headers.indexOf(c.header) + 1;
+    if (!col) continue;
+    if (c.values === null) {
+      pick(col, 4);
+      continue;
+    }
+    lists.push([c.header, c.values]);
+    const n = lists.length - 1;
+    vs.getCell(1, n + 1).value = c.header;
+    vs.getCell(1, n + 1).font = { bold: true };
+    c.values.forEach((v, i) => (vs.getCell(i + 2, n + 1).value = v));
+    vs.getColumn(n + 1).width = 22;
+    pick(col, n);
+  }
 
   const guide = wb.addWorksheet('คำแนะนำ');
   guide.addRow(['คอลัมน์', 'ความหมาย', 'จำเป็น']).font = { bold: true };
   for (const r of GUIDE) guide.addRow(r);
+  for (const r of d.customGuide ?? []) guide.addRow(r);
   guide.addRow([]);
   for (const line of NOTES) guide.addRow([line]);
   guide.columns.forEach((c, n) => (c.width = [18, 80, 10][n]));

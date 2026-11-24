@@ -500,6 +500,85 @@ describe('Custom field ในไฟล์ (โหมดอัปเดต)', () 
   });
 });
 
+// F01 · ชุดฟิลด์ของโปรเจกต์ตอนนำเข้า + Template Excel ของโปรเจกต์ (คอลัมน์ Custom field)
+describe('ชุดฟิลด์ตอนนำเข้า และ Template ของโปรเจกต์', () => {
+  const P = () => `${team.ws}/projects/IMP`;
+  let contract = '';
+  const heads = (ws: ExcelJS.Worksheet) => (ws.getRow(1).values as unknown[]).slice(1).map((v) => String(v ?? ''));
+  const cellOf = (ws: ExcelJS.Worksheet, row: number, header: string) => ws.getRow(row).getCell(heads(ws).indexOf(header) + 1);
+  const problems = (job: { findings: { level: string; problem: string }[] }) => job.findings.map((f) => `${f.level}:${f.problem}`);
+
+  beforeAll(async () => {
+    // Remark ซ่อนใน Task · Screen ซ่อนทั้งสองระดับ · Custom field ข้อความบังคับใน Task
+    const r = await team.lead.put(`${P()}/field-profile`, { fields: { remark: { task: 'hidden' }, screens: { task: 'hidden', subtask: 'hidden' } } });
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
+    const f = await team.lead.post(`${P()}/custom-fields`, { name: 'รหัสสัญญา', fieldType: 'text', taskMode: 'required', subtaskMode: 'hidden' });
+    expect(f.status, JSON.stringify(f.body)).toBe(201);
+    contract = f.body.id;
+    const i1 = (await team.lead.get(`${team.ws}/issues/IMP-1`)).body;
+    expect((await team.lead.patch(`${team.ws}/issues/IMP-1`, { customFields: { [contract]: 'CT-001' } }, i1.version)).status).toBe(200);
+  });
+  afterAll(async () => {
+    await team.lead.put(`${P()}/field-profile`, { fields: { remark: { task: 'optional' }, screens: { task: 'optional', subtask: 'optional' } } });
+    await team.lead.patch(`${P()}/custom-fields/${contract}`, { taskMode: 'optional', subtaskMode: 'optional' });
+  });
+
+  it('GET import-template.xlsx?project=: คอลัมน์ตามชุดฟิลด์ + Custom field พร้อมรายการเลือก · Workspace เดิมไม่เปลี่ยน', async () => {
+    const res = await download(team.lead, `${team.ws}/import-template.xlsx?project=IMP`);
+    expect(res.status).toBe(200);
+    expect(res.headers['content-disposition']).toContain('IMP-plan-template.xlsx');
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(res.body as unknown as ArrayBuffer);
+    const tasks = wb.getWorksheet('Tasks')!;
+    const h = heads(tasks);
+    expect(h).toEqual(expect.arrayContaining(['Sprint', 'Remark', 'ระดับลูกค้า', 'ช่องทาง', 'ผู้ติดต่อ', 'จำนวนเครื่อง', 'วันนัด', 'รหัสสัญญา']));
+    expect(h).not.toContain('Screen');
+    expect(tasks.rowCount).toBe(1);
+    const values = wb.getWorksheet('ค่าที่ใช้ได้')!;
+    const listCol = (values.getRow(1).values as unknown[]).indexOf('ระดับลูกค้า');
+    expect(listCol).toBeGreaterThan(0);
+    expect(values.getColumn(listCol).values.slice(2)).toEqual(['Gold', 'Silver']);
+    const guide = wb.getWorksheet('คำแนะนำ')!.getColumn(1).values.slice(1).map(String);
+    expect(guide).toContain('รหัสสัญญา');
+    // Template ของ Workspace (ไม่ระบุโปรเจกต์) ยังเป็นคอลัมน์มาตรฐานชุดเดิม
+    const plain = await download(team.lead, `${team.ws}/import-template.xlsx`);
+    const wb2 = new ExcelJS.Workbook();
+    await wb2.xlsx.load(plain.body as unknown as ArrayBuffer);
+    expect(heads(wb2.getWorksheet('Tasks')!)).toEqual(TASK_HEADERS.filter((x) => x !== 'Sprint'));
+    // Template ของโปรเจกต์อัปโหลดเข้าโหมดอัปเดตได้ · คอลัมน์ Custom field จับคู่อัตโนมัติ
+    const job = await updateJob('IMP', res.body);
+    const mapped = Object.fromEntries(job.columns.map((c: { header: string; field: string | null }) => [c.header, c.field]));
+    expect(mapped['รหัสสัญญา']).toBe(`cf:${contract}`);
+    expect((await download(team.lead, `${team.ws}/import-template.xlsx?project=NOPE`)).status).toBe(404);
+  });
+
+  it('อัปเดตแผน: ฟิลด์ที่ซ่อนไม่แตะ · ฟิลด์บังคับที่ไฟล์ล้างค่าคงค่าเดิม · งานใหม่ที่ขาดฟิลด์บังคับเตือน', async () => {
+    const before = (await team.lead.get(`${team.ws}/issues/IMP-1`)).body;
+    const file = await edit(await exportOf('IMP'), (ws) => {
+      cellOf(ws, 2, 'Remark').value = 'แก้ในไฟล์ แต่ Remark ซ่อนใน Task';
+      cellOf(ws, 2, 'รหัสสัญญา').value = '';
+      const src = ws.getRow(2).values as unknown[];
+      ws.addRow(heads(ws).map((x, i) => (x === 'Key' ? null : x === 'Title' ? 'งานใหม่ไม่มีรหัสสัญญา' : x === 'Remark' ? 'ไม่ควรถูกเขียน' : x === 'รหัสสัญญา' ? null : (src[i + 1] ?? null))));
+    });
+    const job = await updateJob('IMP', file);
+    const ch = job.diff.changed.find((c: { key: string }) => c.key === 'IMP-1');
+    expect(ch?.fields.map((f: { field: string }) => f.field) ?? []).not.toEqual(expect.arrayContaining(['remark']));
+    expect(ch?.fields.map((f: { field: string }) => f.field) ?? []).not.toEqual(expect.arrayContaining([`cf:${contract}`]));
+    expect(problems(job)).toEqual(expect.arrayContaining([
+      expect.stringMatching(/^warn:Remark ถูกซ่อนใน Task/),
+      'warn:รหัสสัญญา เป็นฟิลด์บังคับของ Task แต่ในไฟล์ว่าง',
+      expect.stringMatching(/^warn:รหัสสัญญา เป็นฟิลด์บังคับของ Task แต่งานใหม่ 1 งานยังไม่มีค่า/),
+    ]));
+    expect(job.diff.added).toHaveLength(1);
+    await commit(job.id);
+    const after = (await team.lead.get(`${team.ws}/issues/IMP-1`)).body;
+    expect(after.remark).toBe(before.remark);
+    expect(after.customFields[contract]).toBe('CT-001');
+    const fresh = (await t.owner.query(`SELECT i.remark FROM issues i JOIN projects p ON p.id = i.project_id WHERE p.key = 'IMP' AND i.title = 'งานใหม่ไม่มีรหัสสัญญา'`)).rows[0];
+    expect(fresh.remark).toBeNull();
+  });
+});
+
 describe('นำเข้ารอบที่ 2: แทนที่ หรือ เพิ่มเติมแผน', () => {
   const issuesOf = async (key: string) =>
     (await t.owner.query(`SELECT i.number, i.title, i.excel_row_no, i.version FROM issues i JOIN projects p ON p.id = i.project_id WHERE p.key = $1 AND i.deleted_at IS NULL ORDER BY i.number`, [key])).rows;

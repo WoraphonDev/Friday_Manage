@@ -182,7 +182,7 @@ export function ImportWizard({ ws, projectKey, changesHref }: { ws: string; proj
           />
           <div className={`muted ${styles.small} ${styles.template}`}>
             <span>{t("templateHint")}</span>
-            <a className="button" href={`/api/v1/w/${encodeURIComponent(ws)}/import-template.xlsx`} download>{t("template")}</a>
+            <a className="button" href={`/api/v1/w/${encodeURIComponent(ws)}/import-template.xlsx${projectKey ? `?project=${encodeURIComponent(projectKey)}` : ""}`} download>{t("template")}</a>
           </div>
           {mode === "update" && perms.isSuccess && !canUpdate && <p className="field-error">{t("noBaselinePerm")}</p>}
           <div className={styles.right}>

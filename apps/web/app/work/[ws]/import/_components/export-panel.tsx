@@ -89,7 +89,7 @@ export function ExportPanel({ ws, projectKey: key, tableFilters = null }: { ws: 
         </ul>
       </div>
       <div className={styles.exportActions}>
-        <a className="button" href={`/api/v1${w}/import-template.xlsx`} download>{t("template")}</a>
+        <a className="button" href={`/api/v1${w}/import-template.xlsx?project=${encodeURIComponent(key)}`} download>{t("template")}</a>
         {allowed
           ? <a className="button button-primary" href={href} download><Download size={16} aria-hidden="true" /> {t("download")}</a>
           : <span className="button button-primary" aria-disabled="true" style={{ opacity: 0.5, pointerEvents: "none" }}><Download size={16} aria-hidden="true" /> {t("download")}</span>}

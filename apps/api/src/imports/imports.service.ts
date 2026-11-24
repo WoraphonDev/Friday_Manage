@@ -367,8 +367,9 @@ export class ImportsService {
       // แทนที่แผน: งานเดิมถูกลบทั้งหมด Sub-task จึงต้องมี Task แม่ในไฟล์
       parents: keep.updateKind === 'replace' ? undefined : await parentTasks(tx, project.id),
     });
-    const defs = await this.customDefs(tx, project);
-    const plan: UpdatePlan = await computeUpdate(tx, project, base.check, Object.values(columnMapping).includes('key'), defs, keep.updateKind ?? 'sync');
+    const { fieldProfile, customFields } = await this.projects.fieldsOf(tx, project);
+    const defs = customFields as CustomFieldDef[];
+    const plan: UpdatePlan = await computeUpdate(tx, project, base.check, Object.values(columnMapping).includes('key'), defs, keep.updateKind ?? 'sync', fieldProfile);
     // อัปเดตเฉพาะงานที่ยังไม่เริ่ม: งานใหม่ในไฟล์แสดงให้เห็นแต่เพิ่มเมื่อผู้ใช้ยืนยันเท่านั้น
     if (plan.unstartedOnly && !keep.addNew) plan.adds = [];
     const state: JobState = { ...base.state, diff: plan.diff, ...keep, customFields: defs.map((d) => ({ target: `cf:${d.id}` as const, label: d.name })) };
@@ -441,10 +442,20 @@ export class ImportsService {
     });
   }
 
-  /** `GET import-template.xlsx` · Template เปล่ารูปแบบเดียวกับไฟล์ Export · คนที่สร้างโปรเจกต์ได้ (ไม่ใช่ Guest) */
-  async templateXlsx(auth: AuthInfo, tenant: TenantInfo) {
+  /**
+   * `GET import-template.xlsx` · Template เปล่ารูปแบบเดียวกับไฟล์ Export · คนที่สร้างโปรเจกต์ได้ (ไม่ใช่ Guest)
+   * `?project=<key>` = Template ของโปรเจกต์นั้น: คอลัมน์ตามชุดฟิลด์ + Custom field (ต้องเห็นโปรเจกต์)
+   */
+  async templateXlsx(auth: AuthInfo, tenant: TenantInfo, projectKey?: string) {
     if (tenant.role === 'guest') throw forbidden('ws.project.create');
-    return this.db.run(auth, tenant, async (tx) => ({ filename: 'friday-plan-template.xlsx', buffer: await buildTemplateXlsx(tx, tenant.workspaceId) }));
+    return this.db.run(auth, tenant, async (tx) => {
+      if (!projectKey) return { filename: 'friday-plan-template.xlsx', buffer: await buildTemplateXlsx(tx, tenant.workspaceId) };
+      const { project, access } = await this.projects.load(tx, auth, tenant, projectKey);
+      requirePerm(access, 'project.view');
+      const { fieldProfile, customFields } = await this.projects.fieldsOf(tx, project);
+      const buffer = await buildTemplateXlsx(tx, tenant.workspaceId, { ...project, profile: fieldProfile, customFields: customFields as CustomFieldDef[] });
+      return { filename: `${project.key}-plan-template.xlsx`, buffer };
+    });
   }
 
   // ---------------------------------------------------------------------------

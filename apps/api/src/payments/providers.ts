@@ -1,4 +1,9 @@
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { QR_TTL_MS } from './providers/card-retry.js';
+import { parseStripeEvent } from './providers/stripe-event.js';
+import { StripeGateway } from './providers/stripe.js';
+
+export { parseStripeEvent, StripeGateway };
 
 /** ผู้ให้บริการชำระเงิน (Stripe) และ e-Tax เป็น interface เพื่อให้ test ใช้ตัวปลอมที่ไม่ออกเครือข่าย */
 
@@ -16,12 +21,40 @@ export interface GatewayRequest {
   email: string | null;
   /** ส่งคำขอเดิมซ้ำด้วย key เดิมต้องได้ผลเดิม (Stripe รองรับด้วย Idempotency-Key) */
   idempotencyKey: string;
+  /** รายการเดิมของใบนี้ (ขอ client secret / QR ซ้ำ) → ดึงรายการเดิม ไม่สร้างใหม่ (Idempotency-Key ของ Stripe หมดอายุใน 24 ชม.) */
+  providerRef?: string | null;
+  /** บัตร: ลูกค้าที่ผู้ให้บริการเก็บบัตรไว้แล้ว (`subscriptions.stripe_customer_id`) · null = สร้างใหม่ */
+  customerRef?: string | null;
 }
 export interface GatewayEvent {
   id: string;
-  type: 'payment.succeeded' | 'payment.failed' | 'payment.canceled' | 'ignored';
+  /** expired = QR หมดอายุ / ถูกแทนด้วย QR ใหม่ (ใบยังเปิด) · canceled = ยกเลิกด้วยเหตุอื่น (ใบ void) */
+  type: 'payment.succeeded' | 'payment.failed' | 'payment.canceled' | 'payment.expired' | 'ignored';
   providerRef: string;
   invoiceId: string | null;
+  /** ยอดที่รับจริง (สตางค์) · เฉพาะ succeeded */
+  amount?: number;
+  /** สกุลเงินของรายการ (ตัวเล็กตาม Stripe) · ไม่ใช่ thb = ยอดไม่ตรง */
+  currency?: string | null;
+  method?: 'card' | 'promptpay' | null;
+  /** บัตร: ลูกค้าที่เก็บบัตรไว้ตัดรอบถัดไป */
+  customerRef?: string | null;
+  /** ล้มเหลว: รหัสของผู้ให้บริการ (ไม่มีข้อมูลบัตร) */
+  failureCode?: string | null;
+}
+
+/** ตัดบัตรที่เก็บไว้ของใบต่ออายุ (off-session) */
+export interface SavedCardCharge {
+  /** รายการชำระของใบต่ออายุ (สร้างตอนออกใบ) */
+  providerRef: string;
+  customerRef: string;
+  /** ต่อครั้งที่ตัด: ส่งซ้ำในครั้งเดียวกันไม่ตัดซ้ำ */
+  idempotencyKey: string;
+}
+/** succeeded / processing = รอ Webhook ยืนยัน · requires_action = ธนาคารขอ 3-D Secure ต้องให้ลูกค้ายืนยันเอง · failed = บัตรถูกปฏิเสธ */
+export interface ChargeResult {
+  status: 'succeeded' | 'processing' | 'requires_action' | 'failed';
+  code?: string | null;
 }
 
 /** รายการที่ผู้ให้บริการรับเงินสำเร็จ (ใช้กระทบยอดทุกเช้า จับ Webhook ที่หลุด) */
@@ -29,11 +62,14 @@ export interface SettledPayment {
   providerRef: string;
   invoiceId: string | null;
   amount: number;
+  /** ไม่ใช่ thb = ยอดไม่ตรง · ไม่ส่ง = ไม่รู้ (ตัวปลอม) */
+  currency?: string | null;
+  method?: 'card' | 'promptpay' | null;
   at: Date;
 }
 
 /**
- * ผู้ให้บริการรับชำระ (A35a) · ตัวจริงเลือกใน A35b (Opn หรือ Stripe) · โค้ดส่วนอื่นใช้ผ่าน interface นี้เท่านั้น
+ * ผู้ให้บริการรับชำระ (A35a) · ตัวจริงคือ Stripe (A35b · `providers/stripe.ts`) · โค้ดส่วนอื่นใช้ผ่าน interface นี้เท่านั้น
  */
 export interface PaymentGateway {
   readonly name: 'stripe' | 'fake';
@@ -43,6 +79,12 @@ export interface PaymentGateway {
   verifyWebhook(raw: Buffer, signature: string | undefined): GatewayEvent;
   /** รายการที่รับเงินสำเร็จตั้งแต่เวลาที่กำหนด */
   listSettled(since: Date): Promise<SettledPayment[]>;
+  /** ตัดบัตรที่เก็บไว้ (ใบต่ออายุ) */
+  chargeSaved(c: SavedCardCharge): Promise<ChargeResult>;
+  /** ปิดรายการที่ยังไม่ชำระ (QR หมดอายุ / ถูกแทน) · false = ปิดไม่ได้เพราะชำระแล้วหรือกำลังตัดเงิน */
+  cancel(providerRef: string, reason: 'expired' | 'replaced'): Promise<boolean>;
+  /** QR ครบ 15 นาทีแล้ว → ปิดที่ผู้ให้บริการ · open = ยังไม่หมดอายุ · paid = ชำระแล้ว (รอ Webhook / กระทบยอด) */
+  closeExpiredQr(providerRef: string, now: Date): Promise<'open' | 'expired' | 'paid'>;
 }
 export const PAYMENT_GATEWAY = Symbol('PAYMENT_GATEWAY');
 
@@ -113,18 +155,6 @@ export function verifyStripeSignature(raw: Buffer, header: string | undefined, s
   if (given.length !== expected.length || !timingSafeEqual(given, expected)) throw new Error('bad_signature');
 }
 
-/** แปลงเหตุการณ์ของ Stripe (payment_intent.*) เป็นเหตุการณ์ของเรา */
-export function parseStripeEvent(raw: Buffer): GatewayEvent {
-  const e = JSON.parse(raw.toString('utf8')) as { id: string; type: string; data?: { object?: { id?: string; metadata?: { invoice_id?: string } } } };
-  const obj = e.data?.object ?? {};
-  const map: Record<string, GatewayEvent['type']> = {
-    'payment_intent.succeeded': 'payment.succeeded',
-    'payment_intent.payment_failed': 'payment.failed',
-    'payment_intent.canceled': 'payment.canceled',
-  };
-  return { id: e.id, type: map[e.type] ?? 'ignored', providerRef: obj.id ?? '', invoiceId: obj.metadata?.invoice_id ?? null };
-}
-
 const webhookSecret = () => process.env.STRIPE_WEBHOOK_SECRET ?? 'whsec_dev_fake';
 
 /** ตัวปลอมสำหรับ dev / test: ไม่ออกเครือข่าย ผลซ้ำได้ตาม Idempotency-Key · ลายเซ็น Webhook ใช้สูตรเดียวกับ Stripe จริง */
@@ -133,18 +163,27 @@ export class FakeGateway implements PaymentGateway {
   readonly calls: { kind: 'card' | 'promptpay'; request: GatewayRequest }[] = [];
   /** test / dev: รายการที่ถือว่าผู้ให้บริการรับเงินแล้ว (จำลองกรณี Webhook หลุด) */
   readonly settled: SettledPayment[] = [];
+  /** การตัดบัตรที่เก็บไว้ (ใบต่ออายุ) */
+  readonly charges: SavedCardCharge[] = [];
+  /** test ตั้งผลการตัดบัตรครั้งถัดไป · ว่าง = สำเร็จ */
+  readonly chargeOutcomes: ChargeResult[] = [];
+  /** รายการที่ถูกปิด (QR หมดอายุ / ถูกแทน) */
+  readonly canceled: { providerRef: string; reason: 'expired' | 'replaced' }[] = [];
+  private readonly createdAt = new Map<string, number>();
+  private readonly chargeResults = new Map<string, ChargeResult>();
 
   async createCard(r: GatewayRequest): Promise<GatewayPayment> {
     this.calls.push({ kind: 'card', request: r });
-    const providerRef = `pi_fake_${sha(r.idempotencyKey).slice(0, 16)}`;
+    const providerRef = r.providerRef ?? `pi_fake_${sha(r.idempotencyKey).slice(0, 16)}`;
     return { providerRef, clientSecret: `${providerRef}_secret_fake` };
   }
 
   async createPromptPay(r: GatewayRequest): Promise<GatewayPayment> {
     this.calls.push({ kind: 'promptpay', request: r });
-    const providerRef = `pi_fake_${sha(`pp:${r.idempotencyKey}`).slice(0, 16)}`;
-    // หมดอายุ 15 นาทีนับจากการสร้างครั้งแรก (ซ้ำด้วย key เดิมต้องได้เวลาเดิม จึงคิดจากค่าแฮช ไม่ใช่เวลาปัจจุบัน)
-    return { providerRef, qr: { payload: `00020101021229370016A000000677010111FAKE|${r.amount}|${providerRef}`, expiresAt: new Date(Date.now() + 15 * 60_000) } };
+    const providerRef = r.providerRef ?? `pi_fake_${sha(`pp:${r.idempotencyKey}`).slice(0, 16)}`;
+    // หมดอายุ 15 นาทีนับจากการสร้างครั้งแรก (ขอซ้ำได้เวลาเดิม)
+    if (!this.createdAt.has(providerRef)) this.createdAt.set(providerRef, Date.now());
+    return { providerRef, qr: { payload: `00020101021229370016A000000677010111FAKE|${r.amount}|${providerRef}`, expiresAt: new Date(this.createdAt.get(providerRef)! + QR_TTL_MS) } };
   }
 
   verifyWebhook(raw: Buffer, signature: string | undefined) {
@@ -155,68 +194,28 @@ export class FakeGateway implements PaymentGateway {
   async listSettled(since: Date) {
     return this.settled.filter((p) => p.at >= since);
   }
-}
 
-/** Stripe จริง (REST โดยตรง ไม่ใช้ SDK) · เปิดเมื่อมี `STRIPE_SECRET_KEY` */
-export class StripeGateway implements PaymentGateway {
-  readonly name = 'stripe' as const;
-
-  constructor(
-    private readonly secretKey: string,
-    private readonly whSecret: string,
-  ) {}
-
-  private async intent(r: GatewayRequest, extra: Record<string, string>) {
-    const body = new URLSearchParams({
-      amount: String(r.amount),
-      currency: 'thb',
-      description: `Friday Work Management ${r.invoiceNumber}`,
-      'metadata[invoice_id]': r.invoiceId,
-      'metadata[invoice_number]': r.invoiceNumber,
-      ...(r.email ? { receipt_email: r.email } : {}),
-      ...extra,
-    });
-    const res = await fetch('https://api.stripe.com/v1/payment_intents', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${this.secretKey}`, 'Content-Type': 'application/x-www-form-urlencoded', 'Idempotency-Key': r.idempotencyKey },
-      body,
-    });
-    const json = (await res.json()) as { id?: string; client_secret?: string; next_action?: { promptpay_display_qr_code?: { data?: string; expires_at?: number } }; error?: { message?: string } };
-    if (!res.ok || !json.id) throw new Error(`stripe_error: ${json.error?.message ?? res.status}`);
-    return json;
+  async chargeSaved(c: SavedCardCharge): Promise<ChargeResult> {
+    const seen = this.chargeResults.get(c.idempotencyKey);
+    if (seen) return seen;
+    this.charges.push(c);
+    const result = this.chargeOutcomes.shift() ?? { status: 'succeeded' as const };
+    this.chargeResults.set(c.idempotencyKey, result);
+    return result;
   }
 
-  async createCard(r: GatewayRequest): Promise<GatewayPayment> {
-    const j = await this.intent(r, { 'payment_method_types[]': 'card' });
-    return { providerRef: j.id!, clientSecret: j.client_secret };
+  async cancel(providerRef: string, reason: 'expired' | 'replaced') {
+    if (this.settled.some((p) => p.providerRef === providerRef)) return false;
+    if (!this.canceled.some((x) => x.providerRef === providerRef)) this.canceled.push({ providerRef, reason });
+    return true;
   }
 
-  async createPromptPay(r: GatewayRequest): Promise<GatewayPayment> {
-    const j = await this.intent(r, { 'payment_method_types[]': 'promptpay', confirm: 'true', 'payment_method_data[type]': 'promptpay', 'payment_method_data[billing_details][email]': r.email ?? 'billing@example.com' });
-    const qr = j.next_action?.promptpay_display_qr_code;
-    if (!qr?.data) throw new Error('stripe_error: ไม่ได้รับ QR');
-    return { providerRef: j.id!, qr: { payload: qr.data, expiresAt: new Date((qr.expires_at ?? Math.floor(Date.now() / 1000) + 900) * 1000) } };
-  }
-
-  verifyWebhook(raw: Buffer, signature: string | undefined) {
-    verifyStripeSignature(raw, signature, this.whSecret);
-    return parseStripeEvent(raw);
-  }
-
-  async listSettled(since: Date) {
-    const out: SettledPayment[] = [];
-    let after: string | undefined;
-    // ดึงทีละ 100 จนครบ (Stripe แบ่งหน้าด้วย starting_after)
-    for (let page = 0; page < 20; page++) {
-      const q = new URLSearchParams({ limit: '100', 'created[gte]': String(Math.floor(since.getTime() / 1000)), ...(after ? { starting_after: after } : {}) });
-      const res = await fetch(`https://api.stripe.com/v1/payment_intents?${q}`, { headers: { Authorization: `Bearer ${this.secretKey}` } });
-      const json = (await res.json()) as { data?: { id: string; status: string; amount_received: number; created: number; metadata?: { invoice_id?: string } }[]; has_more?: boolean };
-      if (!res.ok) throw new Error(`stripe_error: ${res.status}`);
-      for (const p of json.data ?? []) if (p.status === 'succeeded') out.push({ providerRef: p.id, invoiceId: p.metadata?.invoice_id ?? null, amount: p.amount_received, at: new Date(p.created * 1000) });
-      if (!json.has_more || !json.data?.length) break;
-      after = json.data[json.data.length - 1].id;
-    }
-    return out;
+  async closeExpiredQr(providerRef: string, now: Date) {
+    if (this.settled.some((p) => p.providerRef === providerRef)) return 'paid' as const;
+    if (this.canceled.some((x) => x.providerRef === providerRef)) return 'expired' as const;
+    if ((this.createdAt.get(providerRef) ?? 0) + QR_TTL_MS > now.getTime()) return 'open' as const;
+    await this.cancel(providerRef, 'expired');
+    return 'expired' as const;
   }
 }
 
@@ -297,9 +296,16 @@ export class HttpETax implements ETaxProvider {
 }
 
 export function gatewayFromEnv(env: NodeJS.ProcessEnv = process.env): PaymentGateway {
-  if (env.STRIPE_SECRET_KEY) return new StripeGateway(env.STRIPE_SECRET_KEY, env.STRIPE_WEBHOOK_SECRET ?? '');
+  if (env.STRIPE_SECRET_KEY) {
+    // ไม่มี secret ของ Webhook = ใครก็ปลอม Webhook มาปิดใบแจ้งหนี้ได้ → ไม่ยอมเริ่ม
+    if (!env.STRIPE_WEBHOOK_SECRET) throw new Error('ตั้ง STRIPE_WEBHOOK_SECRET (whsec_… จาก Stripe Dashboard หรือ stripe listen) คู่กับ STRIPE_SECRET_KEY');
+    // ปลายทาง API อื่น (stripe-mock / ตัวจำลองใน test) ใช้ได้เฉพาะนอก production กันคีย์จริงถูกส่งไปที่อื่น
+    // คีย์ live ก็ห้ามเช่นกัน แม้ NODE_ENV ไม่ใช่ production (เช่นรันเครื่องตัวเองด้วยคีย์จริง)
+    if (env.STRIPE_API_URL && (env.NODE_ENV === 'production' || /^(sk|rk)_live_/.test(env.STRIPE_SECRET_KEY))) throw new Error('STRIPE_API_URL ใช้ได้เฉพาะ dev / test กับคีย์ทดสอบ');
+    return new StripeGateway(env.STRIPE_SECRET_KEY, env.STRIPE_WEBHOOK_SECRET, { apiUrl: env.STRIPE_API_URL || undefined });
+  }
   if (env.NODE_ENV === 'production') {
-    // staging (VPS) รันแบบ production แต่ยังไม่มี Gateway จริง (A35b) · ต้องขอตัวปลอมตรง ๆ และตั้งลายเซ็น Webhook ของตัวเอง
+    // staging (VPS) รันแบบ production โดยยังไม่ตั้งคีย์ Stripe · ต้องขอตัวปลอมตรง ๆ และตั้งลายเซ็น Webhook ของตัวเอง
     // ไม่งั้นใครก็ส่ง Webhook ที่เซ็นด้วยค่า dev ใน repo มาปิดใบแจ้งหนี้ได้
     if (env.PAYMENT_GATEWAY === 'fake' && (env.STRIPE_WEBHOOK_SECRET ?? '').length >= 32) return new FakeGateway();
     throw new Error('ตั้ง STRIPE_SECRET_KEY และ STRIPE_WEBHOOK_SECRET ก่อนเปิด production (staging: PAYMENT_GATEWAY=fake + STRIPE_WEBHOOK_SECRET ≥ 32 ตัวอักษร)');

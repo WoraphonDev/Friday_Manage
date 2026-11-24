@@ -3,7 +3,7 @@ import { AnalyticsService, classifyChange } from '../analytics/analytics.service
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { bkkDate, type BuyerSnapshot, canGrant, cancelETax, commitCouponUses, type Db, issueReceipt, nextDocNumber, queueETax, recordCreditUse, reserveCredit, resumeIfPaid, schema, type Tx } from '@friday/db';
 import { bankFromEnv } from '@friday/docs';
-import { and, desc, eq, inArray, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { today } from '../common/dates.js';
 import { AppError, forbidden, notFound } from '../common/errors.js';
@@ -16,7 +16,8 @@ import { SYSTEM_DB } from '../db/db.module.js';
 import { config } from '../config.js';
 import { Jobs } from '../queue/jobs.js';
 import { CouponCode, recordDiscount } from './coupons.js';
-import { ETAX_PROVIDER, type ETaxCancelInput, type ETaxInput, type ETaxProvider, etaxErrorText, PAYMENT_GATEWAY, type PaymentGateway, verifyETaxSignature } from './providers.js';
+import { ETAX_PROVIDER, type ETaxCancelInput, type ETaxInput, type ETaxProvider, etaxErrorText, type GatewayEvent, PAYMENT_GATEWAY, type PaymentGateway, verifyETaxSignature } from './providers.js';
+import { markQrExpired } from './providers/qr-expiry.js';
 
 const s = schema;
 const DAY = 86_400_000;
@@ -71,6 +72,15 @@ export const PayBody = z.object({ renew: z.boolean().default(false) }).strict();
 
 type Invoice = typeof s.invoices.$inferSelect;
 type Payment = typeof s.payments.$inferSelect;
+/** เงินเข้าที่ผู้ให้บริการแจ้ง (Webhook สำเร็จ / รายการจากกระทบยอด) */
+type SettledEvent = Pick<GatewayEvent, 'providerRef' | 'invoiceId' | 'amount' | 'currency' | 'method'>;
+
+/** ยอด / สกุลที่ผู้ให้บริการรับไม่ตรงกับที่ควรได้ → ข้อความให้ทีมตรวจ · ไม่ส่งยอด / สกุลมา (ตัวปลอม) = ไม่ตรวจส่วนนั้น */
+function moneyMismatch(expected: number, amount: number | undefined, currency: string | null | undefined) {
+  if (currency && currency.toLowerCase() !== 'thb') return `ผู้ให้บริการรับเป็นสกุล ${currency.toUpperCase()} · ใบแจ้งหนี้เป็นบาท`;
+  if (amount !== undefined && amount !== expected) return `ผู้ให้บริการรับ ${amount / 100} บาท · รายการ ${expected / 100} บาท`;
+  return null;
+}
 
 export const invoiceDto = (i: Invoice) => ({ id: i.id, number: i.number, periodStart: i.periodStart, periodEnd: i.periodEnd, subtotal: i.subtotal, discount: i.discount, vat: i.vat, total: i.total, whtAmount: i.whtAmount, amountDue: i.amountDue, poNumber: i.poNumber, status: i.status, dueDate: i.dueDate, paidAt: i.paidAt, createdAt: i.createdAt });
 
@@ -109,41 +119,59 @@ export class PaymentsService implements OnModuleInit {
     const result = { checked: 0, settled: 0, exceptions: 0, unmatched: [] as { providerRef: string; invoiceId: string | null; amount: number }[] };
     for (const p of await this.gateway.listSettled(since)) {
       result.checked++;
-      const [payment] = await this.sys.select().from(s.payments).where(and(inArray(s.payments.method, ['card', 'promptpay']), eq(s.payments.providerRef, p.providerRef)));
+      const [found] = await this.sys.select().from(s.payments).where(and(inArray(s.payments.method, ['card', 'promptpay']), eq(s.payments.providerRef, p.providerRef)));
+      // รายการเดิมของใบ (QR ที่ถูกแทน) ที่ Webhook หลุด: ผูกกับใบด้วย metadata เหมือน Webhook → จ่ายซ้ำ / ปิดใบ ไม่ทิ้งเป็น "ไม่รู้จัก"
+      const payment: Payment | null = found ?? (p.invoiceId ? await this.adopt(p) : null);
       if (!payment) {
         result.unmatched.push({ providerRef: p.providerRef, invoiceId: p.invoiceId, amount: p.amount });
         continue;
       }
       if (payment.status === 'confirmed' || payment.exceptionReason) continue;
-      if (p.amount !== payment.amount) {
-        await this.flag(payment, 'amount_mismatch', `ผู้ให้บริการรับ ${p.amount / 100} บาท · ใบแจ้งหนี้ ${payment.amount / 100} บาท`);
-        result.exceptions++;
-        continue;
-      }
-      const outcome = await this.succeed(payment);
-      if (outcome === 'settled') result.settled++;
+      const r = await this.receive(payment, p);
+      if (r.outcome === 'settled') result.settled++;
       else result.exceptions++;
     }
     if (result.settled || result.exceptions || result.unmatched.length) this.log.warn(`กระทบยอด: ยืนยันเพิ่ม ${result.settled} · ผิดปกติ ${result.exceptions} · ไม่รู้จัก ${result.unmatched.length}`);
     return result;
   }
 
-  /** รับเงินสำเร็จ: ใบแจ้งหนี้ชำระด้วยรายการอื่นไปแล้ว = จ่ายซ้ำ (ไม่เปิดสิทธิ์ซ้ำ รอทีมตัดสินว่าเก็บเป็นเครดิตหรือคืน) */
-  private async succeed(payment: Payment): Promise<'settled' | 'double_payment'> {
-    const [invoice] = await this.sys.select({ status: s.invoices.status }).from(s.invoices).where(eq(s.invoices.id, payment.invoiceId));
-    if (invoice?.status === 'paid') {
-      await this.flag(payment, 'double_payment', 'ใบแจ้งหนี้นี้ชำระด้วยรายการอื่นแล้ว');
-      return 'double_payment';
+  /**
+   * รับเงินสำเร็จจากผู้ให้บริการ (Webhook / กระทบยอด) ของรายการที่อ่านไว้ก่อนต่อคิว settle
+   * ยอดไม่ตรง → คิวผิดปกติ · ใบชำระด้วยรายการอื่นไปแล้ว = จ่ายซ้ำ (ไม่เปิดสิทธิ์ซ้ำ รอทีมตัดสินว่าเก็บเป็นเครดิตหรือคืน)
+   * ลูกค้าสร้าง QR ใหม่แทรกก่อนได้ล็อก (แถวเดิมถูกเขียนเลขอ้างอิงใหม่) → เงินนี้เป็นของ QR เดิม: ผูกเป็นรายการของใบ (adopt) แล้วทำใหม่
+   * ไม่ยืนยัน / ติดธงรายการของ QR ใหม่ที่ลูกค้ายังไม่ได้จ่าย
+   */
+  private async receive(payment: Payment, ev: SettledEvent): Promise<{ outcome: 'settled' } | { outcome: 'duplicate' } | { outcome: 'exception'; reason: string }> {
+    if (payment.status === 'confirmed') return { outcome: 'duplicate' };
+    if (payment.exceptionReason) return { outcome: 'exception', reason: payment.exceptionReason };
+    const wrong = moneyMismatch(payment.amount, ev.amount, ev.currency);
+    if (wrong) {
+      if (await this.flag(payment, 'amount_mismatch', wrong, ev.providerRef)) return { outcome: 'exception', reason: 'amount_mismatch' };
+    } else {
+      const outcome = await this.settle(payment, ev.providerRef);
+      if (outcome === 'settled' || outcome === 'duplicate') return { outcome };
+      if (outcome === 'double_payment' && (await this.flag(payment, 'double_payment', 'ใบแจ้งหนี้นี้ชำระด้วยรายการอื่นแล้ว', ev.providerRef))) return { outcome: 'exception', reason: 'double_payment' };
     }
-    await this.settle(payment);
-    return 'settled';
+    const adopted = await this.adopt({ ...ev, invoiceId: ev.invoiceId ?? payment.invoiceId });
+    if (!adopted || adopted.id === payment.id) {
+      // ไม่ควรเกิด (แถวเดิมมีใบและวิธีชำระที่ถูกต้อง) · ไม่ยืนยันอะไร ให้กระทบยอดรอบถัดไปลองใหม่
+      this.log.error(`ผูกรายการ ${ev.providerRef} กับใบ ${payment.invoiceId} ไม่สำเร็จหลังเลขอ้างอิงถูกเปลี่ยน`);
+      return { outcome: 'exception', reason: 'unmatched' };
+    }
+    return this.receive(adopted, ev);
   }
 
-  /** ส่งเข้าคิวกรณีผิดปกติของ Friday Ops (O03) */
-  async flag(payment: Payment, reason: 'amount_mismatch' | 'double_payment' | 'duplicate_slip' | 'wht_not_declared' | 'unmatched', note: string) {
-    await this.sys.transaction(async (tx) => {
-      await tx.update(s.payments).set({ status: 'pending_review', exceptionReason: reason, updatedAt: new Date() }).where(eq(s.payments.id, payment.id));
+  /**
+   * ส่งเข้าคิวกรณีผิดปกติของ Friday Ops (O03)
+   * `providerRef` = เลขอ้างอิงของเหตุการณ์: ต่อคิวเดียวกับ settle / สร้าง QR ใหม่ แล้วเขียนเฉพาะเมื่อแถวยังเป็นรายการนั้น · false = ถูกเปลี่ยนเป็น QR ใหม่แล้ว ไม่ได้เขียน
+   */
+  async flag(payment: Payment, reason: 'amount_mismatch' | 'double_payment' | 'duplicate_slip' | 'wht_not_declared' | 'unmatched', note: string, providerRef: string) {
+    return this.sys.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${'settle:' + payment.invoiceId}, 0))`);
+      const [row] = await tx.update(s.payments).set({ status: 'pending_review', exceptionReason: reason, updatedAt: new Date() }).where(and(eq(s.payments.id, payment.id), eq(s.payments.providerRef, providerRef))).returning({ id: s.payments.id });
+      if (!row) return false;
       await tx.insert(s.auditLogs).values({ workspaceId: payment.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: 'billing.payment_exception', targetType: 'invoice', targetId: payment.invoiceId, summary: `${reason} · ${note}` });
+      return true;
     });
   }
 
@@ -183,7 +211,10 @@ export class PaymentsService implements OnModuleInit {
   // POST w/billing/checkout
   // ---------------------------------------------------------------------------
 
-  async checkout(auth: AuthInfo, tenant: TenantInfo, input: z.infer<typeof CheckoutBody>, rawKey: string | undefined) {
+  /**
+   * `opts.actor = system`: ระบบออกใบเอง (ใบต่ออายุบัตร) · ยังทำงานภายใต้ RLS ด้วยสิทธิ์ของ Owner แต่ Audit บันทึกผู้ทำเป็นระบบ ไม่ใช่ Owner
+   */
+  async checkout(auth: AuthInfo, tenant: TenantInfo, input: z.infer<typeof CheckoutBody>, rawKey: string | undefined, opts: { actor?: { kind: 'system' } } = {}) {
     this.requireBilling(tenant);
     const parsedKey = IdempotencyKey.safeParse(rawKey ?? '');
     if (!parsedKey.success) throw new AppError(400, 'idempotency_key_required', 'ต้องส่งหัว Idempotency-Key (8–128 ตัวอักษร) เพื่อกันตัดเงินซ้ำ');
@@ -213,7 +244,7 @@ export class PaymentsService implements OnModuleInit {
       if (quote.change.kind === 'next_cycle')
         throw new AppError(409, 'change_next_cycle', quote.change.reason === 'cycle' ? 'เปลี่ยนรอบบิลมีผลเมื่อจบรอบที่จ่ายแล้ว · ตั้งการเปลี่ยนไว้ล่วงหน้าได้' : 'ลดแพ็กเกจมีผลเมื่อจบรอบที่จ่ายแล้ว · ตั้งการเปลี่ยนไว้ล่วงหน้าได้', { effectiveAt: quote.change.effectiveAt, reason: quote.change.reason });
       const upgrade = quote.change.kind === 'upgrade' ? quote.change : null;
-      const [subRow] = await tx.select({ id: s.subscriptions.id }).from(s.subscriptions);
+      const [subRow] = await tx.select({ id: s.subscriptions.id, customerRef: s.subscriptions.stripeCustomerId }).from(s.subscriptions);
 
       // เลขใบแจ้งหนี้ออกต่อเนื่องทั้งระบบ (ใบกำกับภาษีต้องเรียงเลข) จึงล็อกระดับระบบ แล้วนับด้วย SYSTEM_DB ซึ่งเห็นทุก Workspace
       const start = today();
@@ -250,13 +281,15 @@ export class PaymentsService implements OnModuleInit {
       await recordCreditUse(tx, invoice, credit);
 
       if (!free) {
-        const gwReq = { amount: invoice.amountDue, invoiceId: invoice.id, invoiceNumber: invoice.number, email: profile.taxEmail, idempotencyKey: key };
+        // บัตร: ใช้ลูกค้าที่เก็บบัตรไว้แล้ว (A35b) ให้บัตรใบใหม่ไปอยู่ที่เดียวกับที่ตัดรอบถัดไป
+        const gwReq = { amount: invoice.amountDue, invoiceId: invoice.id, invoiceNumber: invoice.number, email: profile.taxEmail, idempotencyKey: key, customerRef: input.method === 'card' ? subRow.customerRef : null };
         const gw = input.method === 'card' ? await this.gateway.createCard(gwReq) : input.method === 'promptpay' ? await this.gateway.createPromptPay(gwReq) : null;
         await tx.insert(s.payments).values({ workspaceId: tenant.workspaceId, invoiceId: invoice.id, method: input.method, amount: invoice.amountDue, providerRef: gw?.providerRef ?? null });
       }
 
       const meta: CheckoutMeta = { plan: input.plan, cycle: input.cycle, method: input.method, wht: input.wht, key, payload, priceVersionId: internal.priceVersionId, coupon: quote.coupon, ...(upgrade ? { proration: true } : {}), ...(credit ? { credit } : {}) };
-      const log = { workspaceId: tenant.workspaceId, actorId: auth.userId, actorKind: 'user' as const, category: 'plan' as const, targetType: 'invoice', targetId: invoice.id };
+      const actor = opts.actor?.kind === 'system' ? { actorId: null, actorKind: 'system' as const } : { actorId: auth.userId, actorKind: 'user' as const };
+      const log = { workspaceId: tenant.workspaceId, ...actor, category: 'plan' as const, targetType: 'invoice', targetId: invoice.id };
       const off = `${quote.discount ? ` · ส่วนลด ${quote.discounts.map((d) => d.code).join(', ')} ${quote.discount / 100} บาท` : ''}${credit ? ` · หักเครดิต ${credit / 100} บาท` : ''}${upgrade ? ` · ส่วนต่างอัปเกรดจาก ${upgrade.fromPlan} (${upgrade.proration.left}/${upgrade.proration.total} วัน)` : ''}`;
       await tx.insert(s.auditLogs).values([
         { ...log, action: 'billing.checkout', summary: JSON.stringify(meta) },
@@ -285,6 +318,8 @@ export class PaymentsService implements OnModuleInit {
     if (invoice.status !== 'open') throw new AppError(409, 'invoice_closed', 'ใบแจ้งหนี้นี้ไม่ได้รอชำระแล้ว', { status: invoice.status });
     if (!payment || payment.method === 'transfer') throw new AppError(409, 'pay_not_applicable', 'ใบนี้ชำระด้วยการโอน · แนบสลิปที่หน้าเดียวกัน');
     if (input.renew && payment.method !== 'promptpay') throw new AppError(409, 'renew_not_applicable', 'สร้างรายการใหม่ได้เฉพาะ QR PromptPay');
+    // รายการที่เข้าคิวผิดปกติ (เช่นยอดไม่ตรง) ห้ามเขียนทับ ทีมต้องเห็นเลขอ้างอิงเดิม
+    if (input.renew && payment.exceptionReason) throw new AppError(409, 'payment_under_review', 'รายการชำระของใบนี้อยู่ระหว่างตรวจสอบ · ทีม Friday จะติดต่อกลับ');
     const meta = await this.meta(invoice.id);
     // key ของรายการชำระปัจจุบัน: สร้าง QR ใหม่ครั้งล่าสุด หรือ key ของ checkout
     const [renewed] = await this.sys.select({ summary: s.auditLogs.summary }).from(s.auditLogs).where(and(eq(s.auditLogs.action, 'billing.qr_renewed'), eq(s.auditLogs.targetId, invoice.id))).orderBy(desc(s.auditLogs.createdAt)).limit(1);
@@ -295,10 +330,37 @@ export class PaymentsService implements OnModuleInit {
       const [profile] = await this.sys.select({ email: s.billingProfiles.taxEmail }).from(s.billingProfiles).where(eq(s.billingProfiles.workspaceId, invoice.workspaceId));
       const gw = await this.gateway.createPromptPay({ amount: invoice.amountDue, invoiceId: invoice.id, invoiceNumber: invoice.number, email: profile?.email ?? null, idempotencyKey: key });
       if (gw.providerRef !== payment.providerRef) {
-        await this.sys.transaction(async (tx) => {
-          await tx.update(s.payments).set({ providerRef: gw.providerRef, status: 'pending_review', updatedAt: new Date() }).where(eq(s.payments.id, payment.id));
+        // ระหว่างรอ Stripe ตอบ Webhook ของ QR เดิมอาจยืนยันรายการนี้ไปแล้ว → ต่อคิวเดียวกับ settle แล้วเขียนทับเฉพาะเมื่อยังเป็น QR เดิมที่ยังไม่จ่าย
+        // (เลือกแก้แถวเดิมแบบมีเงื่อนไขแทนการเพิ่มแถวต่อ QR เพราะโค้ดส่วนอื่นถือว่า "รายการล่าสุดของใบ" คือรายการปัจจุบัน)
+        const outcome = await this.sys.transaction(async (tx) => {
+          await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${'settle:' + invoice.id}, 0))`);
+          const [open] = await tx.select({ id: s.invoices.id }).from(s.invoices).where(and(eq(s.invoices.id, invoice.id), eq(s.invoices.status, 'open')));
+          if (!open) return 'closed' as const;
+          const [row] = await tx
+            .update(s.payments)
+            .set({ providerRef: gw.providerRef, status: 'pending_review', updatedAt: new Date() })
+            .where(and(eq(s.payments.id, payment.id), payment.providerRef ? eq(s.payments.providerRef, payment.providerRef) : isNull(s.payments.providerRef), ne(s.payments.status, 'confirmed'), isNull(s.payments.exceptionReason)))
+            .returning({ id: s.payments.id });
+          if (!row) {
+            const [cur] = await tx.select({ providerRef: s.payments.providerRef, status: s.payments.status, exceptionReason: s.payments.exceptionReason }).from(s.payments).where(eq(s.payments.id, payment.id));
+            if (!cur || cur.status === 'confirmed') return 'closed' as const;
+            if (cur.exceptionReason) return 'review' as const;
+            // กดซ้ำพร้อมกัน: อีกคำขอเปลี่ยนเป็น QR ชุดเดียวกันไปแล้ว (key เดียวกัน) = สำเร็จ ไม่ปิด QR ที่ใช้อยู่
+            if (cur.providerRef === gw.providerRef) return 'same' as const;
+            // อีกคำขอเปลี่ยนเป็น QR อื่นไปก่อน → ใช้ QR นั้น และปิด QR ของคำขอนี้
+            return 'superseded' as const;
+          }
           await tx.insert(s.auditLogs).values({ workspaceId: invoice.workspaceId, actorId: auth.userId, actorKind: 'user', category: 'plan', action: 'billing.qr_renewed', targetType: 'invoice', targetId: invoice.id, summary: JSON.stringify({ key, providerRef: gw.providerRef, previous: payment.providerRef }) });
+          return 'replaced' as const;
         });
+        if (outcome === 'closed' || outcome === 'review' || outcome === 'superseded') {
+          // QR ใหม่ที่เพิ่งสร้างไม่มีแถวในระบบ → ปิดที่ Stripe ไม่ให้ลูกค้าสแกนจ่ายซ้ำ
+          await this.gateway.cancel(gw.providerRef, 'replaced').catch((e) => this.log.error(`ปิด QR ใหม่ ${gw.providerRef} ไม่สำเร็จ: ${(e as Error).message}`));
+          if (outcome === 'review') throw new AppError(409, 'payment_under_review', 'รายการชำระของใบนี้อยู่ระหว่างตรวจสอบ · ทีม Friday จะติดต่อกลับ');
+          if (outcome === 'closed') throw new AppError(409, 'invoice_closed', 'ใบแจ้งหนี้นี้ไม่ได้รอชำระแล้ว');
+        }
+        // ปิด QR เดิมที่ผู้ให้บริการ (A35b) · สแกนจ่ายทันก่อนปิด → Webhook ของรายการเดิมเข้าคิวจ่ายซ้ำ (handleStripe)
+        if (outcome === 'replaced' && payment.providerRef) await this.gateway.cancel(payment.providerRef, 'replaced').catch((e) => this.log.error(`ปิด QR เดิม ${payment.providerRef} ไม่สำเร็จ: ${(e as Error).message}`));
       }
     }
     return this.db.run(auth, tenant, (tx) => this.respond(tx, invoice.id, key));
@@ -333,12 +395,13 @@ export class PaymentsService implements OnModuleInit {
   /** ผลของ checkout (ใช้ทั้งครั้งแรกและตอนส่งซ้ำ) · บัตร / PromptPay ถามผู้ให้บริการอีกครั้งด้วย key เดิม ได้ intent เดิม */
   private async respond(tx: Tx, invoiceId: string, key: string) {
     const [invoice] = await tx.select().from(s.invoices).where(eq(s.invoices.id, invoiceId));
-    const [payment] = await tx.select().from(s.payments).where(eq(s.payments.invoiceId, invoiceId));
+    const [payment] = await tx.select().from(s.payments).where(eq(s.payments.invoiceId, invoiceId)).orderBy(desc(s.payments.createdAt)).limit(1);
     // ไม่มียอดชำระ (คูปอง): ไม่มีรายการชำระและไม่ต้องไปผู้ให้บริการ
     if (!payment) return { invoice: invoiceDto(invoice), payment: null, free: true as const };
     const [profile] = await tx.select({ email: s.billingProfiles.taxEmail }).from(s.billingProfiles);
     const base = { invoice: invoiceDto(invoice), payment: { id: payment.id, method: payment.method, status: payment.status, amount: payment.amount } };
-    const req = { amount: invoice.amountDue, invoiceId: invoice.id, invoiceNumber: invoice.number, email: profile?.email ?? null, idempotencyKey: key };
+    // ส่งเลขอ้างอิงเดิมไปด้วย: ผู้ให้บริการดึงรายการเดิม ไม่สร้างใหม่เมื่อ Idempotency-Key หมดอายุ (Stripe 24 ชม.)
+    const req = { amount: invoice.amountDue, invoiceId: invoice.id, invoiceNumber: invoice.number, email: profile?.email ?? null, idempotencyKey: key, providerRef: payment.providerRef };
     if (payment.method === 'card') return { ...base, card: { clientSecret: (await this.gateway.createCard(req)).clientSecret } };
     if (payment.method === 'promptpay') {
       const qr = (await this.gateway.createPromptPay(req)).qr!;
@@ -381,10 +444,18 @@ export class PaymentsService implements OnModuleInit {
   }
 
   /** ชำระสำเร็จ (Stripe หรือเจ้าหน้าที่ยืนยัน) → ปิดใบแจ้งหนี้, เปิดแพ็กเกจ, ขอออกใบกำกับภาษี */
-  private async settle(payment: Payment) {
+  private async settle(payment: Payment, providerRef: string): Promise<'settled' | 'double_payment' | 'duplicate' | 'moved'> {
     const paidAt = new Date();
+    let outcome: 'settled' | 'double_payment' | 'duplicate' | 'moved' = 'settled';
     const created = await this.sys.transaction(async (tx) => {
+      // Webhook ซ้ำ / Webhook กับงานกระทบยอดมาพร้อมกัน: ต่อคิวต่อใบแจ้งหนี้ แล้วอ่านสถานะใหม่ในธุรกรรม ไม่ออกเอกสารหรือเปิดแพ็กเกจซ้ำ (A35b)
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${'settle:' + payment.invoiceId}, 0))`);
+      const [fresh] = await tx.select({ status: s.payments.status, providerRef: s.payments.providerRef }).from(s.payments).where(eq(s.payments.id, payment.id));
+      // สร้าง QR ใหม่ commit ก่อนได้ล็อก: แถวนี้เป็นของ QR ใหม่ที่ยังไม่จ่ายแล้ว → ผู้เรียกผูกเงินนี้เป็นรายการของ QR เดิม (adopt)
+      if (fresh?.providerRef !== providerRef) return void (outcome = 'moved');
+      if (fresh.status === 'confirmed') return void (outcome = 'duplicate');
       const [invoice] = await tx.select().from(s.invoices).where(eq(s.invoices.id, payment.invoiceId));
+      if (invoice.status === 'paid') return void (outcome = 'double_payment');
       const meta = await this.meta(invoice.id);
       await tx.update(s.payments).set({ status: 'confirmed', verifiedBy: 'webhook', paidAt, updatedAt: new Date() }).where(eq(s.payments.id, payment.id));
       await tx.update(s.invoices).set({ status: 'paid', paidAt, updatedAt: new Date() }).where(eq(s.invoices.id, invoice.id));
@@ -404,6 +475,35 @@ export class PaymentsService implements OnModuleInit {
       return doc;
     });
     if (created?.docType === 'tax_invoice_receipt') await this.jobs.enqueue('payments.etax', { taxDocumentId: created.id });
+    return outcome;
+  }
+
+  /**
+   * เงินเข้าจากรายการที่ไม่ใช่รายการปัจจุบันของใบ แต่ผู้ให้บริการผูกกับใบแจ้งหนี้ของเรา (metadata ที่เราเซ็นตอนสร้าง · ลายเซ็นผ่านแล้ว)
+   * เช่น QR เดิมที่ถูกแทนด้วย QR ใหม่ · บันทึกเป็นรายการชำระของใบนั้น แล้วยืนยันตามปกติ (ใบชำระแล้ว = จ่ายซ้ำเข้าคิว)
+   * ใบยังเปิด: ปิดรายการปัจจุบันที่ยังไม่จ่ายที่ผู้ให้บริการ ไม่ให้ลูกค้าจ่ายซ้ำ
+   */
+  private async adopt(ev: SettledEvent): Promise<Payment | null> {
+    if (!ev.invoiceId || !z.uuid().safeParse(ev.invoiceId).success || !ev.providerRef) return null;
+    const [invoice] = await this.sys.select().from(s.invoices).where(eq(s.invoices.id, ev.invoiceId));
+    if (!invoice) return null;
+    const current = await this.sys.select().from(s.payments).where(and(eq(s.payments.invoiceId, invoice.id), inArray(s.payments.method, ['card', 'promptpay']))).orderBy(desc(s.payments.createdAt));
+    const method = ev.method ?? current[0]?.method;
+    if (method !== 'card' && method !== 'promptpay') return null;
+    const [row] = await this.sys
+      .insert(s.payments)
+      // ยอดที่ควรได้ (ไม่ใช่ยอดจากเหตุการณ์) เพื่อให้การตรวจยอดด้านล่างจับยอดที่ไม่ตรงได้
+      .values({ workspaceId: invoice.workspaceId, invoiceId: invoice.id, method, amount: invoice.amountDue, providerRef: ev.providerRef })
+      .onConflictDoNothing()
+      .returning();
+    const [payment] = row ? [row] : await this.sys.select().from(s.payments).where(and(eq(s.payments.method, method), eq(s.payments.providerRef, ev.providerRef)));
+    if (row) {
+      await this.sys.insert(s.auditLogs).values({ workspaceId: invoice.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: 'billing.payment_adopted', targetType: 'invoice', targetId: invoice.id, summary: `${invoice.number} · เงินเข้าจากรายการเดิม ${ev.providerRef}` });
+      if (invoice.status === 'open' && !moneyMismatch(invoice.amountDue, ev.amount, ev.currency))
+        for (const p of current.filter((x) => x.providerRef && x.status !== 'confirmed' && !x.exceptionReason))
+          await this.gateway.cancel(p.providerRef!, 'replaced').catch((e) => this.log.error(`ปิดรายการ ${p.providerRef} ไม่สำเร็จ: ${(e as Error).message}`));
+    }
+    return payment ?? null;
   }
 
   // ---------------------------------------------------------------------------
@@ -419,23 +519,35 @@ export class PaymentsService implements OnModuleInit {
     }
     if (ev.type === 'ignored') return { received: true, ignored: true };
     // รู้แค่เลขอ้างอิงของผู้ให้บริการ ยังไม่รู้ Workspace จึงค้นด้วย SYSTEM_DB
-    const [payment] = await this.sys.select().from(s.payments).where(and(inArray(s.payments.method, ['card', 'promptpay']), eq(s.payments.providerRef, ev.providerRef)));
+    let [payment] = await this.sys.select().from(s.payments).where(and(inArray(s.payments.method, ['card', 'promptpay']), eq(s.payments.providerRef, ev.providerRef)));
+    // เงินเข้าจากรายการเดิมของใบ (QR ที่ถูกแทน) ไม่ทิ้งเป็น "ไม่รู้จัก" (A35b)
+    if (!payment && ev.type === 'payment.succeeded') {
+      const adopted = await this.adopt(ev);
+      if (adopted) payment = adopted;
+    }
     if (!payment) return { received: true, unknown: true };
 
     if (ev.type === 'payment.succeeded') {
-      if (payment.status === 'confirmed') return { received: true, duplicate: true };
-      if (payment.exceptionReason) return { received: true, exception: payment.exceptionReason };
-      const outcome = await this.succeed(payment);
-      return outcome === 'settled' ? { received: true } : { received: true, exception: outcome };
+      // ยอดที่ผู้ให้บริการรับต่างจากที่สร้าง (ไม่ควรเกิด) → ไม่เปิดแพ็กเกจ ให้ทีมตรวจ (ใน receive)
+      const r = await this.receive(payment, ev);
+      // บัตร: เก็บลูกค้าที่ผูกบัตรไว้ ใช้ตัดรอบถัดไป (A35b)
+      if (r.outcome === 'settled' && payment.method === 'card' && ev.customerRef) await this.sys.update(s.subscriptions).set({ stripeCustomerId: ev.customerRef, updatedAt: new Date() }).where(eq(s.subscriptions.workspaceId, payment.workspaceId));
+      return r.outcome === 'settled' ? { received: true } : r.outcome === 'duplicate' ? { received: true, duplicate: true } : { received: true, exception: r.reason };
     }
-    // ล้มเหลว / ยกเลิก (เช่น QR หมดอายุ): ไม่ย้อนการชำระที่ยืนยันแล้ว
+    // ล้มเหลว / ยกเลิก: ไม่ย้อนการชำระที่ยืนยันแล้ว
     if (payment.status === 'confirmed') return { received: true, ignored: true };
-    await this.sys.transaction(async (tx) => {
-      await tx.update(s.payments).set({ status: 'rejected', updatedAt: new Date() }).where(eq(s.payments.id, payment.id));
+    // QR หมดอายุ / ถูกแทน: ปิดรายการ ใบยังเปิดให้สร้าง QR ใหม่ (A35b)
+    if (ev.type === 'payment.expired') return { received: true, ...((await markQrExpired(this.sys, payment)) ? { expired: true } : { duplicate: true }) };
+    const written = await this.sys.transaction(async (tx) => {
+      // ล้มเหลวกับสำเร็จของรายการเดียวกันมาพร้อมกัน (ลูกค้ายืนยันบัตรซ้ำหลังถูกปฏิเสธ): ต่อคิวเดียวกับ settle และไม่ทับรายการที่ยืนยันแล้ว
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${'settle:' + payment.invoiceId}, 0))`);
+      const [row] = await tx.update(s.payments).set({ status: 'rejected', updatedAt: new Date() }).where(and(eq(s.payments.id, payment.id), eq(s.payments.providerRef, ev.providerRef), ne(s.payments.status, 'confirmed'))).returning({ id: s.payments.id });
+      if (!row) return false;
       if (ev.type === 'payment.canceled') await tx.update(s.invoices).set({ status: 'void', updatedAt: new Date() }).where(and(eq(s.invoices.id, payment.invoiceId), eq(s.invoices.status, 'open')));
       await tx.insert(s.auditLogs).values({ workspaceId: payment.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: ev.type === 'payment.failed' ? 'billing.payment_failed' : 'billing.payment_canceled', targetType: 'invoice', targetId: payment.invoiceId, summary: `${payment.method} ${payment.providerRef}` });
+      return true;
     });
-    return { received: true };
+    return written ? { received: true } : { received: true, ignored: true };
   }
 
   // ---------------------------------------------------------------------------

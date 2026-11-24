@@ -113,7 +113,7 @@ services:
       WEB_URL: https://${APP_HOST}
       API_PUBLIC_URL: https://${APP_HOST}
       UPLOAD_DIR: /data/uploads
-      # ยังไม่มี Gateway จริง (A35b) · staging ใช้ตัวจำลองแบบตั้งใจ พร้อมลายเซ็น Webhook ของเครื่องนี้
+      # Gateway จริง = Stripe (A35b) · ตั้ง STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET ใน /opt/friday/.env เพื่อเปิด · ยังไม่ตั้งคีย์ staging ใช้ตัวจำลองแบบตั้งใจ พร้อมลายเซ็น Webhook ของเครื่องนี้
       PAYMENT_GATEWAY: ${PAYMENT_GATEWAY:-fake}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}

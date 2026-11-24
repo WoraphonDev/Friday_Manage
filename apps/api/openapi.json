@@ -2286,6 +2286,25 @@
                       "required": [
                         "received"
                       ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "expired": {
+                          "type": "boolean"
+                        },
+                        "received": {
+                          "type": "boolean"
+                        },
+                        "ignored": {},
+                        "unknown": {},
+                        "duplicate": {},
+                        "exception": {}
+                      },
+                      "required": [
+                        "expired",
+                        "received"
+                      ]
                     }
                   ]
                 }

@@ -41,7 +41,7 @@
   - PromptPay: PaymentIntent `confirm=true` ผูกยอด (สตางค์) + `metadata.invoice_id / invoice_number` · Stripe ไม่ส่งเวลาหมดอายุของ QR มา จึงคิดเอง = เวลาสร้าง + 15 นาที
   - บัตร: PaymentIntent ผูก Customer + `setup_future_usage=off_session` (เก็บบัตรไว้ตัดรอบถัดไป) + `request_three_d_secure=automatic` (3-D Secure ตามที่ธนาคารขอ ยืนยันด้วย Stripe.js ด้วย `clientSecret` เดิม)
   - ขอ client secret / QR ซ้ำ: ดึง intent เดิมด้วยเลขอ้างอิง ไม่สร้างใหม่ (Idempotency-Key ของ Stripe หมดอายุใน 24 ชม. · เดิมเปิดหน้าชำระวันถัดไปจะได้ intent ใหม่ที่ระบบไม่รู้จัก)
-  - `chargeSaved` ตัดแบบ off_session ด้วยบัตรล่าสุดของ Customer · `cancel` · `closeExpiredQr` · `listSettled` (กระทบยอด ใช้ auto-pagination จำกัด 2,000 รายการต่อรอบ)
+  - `chargeSaved` ตัดแบบ off_session ด้วยบัตรของรายการที่ชำระสำเร็จล่าสุดของ Customer (ไม่ใช่บัตรที่ผูกล่าสุด) · `cancel` · `closeExpiredQr` · `listSettled` (กระทบยอด ใช้ auto-pagination จำกัด 2,000 รายการต่อรอบ)
   - Webhook: `stripe.webhooks.constructEvent` ทนเวลา 5 นาที ตรวจก่อนอ่านเนื้อหาและก่อนเขียนฐานข้อมูล · secret ว่างไม่ยอมรับ · error ส่งต่อเฉพาะชนิด / รหัส / ข้อความของ Stripe (ไม่มีข้อมูลบัตร ไม่มีคีย์)
 - `stripe-event.ts` · แปลง event: `canceled` ที่ `cancellation_reason` = `abandoned` (QR หมดอายุ) / `duplicate` (ถูกแทนด้วย QR ใหม่) → `payment.expired` (ใบยังเปิด) · เหตุอื่นยัง void ตาม A33 · อ่านยอดที่รับจริง, Customer, รหัสที่ล้ม
 - `card-retry.ts` · ตัดวันที่ 0 ของรอบใหม่ แล้วลองใหม่วันที่ 1, 3, 5 (รวม 4 ครั้ง) · QR 15 นาที
@@ -65,7 +65,7 @@
 **คำตัดสินที่เลือกเอง**
 
 - ตีความ "ลองใหม่วันที่ 1, 3, 5" = ตัดครั้งแรกวันจบรอบ (วันที่ 0) แล้วลองวันที่ 1, 3, 5 นับจากวันเริ่มใบต่ออายุ · ครบแล้วหยุดตัดเอง ใบค้าง `open` ให้การตามหนี้ / ระงับเดิม (C6) ทำต่อ
-- ใบต่ออายุออกผ่าน `checkout` ในนามของ Owner (ต้องใช้ RLS ของ Workspace) · audit `billing.checkout` จึงมี actor เป็น Owner · มี `billing.card_renewal_invoice` (ระบบ) บอกว่าระบบเป็นผู้ออก
+- ใบต่ออายุออกผ่าน `checkout` ด้วยสิทธิ์ของ Owner (ต้องใช้ RLS ของ Workspace) แต่ audit ของใบบันทึก actor เป็นระบบ (`checkout(..., { actor: { kind: 'system' } })`) · มี `billing.card_renewal_invoice` บอกว่าระบบเป็นผู้ออก
 - Workspace ที่ตั้งลดแพ็กเกจไว้ (`pending_plan_id`) ยังไม่ตัด จนกว่างานของ ops-api เปลี่ยนแพ็กเกจให้ (ไม่งั้น checkout จะล้างการลดแพ็กเกจที่ตั้งไว้)
 - QR หมดอายุไม่ void ใบ (ต่างจาก A33 ที่ `canceled` → void) เพราะหน้าชำระมีปุ่มสร้าง QR ใหม่ในใบเดิม · ยกเลิกด้วยเหตุอื่นยัง void เหมือนเดิม
 - ใช้ SDK `stripe` แทน `fetch` (dependency ใหม่ใน `apps/api` · lockfile เพิ่ม 1 แพ็กเกจ)
@@ -82,6 +82,17 @@
 - `docs/decisions.md` ข้อ 7: บันทึกว่าเลือก Stripe (ผู้ใช้สั่ง) · **D99**: `docs/tasks/README.md` บรรทัด "A35b รอผู้ใช้เลือกผู้ให้บริการ" ควรอัปเดต · 03-api `hooks/stripe` เพิ่มผล `expired` และพฤติกรรม QR หมดอายุ
 - **W19 / W22b**: หน้าชำระควรแสดง "QR หมดอายุ" เมื่อ `expiresAt` ผ่านแล้ว (QR ที่ปิดแล้วคืน `qrPayload` ว่าง) · หน้าใบแจ้งหนี้ต้องยืนยันบัตรด้วย Stripe.js (`confirmCardPayment(clientSecret)`) สำหรับลิงก์ 3-D Secure / ตัดไม่ผ่าน
 - **O03 / Ops**: ปุ่ม "ส่งลิงก์จ่าย" อ่าน `billing.card_renewal_failed` / `card_action_required` ได้
+
+**แก้ตามรีวิว (2026-11-24 · "Close Stripe payment races and audit gaps")** · test ไฟล์นี้ 23 ข้อ (ใหม่ / แก้ 10 ข้อ ล้มทั้งหมดกับโค้ดก่อนแก้)
+
+- สร้าง QR ใหม่ (`pay` + `renew`): ต่อคิว `settle:` แล้วเขียนทับเฉพาะเมื่อใบยังเปิดและแถวยังเป็น QR เดิมที่ไม่ยืนยัน / ไม่ติดคิวผิดปกติ · Webhook ของ QR เดิมยืนยันระหว่างรอ Stripe → ปิด QR ใหม่ที่ Stripe + 409 `invoice_closed` · กดซ้อนกันแล้วอีกคำขอแซง → ปิด QR ของตัวเอง ตอบ QR ปัจจุบัน · รายการที่ติดคิวผิดปกติสร้าง QR ใหม่ไม่ได้ (409 `payment_under_review`) · เลือกแก้แถวเดิมแบบมีเงื่อนไขแทนการเพิ่มแถวต่อ QR เพราะโค้ดหลายจุดถือ "รายการล่าสุดของใบ" เป็นรายการปัจจุบัน (เล็กกว่าและปลอดภัยพอ)
+- Webhook ล้มเหลว / ยกเลิก: ต่อคิว `settle:` และเขียน `rejected` เฉพาะแถวที่ยังไม่ยืนยัน (และเลขอ้างอิงตรง) · ไม่เขียน → ตอบ `ignored`
+- ตัดบัตรแล้วผู้ให้บริการผิดพลาด (ไม่ใช่บัตรถูกปฏิเสธ): บันทึก `billing.card_charge_failed` ทุกครั้ง ไม่อีเมลลูกค้า · ครั้งสุดท้าย → `billing.card_renewal_failed` + อีเมลลิงก์ชำระ
+- ใบต่ออายุ: audit ของ checkout เป็นระบบ · ไม่มี Owner → `billing.card_renewal_blocked` (รอบละครั้ง) + log เตือน · **ยังไม่มีช่องแจ้งทีม Ops จาก API ลูกค้า** (`system_alerts` รับเฉพาะ `error_rate` · ต้องเพิ่ม kind ด้วย migration นอก lane) → Ops อ่าน audit นี้ได้
+- ตัดรอบถัดไปด้วยบัตรของรายการที่ชำระสำเร็จล่าสุดของ Customer (เดิมใช้บัตรที่ผูกล่าสุด)
+- ตรวจสกุลเงิน `thb` ทั้ง Webhook / กระทบยอด / adopt · ไม่ใช่บาท → `amount_mismatch`
+- กระทบยอด: รายการที่ไม่รู้จักแต่ metadata มี `invoice_id` ของเรา → `adopt` เหมือน Webhook (จ่ายซ้ำ / ปิดใบ แทน "ไม่รู้จัก")
+- `STRIPE_API_URL` ห้ามใช้กับคีย์ `sk_live_` / `rk_live_` แม้ไม่ใช่ production
 
 **NOT_RUN / ค้าง**
 

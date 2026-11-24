@@ -104,12 +104,24 @@ export class StripeGateway implements PaymentGateway {
     return { providerRef: pi.id, qr: { payload: data ?? '', expiresAt } };
   }
 
+  /**
+   * บัตรที่ใช้ตัดรอบถัดไป = บัตรของรายการที่ชำระสำเร็จล่าสุดของ Customer (ไม่ใช่บัตรที่เพิ่มล่าสุด ซึ่งอาจเป็นบัตรที่ลองแล้วไม่ผ่าน)
+   * ลูกค้าเปลี่ยนบัตรด้วยการจ่ายจากหน้าชำระ → บัตรใหม่ใช้ตั้งแต่รอบถัดไป
+   */
+  private async lastPaidCard(customerRef: string) {
+    let seen = 0;
+    for await (const p of this.stripe.paymentIntents.list({ customer: customerRef, limit: 20 })) {
+      if (++seen > 100) break;
+      if (p.status === 'succeeded' && p.payment_method) return typeof p.payment_method === 'string' ? p.payment_method : p.payment_method.id;
+    }
+    return null;
+  }
+
   async chargeSaved(c: SavedCardCharge): Promise<ChargeResult> {
-    const pms = await this.call(() => this.stripe.customers.listPaymentMethods(c.customerRef, { type: 'card', limit: 1 }));
-    const pm = pms.data[0];
+    const pm = await this.call(() => this.lastPaidCard(c.customerRef));
     if (!pm) return { status: 'failed', code: 'no_saved_card' };
     try {
-      const pi = await this.stripe.paymentIntents.confirm(c.providerRef, { payment_method: pm.id, off_session: true }, { idempotencyKey: c.idempotencyKey });
+      const pi = await this.stripe.paymentIntents.confirm(c.providerRef, { payment_method: pm, off_session: true }, { idempotencyKey: c.idempotencyKey });
       return { status: intentResult(pi) };
     } catch (e) {
       if (e instanceof Stripe.errors.StripeCardError) {
@@ -158,7 +170,7 @@ export class StripeGateway implements PaymentGateway {
     // SDK แบ่งหน้าให้เอง (starting_after) · ดึงเฉพาะที่สร้างหลังเวลาที่กำหนด
     for await (const p of this.stripe.paymentIntents.list({ created: { gte: Math.floor(since.getTime() / 1000) }, limit: 100 })) {
       if (++seen > LIST_LIMIT) break;
-      if (p.status === 'succeeded') out.push({ providerRef: p.id, invoiceId: p.metadata?.invoice_id ?? null, amount: p.amount_received, at: new Date(p.created * 1000) });
+      if (p.status === 'succeeded') out.push({ providerRef: p.id, invoiceId: p.metadata?.invoice_id ?? null, amount: p.amount_received, currency: p.currency, method: methodOf(p), at: new Date(p.created * 1000) });
     }
     return out;
   }
@@ -170,6 +182,11 @@ export class StripeGateway implements PaymentGateway {
       throw stripeError(e);
     }
   }
+}
+
+function methodOf(pi: Intent): 'card' | 'promptpay' | null {
+  const types = pi.payment_method_types ?? [];
+  return types.includes('promptpay') ? 'promptpay' : types.includes('card') ? 'card' : null;
 }
 
 function intentResult(pi: Intent): ChargeResult['status'] {

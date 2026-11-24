@@ -21,7 +21,7 @@ const MIN = 60_000;
 // ตัวจำลอง API ของ Stripe (เฉพาะ endpoint ที่ StripeGateway ใช้)
 // ---------------------------------------------------------------------------
 
-type Outcome = 'succeeded' | 'declined' | 'requires_action';
+type Outcome = 'succeeded' | 'declined' | 'requires_action' | 'error';
 interface Intent {
   id: string;
   object: 'payment_intent';
@@ -149,7 +149,7 @@ class StripeStub {
     }
     if (req.method === 'GET' && p === '/v1/payment_intents') {
       const gte = Number(body['created[gte]'] ?? 0);
-      const all = [...this.intents.values()].filter((x) => x.created >= gte).reverse();
+      const all = [...this.intents.values()].filter((x) => x.created >= gte && (!body.customer || x.customer === body.customer)).reverse();
       const start = body.starting_after ? all.findIndex((x) => x.id === body.starting_after) + 1 : 0;
       const limit = Number(body.limit ?? 10);
       return reply(200, { object: 'list', url: p, has_more: start + limit < all.length, data: all.slice(start, start + limit) });
@@ -167,6 +167,8 @@ class StripeStub {
         Object.assign(pi, { status: 'succeeded', amount_received: pi.amount, last_payment_error: null });
         return reply(200, pi);
       }
+      // ข้อผิดพลาดที่ไม่ใช่บัตรถูกปฏิเสธ (คำขอผิดสถานะ) · 400 ไม่ถูก SDK ลองซ้ำ
+      if (outcome === 'error') return reply(400, { error: { type: 'invalid_request_error', code: 'payment_intent_unexpected_state', message: 'This PaymentIntent could not be confirmed.' } });
       if (outcome === 'declined') {
         Object.assign(pi, { status: 'requires_payment_method', last_payment_error: { code: 'card_declined', decline_code: 'insufficient_funds' } });
         return reply(402, { error: { type: 'card_error', code: 'card_declined', decline_code: 'insufficient_funds', message: 'Your card has insufficient funds.', payment_intent: pi } });
@@ -280,6 +282,10 @@ describe('ตั้งค่าผ่าน environment', () => {
     expect(gatewayFromEnv({ STRIPE_SECRET_KEY: 'sk_test_x', STRIPE_WEBHOOK_SECRET: 'whsec_x' })).toBeInstanceOf(StripeGateway);
     expect(() => gatewayFromEnv({ STRIPE_SECRET_KEY: 'sk_test_x' })).toThrow(/STRIPE_WEBHOOK_SECRET/);
     expect(() => gatewayFromEnv({ STRIPE_SECRET_KEY: 'sk_test_x', STRIPE_WEBHOOK_SECRET: 'whsec_x', STRIPE_API_URL: 'http://127.0.0.1:1', NODE_ENV: 'production' })).toThrow(/STRIPE_API_URL/);
+    // คีย์ live ห้ามส่งไปปลายทางอื่นแม้ไม่ใช่ production
+    for (const key of ['sk_live_x', 'rk_live_x']) expect(() => gatewayFromEnv({ STRIPE_SECRET_KEY: key, STRIPE_WEBHOOK_SECRET: 'whsec_x', STRIPE_API_URL: 'http://127.0.0.1:1', NODE_ENV: 'development' })).toThrow(/STRIPE_API_URL/);
+    expect(gatewayFromEnv({ STRIPE_SECRET_KEY: 'sk_live_x', STRIPE_WEBHOOK_SECRET: 'whsec_x', NODE_ENV: 'development' })).toBeInstanceOf(StripeGateway);
+    expect(gatewayFromEnv({ STRIPE_SECRET_KEY: 'sk_test_x', STRIPE_WEBHOOK_SECRET: 'whsec_x', STRIPE_API_URL: 'http://127.0.0.1:1', NODE_ENV: 'development' })).toBeInstanceOf(StripeGateway);
   });
 
   it('ตารางลองตัดบัตร: วันที่ 0 แล้วลองใหม่วันที่ 1, 3, 5', () => {
@@ -369,6 +375,48 @@ describe('PromptPay', () => {
     expect(await rows(c.invoice.id)).toHaveLength(2);
   });
 
+  it('สร้าง QR ใหม่ระหว่างที่ Webhook ของ QR เดิมยืนยันใบ → 409 invoice_closed · ไม่เขียนทับรายการที่ยืนยันแล้ว · ปิด QR ใหม่ที่ Stripe', async () => {
+    const w = await workspace('gw-renew-race');
+    const c = await checkout(w, 'promptpay');
+    const gw = t.app.get<StripeGateway>(PAYMENT_GATEWAY);
+    const create = gw.createPromptPay.bind(gw);
+    let fresh = '';
+    // ลูกค้าสแกน QR เดิมจ่ายและ Webhook มาถึงระหว่างที่ Stripe กำลังสร้าง QR ใหม่ให้
+    const spy = vi.spyOn(gw, 'createPromptPay').mockImplementationOnce(async (r) => {
+      stub.pay(c.ref);
+      expect((await signed(event('payment_intent.succeeded', c.ref))).body).toEqual({ received: true });
+      const out = await create(r);
+      fresh = out.providerRef;
+      return out;
+    });
+    const r = await post(w, `/billing/invoices/${c.invoice.id}/pay`, { renew: true });
+    spy.mockRestore();
+    expect(r.status, JSON.stringify(r.body)).toBe(409);
+    expect(r.body.error.code).toBe('invoice_closed');
+    expect(fresh).toMatch(/^pi_stub_/);
+    expect(await rows(c.invoice.id)).toEqual([expect.objectContaining({ provider_ref: c.ref, status: 'confirmed', exception_reason: null })]);
+    expect((await invoiceRow(c.invoice.id)).status).toBe('paid');
+    expect(stub.intents.get(fresh)).toMatchObject({ status: 'canceled', cancellation_reason: 'duplicate' });
+    expect(stub.intents.get(c.ref)!.status).toBe('succeeded');
+    expect(await auditCount(c.invoice.id, 'billing.qr_renewed')).toBe(0);
+    expect(await taxDocs(c.invoice.id)).toBe(1);
+  });
+
+  it('กดสร้าง QR ใหม่ซ้ำพร้อมกัน: ทั้งสองคำขอสำเร็จ · เหลือ QR ที่จ่ายได้ชุดเดียวคือชุดที่ใบชี้อยู่', async () => {
+    const w = await workspace('gw-renew-twice');
+    const c = await checkout(w, 'promptpay');
+    // สองคำขอซ้อนกันได้หลายแบบ (ได้ QR ชุดเดียวกัน / คำขอหลังแทน QR ของคำขอแรก / คำขอหลังถูกแซง) ทุกแบบต้องจบแบบเดียวกัน
+    const [a, b] = await Promise.all([post(w, `/billing/invoices/${c.invoice.id}/pay`, { renew: true }), post(w, `/billing/invoices/${c.invoice.id}/pay`, { renew: true })]);
+    expect([a.status, b.status], JSON.stringify([a.body, b.body])).toEqual([200, 200]);
+    const all = await rows(c.invoice.id);
+    expect(all).toHaveLength(1);
+    const current = all[0].provider_ref as string;
+    expect(current).not.toBe(c.ref);
+    const live = [...stub.intents.values()].filter((x) => x.metadata.invoice_id === c.invoice.id && x.status !== 'canceled').map((x) => x.id);
+    expect(live).toEqual([current]);
+    expect([a.body.promptpay.qrPayload, b.body.promptpay.qrPayload].some((q: string) => q.includes(current))).toBe(true);
+  });
+
   it('QR เดิมจ่ายเข้ามาขณะใบยังเปิด: ปิดใบด้วยรายการนั้น และปิด QR ปัจจุบันที่ Stripe', async () => {
     const w = await workspace('gw-old-qr');
     const c = await checkout(w, 'promptpay');
@@ -432,6 +480,50 @@ describe('Webhook', () => {
     expect((await signed(event('payment_intent.succeeded', c.ref))).body).toEqual({ received: true, exception: 'amount_mismatch' });
     expect((await invoiceRow(c.invoice.id)).status).toBe('open');
   });
+  it('สกุลเงินไม่ใช่บาท → amount_mismatch แม้ตัวเลขตรง', async () => {
+    const w = await workspace('gw-currency');
+    const c = await checkout(w, 'promptpay');
+    stub.pay(c.ref).currency = 'usd';
+    expect((await signed(event('payment_intent.succeeded', c.ref))).body).toEqual({ received: true, exception: 'amount_mismatch' });
+    expect((await invoiceRow(c.invoice.id)).status).toBe('open');
+    expect((await rows(c.invoice.id))[0]).toMatchObject({ status: 'pending_review', exception_reason: 'amount_mismatch' });
+  });
+
+  it('ล้มเหลวกับสำเร็จของรายการเดียวกันซ้อนกัน (บัตรแรกไม่ผ่าน แล้วยืนยันบัตรใหม่ทันที) → จบที่ยืนยันแล้ว', async () => {
+    const w = await workspace('gw-fail-race');
+    const c = await checkout(w, 'card');
+    const failed = event('payment_intent.payment_failed', c.ref);
+    stub.pay(c.ref);
+    // หยุด settle ไว้หลังเขียน "ยืนยันแล้ว" แต่ก่อน commit แล้วให้ Webhook ล้มเหลว (อ่านสถานะเก่า) มาถึงระหว่างนั้น
+    let release!: () => void;
+    let entered!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const inSettle = new Promise<void>((r) => (entered = r));
+    const analytics = payments['analytics'];
+    const original = analytics.subscriptionChanged.bind(analytics);
+    const spy = vi.spyOn(analytics, 'subscriptionChanged').mockImplementationOnce(async (...args) => {
+      entered();
+      await gate;
+      return original(...args);
+    });
+    const success = signed(event('payment_intent.succeeded', c.ref)).then((r) => r);
+    await inSettle;
+    const failure = signed(failed).then((r) => r);
+    // รอจน Webhook ล้มเหลวติดล็อกของ settle
+    for (let i = 0; i < 100; i++) {
+      if (Number((await t.owner.query('SELECT count(*) FROM pg_locks WHERE NOT granted')).rows[0].count) > 0) break;
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    release();
+    const [ok, fail] = await Promise.all([success, failure]);
+    spy.mockRestore();
+    expect(ok.body).toEqual({ received: true });
+    expect(fail.body).toEqual({ received: true, ignored: true });
+    expect((await rows(c.invoice.id))[0]).toMatchObject({ status: 'confirmed' });
+    expect((await invoiceRow(c.invoice.id)).status).toBe('paid');
+    expect(await auditCount(c.invoice.id, 'billing.payment_failed')).toBe(0);
+  });
+
   it('QR เดิมจ่ายเข้ามาด้วยยอดไม่ตรง → amount_mismatch · ใบยังเปิด และไม่ปิด QR ปัจจุบัน', async () => {
     const w = await workspace('gw-old-amount');
     const c = await checkout(w, 'promptpay');
@@ -479,6 +571,10 @@ describe('บัตร', () => {
     expect(stub.intents.get(ref)).toMatchObject({ customer: w.customer, setup_future_usage: 'off_session', amount: Number(inv.amount_due) });
     const confirms = () => stub.calls('POST', new RegExp(`^/v1/payment_intents/${ref}/confirm$`));
     expect(confirms()[0].body).toMatchObject({ off_session: 'true', payment_method: stub.methods.get(w.customer)![0].id });
+    // ระบบเป็นผู้ออกใบ ไม่ใช่ Owner
+    const actors = (await t.owner.query(`SELECT action, actor_id, actor_kind FROM audit_logs WHERE target_id = $1 AND action IN ('billing.checkout', 'billing.invoice_created')`, [invoiceId])).rows;
+    expect(actors).toHaveLength(2);
+    for (const a of actors) expect(a).toMatchObject({ actor_id: null, actor_kind: 'system' });
     expect(mail.slice(mails).map((m) => m.subject)).toEqual([expect.stringMatching(/^ตัดบัตรไม่ผ่าน/)]);
     expect(mail[mails].text).toContain(nextAttemptOn(inv.start, 1)!);
     expect(mail[mails].text).not.toMatch(/4242|pm_stub/);
@@ -540,6 +636,56 @@ describe('บัตร', () => {
   });
 });
 
+describe('บัตร · กรณีขอบ', () => {
+  it('ตัดรอบใหม่ด้วยบัตรของรายการที่จ่ายสำเร็จล่าสุด ไม่ใช่บัตรที่ผูกไว้ล่าสุด', async () => {
+    const w = await cardCustomer('gw-card-choice');
+    const paidWith = stub.intents.get((await t.owner.query(`SELECT provider_ref FROM payments WHERE workspace_id = $1 AND status = 'confirmed'`, [w.wsId])).rows[0].provider_ref)!.payment_method;
+    expect(paidWith).toMatch(/^pm_stub_/);
+    // บัตรใบใหม่ที่ผูกทีหลังแต่ไม่เคยจ่ายผ่าน (เช่นลองกรอกแล้วไม่ผ่าน) · Stripe เรียงบัตรใหม่สุดก่อน
+    stub.methods.get(w.customer)!.unshift({ id: 'pm_stub_untried', object: 'payment_method', type: 'card', customer: w.customer, card: { brand: 'visa', last4: '0002' } });
+    expect(await jobs.renewCards(new Date())).toMatchObject({ invoices: 1, attempts: 1, pending: 1 });
+    const { ref } = await renewalInvoice(w.wsId);
+    expect(stub.calls('POST', new RegExp(`^/v1/payment_intents/${ref}/confirm$`))[0].body.payment_method).toBe(paidWith);
+    // ปิดใบ ไม่ให้งานตัดบัตรใน test ถัดไปลองตัดใบนี้อีก
+    expect((await signed(event('payment_intent.succeeded', ref))).body).toEqual({ received: true });
+  });
+
+  it('ผู้ให้บริการผิดพลาดตอนตัดบัตร (ไม่ใช่บัตรถูกปฏิเสธ) → บันทึกครั้งที่ล้ม · ครั้งสุดท้ายหยุดตัดและส่งลิงก์ชำระ', async () => {
+    const w = await cardCustomer('gw-charge-error');
+    stub.outcomes.push('error', 'declined', 'declined', 'error');
+    const day = (n: number) => new Date(Date.now() + n * DAY);
+    const mails = mail.length;
+    expect(await jobs.renewCards(day(0))).toMatchObject({ invoices: 1, attempts: 1, failed: 0, errors: 1 });
+    const { invoiceId } = await renewalInvoice(w.wsId);
+    expect(await auditCount(invoiceId, 'billing.card_charge_failed')).toBe(1);
+    // ไม่ใช่ปัญหาของบัตร: ไม่แจ้งลูกค้า
+    expect(mail.length).toBe(mails);
+    expect(await jobs.renewCards(day(1))).toMatchObject({ attempts: 1, failed: 1 });
+    expect(await jobs.renewCards(day(3))).toMatchObject({ attempts: 1, failed: 1 });
+    expect(await jobs.renewCards(day(5))).toMatchObject({ attempts: 1, errors: 1, exhausted: 1 });
+    expect(await auditCount(invoiceId, 'billing.card_charge_attempt')).toBe(4);
+    expect(await auditCount(invoiceId, 'billing.card_charge_failed')).toBe(4);
+    expect(await auditCount(invoiceId, 'billing.card_renewal_failed')).toBe(1);
+    expect(mail.at(-1)).toMatchObject({ to: profile.taxEmail, subject: expect.stringMatching(/^ชำระค่าบริการ/) });
+    expect(await jobs.renewCards(day(8))).toMatchObject({ attempts: 0 });
+    expect((await invoiceRow(invoiceId)).status).toBe('open');
+  });
+
+  it('Workspace ไม่มี Owner → ไม่ออกใบ · บันทึก billing.card_renewal_blocked รอบละครั้งให้ทีมเห็น', async () => {
+    const w = await cardCustomer('gw-no-owner');
+    await t.owner.query(`UPDATE workspace_members SET role = 'admin' WHERE workspace_id = $1 AND role = 'owner'`, [w.wsId]);
+    expect(await jobs.renewCards(new Date())).toMatchObject({ invoices: 0, attempts: 0, errors: 1 });
+    expect(await jobs.renewCards(new Date())).toMatchObject({ invoices: 0, errors: 1 });
+    const logs = (await t.owner.query(`SELECT actor_kind, summary FROM audit_logs WHERE workspace_id = $1 AND action = 'billing.card_renewal_blocked'`, [w.wsId])).rows;
+    expect(logs).toHaveLength(1);
+    expect(logs[0]).toMatchObject({ actor_kind: 'system' });
+    expect(JSON.parse(logs[0].summary)).toMatchObject({ reason: 'no_owner' });
+    // คืนสภาพไม่ให้กระทบงานตัดบัตรใน test ถัดไป
+    await t.owner.query(`UPDATE workspace_members SET role = 'owner' WHERE workspace_id = $1 AND role = 'admin'`, [w.wsId]);
+    await t.owner.query(`UPDATE subscriptions SET current_period_end = now() + interval '30 days' WHERE workspace_id = $1`, [w.wsId]);
+  });
+});
+
 describe('กระทบยอดทุกเช้า', () => {
   it('ดึงรายการย้อนหลังจาก Stripe (แบ่งหน้า) · Webhook หลุด → ยืนยันให้ · รายการที่ไม่รู้จักคืนให้ทีมตรวจ', async () => {
     const w = await workspace('gw-reconcile');
@@ -557,5 +703,29 @@ describe('กระทบยอดทุกเช้า', () => {
     // รอบถัดไปไม่ยืนยันซ้ำ
     expect((await payments.reconcile(since)).settled).toBe(0);
     expect(await taxDocs(c.invoice.id)).toBe(1);
+  });
+
+  it('QR เดิมที่ Webhook หลุด: ผูกกับใบด้วย metadata → จ่ายซ้ำเข้าคิว ไม่ใช่ "ไม่รู้จัก" · สกุลเงินไม่ใช่บาท → amount_mismatch', async () => {
+    const since = new Date(Date.now() - 1000);
+    const w = await workspace('gw-reconcile-old');
+    const c = await checkout(w, 'promptpay');
+    expect((await post(w, `/billing/invoices/${c.invoice.id}/pay`, { renew: true })).status).toBe(200);
+    const fresh = (await rows(c.invoice.id))[0].provider_ref as string;
+    stub.pay(fresh);
+    expect((await signed(event('payment_intent.succeeded', fresh))).body).toEqual({ received: true });
+    // QR เดิมถูกสแกนจ่ายทันก่อนปิด แต่ Webhook ไม่มา
+    Object.assign(stub.intents.get(c.ref)!, { status: 'succeeded', amount_received: c.invoice.amountDue, cancellation_reason: null });
+
+    const u = await workspace('gw-reconcile-usd');
+    const usd = await checkout(u, 'promptpay');
+    stub.pay(usd.ref).currency = 'usd';
+
+    const r = await payments.reconcile(since);
+    expect(r.unmatched.map((x) => x.providerRef)).not.toContain(c.ref);
+    expect((await rows(c.invoice.id)).find((x) => x.provider_ref === c.ref)).toMatchObject({ status: 'pending_review', exception_reason: 'double_payment' });
+    expect(await auditCount(c.invoice.id, 'billing.payment_adopted')).toBe(1);
+    expect(await taxDocs(c.invoice.id)).toBe(1);
+    expect((await rows(usd.invoice.id))[0]).toMatchObject({ exception_reason: 'amount_mismatch' });
+    expect((await invoiceRow(usd.invoice.id)).status).toBe('open');
   });
 });

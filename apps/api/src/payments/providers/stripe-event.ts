@@ -5,6 +5,7 @@ interface IntentPayload {
   id?: string;
   amount?: number;
   amount_received?: number;
+  currency?: string;
   customer?: string | { id?: string } | null;
   payment_method_types?: string[];
   cancellation_reason?: string | null;
@@ -36,6 +37,7 @@ export function parseStripeEvent(raw: Buffer): GatewayEvent {
     providerRef: obj.id ?? '',
     invoiceId: obj.metadata?.invoice_id ?? null,
     ...(obj.amount_received !== undefined && type === 'payment.succeeded' ? { amount: obj.amount_received } : {}),
+    ...(obj.currency !== undefined ? { currency: obj.currency } : {}),
     method: methods.includes('promptpay') ? 'promptpay' : methods.includes('card') ? 'card' : null,
     customerRef: customer,
     failureCode: obj.last_payment_error?.decline_code ?? obj.last_payment_error?.code ?? null,

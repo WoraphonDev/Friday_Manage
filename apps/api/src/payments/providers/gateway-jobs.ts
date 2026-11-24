@@ -7,7 +7,7 @@ import { Mailer } from '../../core/mail.js';
 import { SYSTEM_DB } from '../../db/db.module.js';
 import { Jobs } from '../../queue/jobs.js';
 import { PaymentsService } from '../payments.service.js';
-import { PAYMENT_GATEWAY, type PaymentGateway } from '../providers.js';
+import { type ChargeResult, PAYMENT_GATEWAY, type PaymentGateway } from '../providers.js';
 import { CARD_ATTEMPT_DAYS, cardAttemptDue, daysBetween, nextAttemptOn, QR_TTL_MS } from './card-retry.js';
 import { markQrExpired } from './qr-expiry.js';
 
@@ -120,9 +120,22 @@ export class GatewayJobs implements OnModuleInit {
     if (!attempt) return;
     result.attempts++;
 
-    const r = await this.gateway.chargeSaved({ providerRef: payment.providerRef, customerRef: sub.stripeCustomerId!, idempotencyKey: sha(`${rawKey}:charge:${attempt.attempt}`) });
     const link = `${webUrl()}/work/${row.slug}/billing/invoices/${invoice.id}`;
     const audit = (action: string, summary: string) => this.sys.insert(s.auditLogs).values({ workspaceId: invoice.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action, targetType: 'invoice', targetId: invoice.id, summary });
+    let r: ChargeResult;
+    try {
+      r = await this.gateway.chargeSaved({ providerRef: payment.providerRef, customerRef: sub.stripeCustomerId!, idempotencyKey: sha(`${rawKey}:charge:${attempt.attempt}`) });
+    } catch (e) {
+      // ผู้ให้บริการล่ม / คำขอผิด (ไม่ใช่บัตรถูกปฏิเสธ): ครั้งนี้นับไปแล้ว ต้องมีร่องรอยให้ทีมเห็น · ไม่แจ้งลูกค้าเพราะไม่ใช่ปัญหาของบัตร
+      // ครั้งสุดท้าย → หยุดตัดและส่งลิงก์ชำระเหมือนบัตรไม่ผ่าน ไม่ปล่อยใบค้างโดยไม่มีใครรู้
+      result.errors++;
+      const error = ((e as Error)?.message ?? String(e)).slice(0, 200);
+      this.log.error(`ตัดบัตร ${invoice.number} ครั้งที่ ${attempt.attempt} ผิดพลาดที่ผู้ให้บริการ: ${error}`);
+      const nextOn = attempt.final ? null : nextAttemptOn(invoice.periodStart, attempt.attempt);
+      await audit('billing.card_charge_failed', `${invoice.number} · ครั้งที่ ${attempt.attempt} ผิดพลาดที่ผู้ให้บริการ (${error})${nextOn ? ` · ลองใหม่ ${nextOn}` : ''}`);
+      if (!nextOn) await this.exhausted(invoice, link, audit, result);
+      return;
+    }
 
     if (r.status === 'succeeded' || r.status === 'processing') {
       result.pending++;
@@ -141,15 +154,20 @@ export class GatewayJobs implements OnModuleInit {
       await this.notify(invoice.workspaceId, `ตัดบัตรไม่ผ่าน ${invoice.number} · Friday Work Management`, `ตัดค่าบริการรอบใหม่ ${baht(invoice.amountDue)} ไม่ผ่าน ระบบจะลองอีกครั้งวันที่ ${nextOn}\nเปลี่ยนบัตรหรือชำระด้วย PromptPay ได้ที่ ${link}`);
       return;
     }
+    await this.exhausted(invoice, link, audit, result);
+  }
+
+  /** ครบ 4 ครั้ง (วันที่ 0, 1, 3, 5): หยุดตัด · ทีมการเงินเห็นใน Audit และส่งลิงก์ชำระซ้ำได้จาก Friday Ops */
+  private async exhausted(invoice: typeof s.invoices.$inferSelect, link: string, audit: (action: string, summary: string) => Promise<unknown>, result: Result) {
     result.exhausted++;
-    // ครบ 4 ครั้ง (วันที่ 0, 1, 3, 5): ทีมการเงินเห็นใน Audit และส่งลิงก์ชำระซ้ำได้จาก Friday Ops
     await audit('billing.card_renewal_failed', `${invoice.number} · ตัดบัตรไม่ผ่านครบ ${CARD_ATTEMPT_DAYS.length} ครั้ง · ส่งลิงก์ชำระให้ลูกค้าแล้ว`);
     await this.notify(invoice.workspaceId, `ชำระค่าบริการ ${invoice.number} · Friday Work Management`, `ตัดบัตรค่าบริการรอบใหม่ ${baht(invoice.amountDue)} ไม่ผ่านครบ ${CARD_ATTEMPT_DAYS.length} ครั้ง\nกรุณาชำระด้วยบัตรใบใหม่หรือ PromptPay ที่ ${link}`);
   }
 
   /**
    * ใบต่ออายุของรอบนี้ · ครั้งแรกออกด้วย `PaymentsService.checkout` (ราคา คูปองที่ได้ต่อ เครดิต VAT และ Idempotency เหมือนลูกค้ากดเอง)
-   * ในนามของ Owner เพราะ checkout ทำงานภายใต้ RLS ของ Workspace · บันทึก `billing.card_renewal_invoice` ว่าระบบเป็นผู้ออก
+   * ใช้สิทธิ์ของ Owner เพราะ checkout ทำงานภายใต้ RLS ของ Workspace แต่ Audit ของใบบันทึกผู้ทำเป็นระบบ · บันทึก `billing.card_renewal_invoice` ว่าระบบเป็นผู้ออก
+   * ไม่มี Owner ที่ใช้งานอยู่: ออกใบไม่ได้ → Audit `billing.card_renewal_blocked` (รอบละครั้ง) ให้ทีม Friday เห็นในประวัติของ Workspace + log เตือน
    */
   private async renewalInvoice(row: { sub: typeof s.subscriptions.$inferSelect; plan: string; slug: string }, rawKey: string, result: Result) {
     const { sub } = row;
@@ -158,9 +176,14 @@ export class GatewayJobs implements OnModuleInit {
     const [owner] = await this.sys.select({ userId: s.workspaceMembers.userId }).from(s.workspaceMembers).where(and(eq(s.workspaceMembers.workspaceId, sub.workspaceId), eq(s.workspaceMembers.role, 'owner'), eq(s.workspaceMembers.status, 'active'))).limit(1);
     if (!owner) {
       this.log.warn(`ต่ออายุบัตรไม่ได้: Workspace ${sub.workspaceId} ไม่มี Owner`);
+      // ยังไม่มีช่องแจ้งเตือนทีม Ops จาก API ลูกค้า (system_alerts รับเฉพาะ error_rate) จึงบันทึกใน Audit ของ Workspace รอบละครั้ง
+      const summary = JSON.stringify({ renewal: rawKey, reason: 'no_owner' });
+      const [logged] = await this.sys.select({ id: s.auditLogs.id }).from(s.auditLogs).where(and(eq(s.auditLogs.workspaceId, sub.workspaceId), eq(s.auditLogs.action, 'billing.card_renewal_blocked'), eq(s.auditLogs.summary, summary)));
+      if (!logged) await this.sys.insert(s.auditLogs).values({ workspaceId: sub.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: 'billing.card_renewal_blocked', targetType: 'subscription', targetId: sub.id, summary });
+      result.errors++;
       return null;
     }
-    const out = await this.payments.checkout({ userId: owner.userId, sessionId: 'system:card-renewal' }, { workspaceId: sub.workspaceId, slug: row.slug, role: 'owner' }, { plan: row.plan as 'team_s' | 'team_m' | 'team_l', cycle: sub.cycle, method: 'card', wht: false }, rawKey);
+    const out = await this.payments.checkout({ userId: owner.userId, sessionId: 'system:card-renewal' }, { workspaceId: sub.workspaceId, slug: row.slug, role: 'owner' }, { plan: row.plan as 'team_s' | 'team_m' | 'team_l', cycle: sub.cycle, method: 'card', wht: false }, rawKey, { actor: { kind: 'system' } });
     await this.sys.insert(s.auditLogs).values({ workspaceId: sub.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: 'billing.card_renewal_invoice', targetType: 'invoice', targetId: out.invoice.id, summary: JSON.stringify({ renewal: rawKey }) });
     result.invoices++;
     return out.invoice.id;

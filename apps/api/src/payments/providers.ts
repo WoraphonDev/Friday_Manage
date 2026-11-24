@@ -34,6 +34,8 @@ export interface GatewayEvent {
   invoiceId: string | null;
   /** ยอดที่รับจริง (สตางค์) · เฉพาะ succeeded */
   amount?: number;
+  /** สกุลเงินของรายการ (ตัวเล็กตาม Stripe) · ไม่ใช่ thb = ยอดไม่ตรง */
+  currency?: string | null;
   method?: 'card' | 'promptpay' | null;
   /** บัตร: ลูกค้าที่เก็บบัตรไว้ตัดรอบถัดไป */
   customerRef?: string | null;
@@ -60,6 +62,9 @@ export interface SettledPayment {
   providerRef: string;
   invoiceId: string | null;
   amount: number;
+  /** ไม่ใช่ thb = ยอดไม่ตรง · ไม่ส่ง = ไม่รู้ (ตัวปลอม) */
+  currency?: string | null;
+  method?: 'card' | 'promptpay' | null;
   at: Date;
 }
 
@@ -295,7 +300,8 @@ export function gatewayFromEnv(env: NodeJS.ProcessEnv = process.env): PaymentGat
     // ไม่มี secret ของ Webhook = ใครก็ปลอม Webhook มาปิดใบแจ้งหนี้ได้ → ไม่ยอมเริ่ม
     if (!env.STRIPE_WEBHOOK_SECRET) throw new Error('ตั้ง STRIPE_WEBHOOK_SECRET (whsec_… จาก Stripe Dashboard หรือ stripe listen) คู่กับ STRIPE_SECRET_KEY');
     // ปลายทาง API อื่น (stripe-mock / ตัวจำลองใน test) ใช้ได้เฉพาะนอก production กันคีย์จริงถูกส่งไปที่อื่น
-    if (env.STRIPE_API_URL && env.NODE_ENV === 'production') throw new Error('STRIPE_API_URL ใช้ได้เฉพาะ dev / test');
+    // คีย์ live ก็ห้ามเช่นกัน แม้ NODE_ENV ไม่ใช่ production (เช่นรันเครื่องตัวเองด้วยคีย์จริง)
+    if (env.STRIPE_API_URL && (env.NODE_ENV === 'production' || /^(sk|rk)_live_/.test(env.STRIPE_SECRET_KEY))) throw new Error('STRIPE_API_URL ใช้ได้เฉพาะ dev / test กับคีย์ทดสอบ');
     return new StripeGateway(env.STRIPE_SECRET_KEY, env.STRIPE_WEBHOOK_SECRET, { apiUrl: env.STRIPE_API_URL || undefined });
   }
   if (env.NODE_ENV === 'production') {
